@@ -118,6 +118,9 @@ export default function ResultPage() {
           redFlags: data.redFlagReasons,
           pharmacyEligible: data.pharmacyEligible,
           summaryText: data.summaryText,
+          safetyNetAdvice: data.safetyNetAdvice,
+          pharmacyTreatmentOptions: data.pharmacyTreatmentOptions,
+          selfCareAdvice: data.selfCareAdvice,
         });
         setLoading(false);
       })

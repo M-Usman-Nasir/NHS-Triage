@@ -1,230 +1,201 @@
 # Aegis Health AI
-## AI Consultation & Triage Platform
 
-> An NHS-aligned AI-assisted digital triage system that guides patients through structured symptom consultations and safely routes them to the most appropriate care pathway.
-
----
-
-## For the Client
-
-### What does this platform do?
-
-Aegis Health AI allows patients to describe their symptoms through a simple digital questionnaire on their phone or computer. The system then:
-
-1. **Asks the right questions** — guided questions based on the patient's symptoms
-2. **Checks for danger signs** — automatically identifies emergencies (e.g. chest pain → calls 999)
-3. **Routes the patient safely** — to the correct care level:
-   - Self-care advice at home
-   - Pharmacy (most minor conditions)
-   - GP appointment
-   - Urgent care / walk-in
-   - Emergency 999
-4. **Generates a summary** — a clear report for the pharmacist or GP
-
-### Why does this matter?
-
-- Reduces pressure on GP surgeries
-- Gets patients the right care faster
-- Reduces unsafe self-diagnosis
-- Pharmacists can see exactly what the patient reported
-- Fully auditable for NHS governance
-
-### Conditions Covered (Phase 1)
-
-| Condition | Common Example |
-|-----------|---------------|
-| Sore Throat | Tonsillitis, strep throat |
-| Sinusitis | Facial pain, blocked nose |
-| Acute Otitis Media | Ear infection (adults) |
-| Infected Insect Bites | Cellulitis from bite |
-| Impetigo | Skin infection in adults |
-| Shingles | Painful rash, nerve pain |
-| UTI | Urinary tract infection (women) |
+**NHS-aligned digital triage** — structured symptom questionnaires and a **deterministic, rule-based** decision engine (not generative “AI” diagnosis). Patients are guided to self-care, pharmacy, GP, urgent care, or emergency (999) with auditable logic.
 
 ---
 
-## For Developers
+## For the client
 
-### Tech Stack
+### What the platform does
+
+1. **Pathway & questions** — The patient chooses a supported condition pathway, then answers guided questions (phone or desktop).
+2. **Safety first** — **Red-flag rules run first** inside the triage engine. Danger signs route to urgent or emergency care; that logic is not overridden by pharmacy convenience.
+3. **Care navigation** — Clear next steps: self-care, pharmacy (where eligible), GP, urgent care, or **999** when appropriate.
+4. **Summary** — Structured output suitable for handoff to a pharmacist or GP record (subject to your deployment model).
+
+### Why it matters
+
+- Supports **Pharmacy First**–style navigation where clinically appropriate  
+- Reduces unsafe self-triage by making **rules explicit and testable**  
+- **Auditable** decisions for governance (see compliance section below)
+
+### Conditions (phase 1 pathways)
+
+| Pathway code | Condition (patient-facing) |
+|--------------|----------------------------|
+| `uti` | Urinary tract infection (aligned pathway) |
+| `sore_throat` | Sore throat |
+| `sinusitis` | Sinusitis |
+| `otitis_media` | Ear infection (acute otitis media) |
+| `insect_bites` | Infected insect bite |
+| `impetigo` | Impetigo |
+| `shingles` | Shingles |
+
+---
+
+## For developers
+
+### Tech stack
 
 | Layer | Technology |
-|-------|-----------|
-| Frontend | Next.js 14 (React), Tailwind CSS |
-| Backend | Node.js + Express.js |
-| Database | PostgreSQL |
-| Decision Engine | Rule-based JSON trees (deterministic) |
-| Cloud | Azure / Cloudways |
-| Auth | JWT + Role-based access control |
+|-------|------------|
+| Frontend | Next.js 14 (React, TypeScript), Tailwind CSS, **lucide-react** icons |
+| Backend | Node.js 18+, Express.js |
+| Decision data | JSON pathway definitions under `backend/data/pathways/` |
+| Database | PostgreSQL (`database/schema.sql`, `database/seed.sql`) — wire as needed; demo APIs may use in-memory stores |
+| Target infra | Azure / Cloudways (project choice) |
 
-### Project Structure
+**Authentication:** Admin and CRM routes are **open in demo**; production should use JWT (or equivalent) and RBAC — see `backend/routes/admin.js` comments.
 
-```
-aegis-health-ai/
-│
-├── README.md                         ← You are here
-├── TASKS.md                          ← Full task tracker with status
-│
-├── /frontend                         ← Next.js web app
-│   ├── /pages
-│   │   ├── index.tsx                 ← Landing page + consent
-│   │   ├── consultation.tsx          ← Symptom questionnaire
-│   │   ├── result.tsx                ← Triage outcome display
-│   │   ├── pharmacist/
-│   │   │   └── dashboard.tsx         ← Pharmacist case review panel
-│   │   └── admin/
-│   │       └── dashboard.tsx         ← Admin rules + analytics
-│   ├── /components
-│   │   ├── QuestionCard.tsx          ← Single question UI component
-│   │   ├── RedFlagAlert.tsx          ← Emergency warning banner
-│   │   ├── ConsultationSummary.tsx   ← Printable/shareable summary
-│   │   └── OutcomeBadge.tsx          ← Colour-coded outcome label
-│   └── /mock
-│       └── patients.json             ← 10 demo patient records
-│
-├── /backend                          ← Node.js API server
-│   ├── server.js                     ← Express app entry point
-│   ├── /routes
-│   │   ├── consultation.js           ← POST /api/consultation
-│   │   ├── summary.js                ← GET /api/summary/:id
-│   │   └── admin.js                  ← GET/POST /api/admin/rules
-│   ├── /engine
-│   │   ├── decisionEngine.js         ← Evaluates clinical rules
-│   │   ├── redFlagDetector.js        ← Checks for emergency symptoms
-│   │   └── pharmacyEligibility.js    ← Pharmacy routing logic
-│   └── /data
-│       ├── /pathways
-│       │   ├── sore_throat.json      ← Clinical decision tree
-│       │   ├── sinusitis.json
-│       │   ├── otitis_media.json
-│       │   ├── insect_bites.json
-│       │   ├── impetigo.json
-│       │   ├── shingles.json
-│       │   └── uti.json
-│       └── mock_consultations.json   ← 5 completed consultation records
-│
-├── /database
-│   ├── schema.sql                    ← PostgreSQL table definitions
-│   └── seed.sql                      ← Mock data inserts for local dev
-│
-└── /docs
-    ├── architecture.md               ← System design for developers
-    ├── user_flows.md                 ← Patient & pharmacist journeys
-    ├── clinical_rules_explained.md   ← Clinical logic (client-friendly)
-    └── compliance_checklist.md       ← NHS DTAC, GDPR, DCB0129 notes
-```
-
-### How the Decision Engine Works
+### Repository layout (current)
 
 ```
-Patient submits symptoms
+NHS Triage/
+├── README.md
+│
+├── frontend/                       ← Next.js app (port 3000)
+│   ├── pages/
+│   │   ├── index.tsx               ← Landing, consent, pathway pick
+│   │   ├── consultation.tsx        ← Questionnaire (pathway-specific + defaults)
+│   │   ├── result.tsx              ← Outcome & summary
+│   │   ├── admin/dashboard.tsx     ← Admin analytics / pathways (demo)
+│   │   ├── pharmacist/dashboard.tsx
+│   │   └── crm/                    ← Staff CRM (dashboard, patients, cases, …)
+│   ├── components/CRMLayout.tsx
+│   ├── lib/                        ← triageOutcomeIcons, channelIcons, …
+│   └── styles/globals.css
+│
+├── backend/                        ← API (port 4000)
+│   ├── server.js
+│   ├── routes/
+│   │   ├── consultation.js
+│   │   ├── summary.js
+│   │   ├── admin.js
+│   │   └── crm.js
+│   ├── engine/
+│   │   ├── decisionEngine.js       ← Orchestrates triage (see flow below)
+│   │   ├── redFlagDetector.js
+│   │   └── pharmacyEligibility.js
+│   ├── store/consultationStore.js  ← Shared in-memory consultations + mock seed
+│   ├── lib/summaryMapper.js        ← Normalizes records for GET /api/summary/:id
+│   └── data/pathways/*.json        ← Clinical rules per pathway
+│
+├── database/
+│   ├── schema.sql
+│   └── seed.sql
+│
+└── docs/
+    ├── README.md                   ← Index to the two canonical docs
+    ├── PLATFORM-HANDBOOK.md        ← Engineering / product / built-vs-gap
+    └── CLINICAL-GOVERNANCE.md      ← Clinical narrative + compliance
+```
+
+### How the decision engine runs (runtime)
+
+When a consultation is evaluated (e.g. `runTriage` in `backend/engine/decisionEngine.js`):
+
+```
+Patient answers + pathway context submitted to API
         ↓
-[1] Red-Flag Detector runs first
-    → Any emergency symptoms? → ESCALATE to 999 / Urgent Care
+[1] Red-flag detection        → if triggered: escalated outcome, stop routine branch
         ↓ (no red flags)
-[2] Pathway Classifier
-    → Match symptoms to clinical pathway (e.g. UTI, Sore Throat)
+[2] Pharmacy eligibility
         ↓
-[3] Rule Evaluator
-    → Apply clinical rules (age, duration, gender, comorbidities)
+[3] Outcome rules               → self_care | pharmacy | gp | urgent_care | emergency_999
         ↓
-[4] Pharmacy Eligibility Check
-    → Can this be treated at pharmacy? Yes/No
-        ↓
-[5] Outcome Decision
-    → Self-care / Pharmacy / GP / Urgent Care / 999
-        ↓
-[6] Summary Generator
-    → Structured report with symptoms, reasoning, next steps
+[4] Summary generation          → structured text from facts + templates
 ```
 
-### Running Locally (Development)
+**Pathway** is chosen by the patient up front — it is **not** an automated “classifier” after the fact. Full detail: **[docs/PLATFORM-HANDBOOK.md](./docs/PLATFORM-HANDBOOK.md)**.
+
+### Documentation (canonical)
+
+| Document | Purpose |
+|----------|---------|
+| [docs/README.md](./docs/README.md) | Index to the two handbooks |
+| [docs/PLATFORM-HANDBOOK.md](./docs/PLATFORM-HANDBOOK.md) | **Primary:** runtime logic, modules, phases, epics/RACI, architecture, **implementation status (what exists vs gaps)** |
+| [docs/CLINICAL-GOVERNANCE.md](./docs/CLINICAL-GOVERNANCE.md) | Clinical narrative, red flags, pathway notes, compliance checklist, MVP scope |
+
+### Run locally
+
+**Prerequisites:** Node.js **18+**, npm. PostgreSQL optional for schema experiments; demo triage works with in-memory consultation storage.
 
 ```bash
-# 1. Clone the project
-git clone <repo-url>
-cd aegis-health-ai
-
-# 2. Install backend dependencies
+# Backend (http://localhost:4000)
 cd backend
 npm install
-node server.js
+npm start
+# or: npm run dev   # nodemon
 
-# 3. Install frontend dependencies
+# Frontend (http://localhost:3000)
 cd ../frontend
 npm install
 npm run dev
+```
 
-# 4. Set up the database (PostgreSQL required)
+Optional database bootstrap:
+
+```bash
 psql -U postgres -f database/schema.sql
 psql -U postgres -f database/seed.sql
 ```
 
-Backend runs on: `http://localhost:4000`
-Frontend runs on: `http://localhost:3000`
+Set `FRONTEND_URL` in the backend environment if the UI is not on `http://localhost:3000` (CORS). Example `.env` in `backend/`:
 
-### API Endpoints
+```env
+PORT=4000
+NODE_ENV=development
+FRONTEND_URL=http://localhost:3000
+# DATABASE_URL=postgresql://localhost:5432/aegis_health   # when DB-backed
+# JWT_SECRET=...                                           # production auth
+```
+
+### API overview
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/consultation` | Submit patient consultation |
-| GET | `/api/summary/:id` | Retrieve consultation summary |
-| GET | `/api/admin/rules` | List all clinical rules |
-| POST | `/api/admin/rules` | Create/update a clinical rule |
-| GET | `/api/admin/analytics` | View consultation statistics |
+| GET | `/health` | Health check |
+| POST | `/api/consultation` | Submit consultation → triage result |
+| GET | `/api/consultation/:id` | Fetch stored consultation (demo store) |
+| GET | `/api/summary/:id` | Summary / record access |
+| GET | `/api/admin/analytics` | Admin analytics (demo) |
+| GET | `/api/admin/pathways` | List pathways |
+| GET | `/api/admin/rules` | List rules |
+| GET | `/api/crm/dashboard` | CRM KPIs & activity (demo data) |
+| … | `/api/crm/*` | Patients, cases, tasks, communications, providers — see `backend/routes/crm.js` |
 
-### User Roles
+### User roles (product)
 
-| Role | Access |
-|------|--------|
-| `patient` | Complete consultations, view own results |
-| `pharmacist` | View assigned consultations, access summaries |
-| `admin` | Manage rules, view analytics, configure pathways |
-
-### Environment Variables
-
-Create a `.env` file in `/backend`:
-
-```
-PORT=4000
-DATABASE_URL=postgresql://localhost:5432/aegis_health
-JWT_SECRET=your-secret-key
-NODE_ENV=development
-```
+| Role | UI (current) |
+|------|----------------|
+| **Patient** | `/`, `/consultation`, `/result` |
+| **Pharmacist** | `/pharmacist/dashboard` |
+| **Admin** | `/admin/dashboard` |
+| **CRM / operations** | `/crm` and sub-routes |
 
 ---
 
-## Delivery Timeline
+## Delivery & compliance
 
-| Version | Milestone | Month | Cost |
-|---------|-----------|-------|------|
-| V0.1 | Platform Foundation | 1 | £4,000 |
-| V0.5 | Functional Prototype | 2 | £5,000 |
-| V1.0 | MVP Triage Platform | 3–4 | £9,000 |
-| V1.5 | Pharmacy Pilot Version | 5–6 | £7,000 |
-| V2.0 | AI Optimization | 7–8 | £5,000 |
+Phases, epics, RACI, and pilot gates: **[docs/PLATFORM-HANDBOOK.md](./docs/PLATFORM-HANDBOOK.md)** (§4–5). Regulatory checklist: **[docs/CLINICAL-GOVERNANCE.md](./docs/CLINICAL-GOVERNANCE.md)** (§5–6).
 
----
-
-## Compliance Summary
-
-| Requirement | Status |
-|------------|--------|
-| DTAC (Digital Technology Assessment Criteria) | In preparation |
-| DCB0129 (Clinical Safety) | In preparation |
-| DCB0160 (Deployment Safety) | In preparation |
+| Requirement | Status (typical MVP) |
+|-------------|---------------------|
+| DTAC | In preparation |
+| DCB0129 / clinical safety | In preparation |
+| DCB0160 | In preparation |
 | UK GDPR / DPIA | In preparation |
-| DSP Toolkit | In preparation |
-| WCAG 2.2 AA (Accessibility) | In preparation |
-| MHRA/SaMD Classification | Under review |
+| DSPT | In preparation |
+| WCAG 2.x (patient UI) | In preparation |
+| MHRA / SaMD | Under organisational review |
 
 ---
 
-## Contact & Support
+## Contact
 
-For technical queries, refer to the development team or open an issue in the project repository.
-
-For clinical or compliance questions, escalate to the clinical safety officer.
+Technical: development team or repository issues.  
+Clinical / safety: clinical safety officer (see RACI in [docs/PLATFORM-HANDBOOK.md](./docs/PLATFORM-HANDBOOK.md) §5).
 
 ---
 
-*Aegis Health AI — Improving patient access. Reducing clinical pressure. Built for the NHS.*
+*Aegis Health AI — clearer navigation, explicit rules, built for accountable care.*

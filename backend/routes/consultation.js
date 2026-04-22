@@ -15,12 +15,9 @@
 const express = require('express');
 const { v4: uuidv4 } = require('uuid');
 const { runTriage, listAvailablePathways } = require('../engine/decisionEngine');
+const { consultationStore } = require('../store/consultationStore');
 
 const router = express.Router();
-
-// In-memory store for demo purposes.
-// In production this would be replaced with PostgreSQL queries.
-const consultationStore = new Map();
 
 /**
  * POST /api/consultation
@@ -107,19 +104,14 @@ router.post('/', (req, res) => {
 });
 
 /**
- * GET /api/consultation/:id
+ * GET /api/consultation/pathways/list
  *
- * Retrieve a stored consultation by its ID.
+ * Returns a list of all available clinical pathways.
+ * MUST be registered before /:id so "pathways" is not captured as an id.
  */
-router.get('/:id', (req, res) => {
-  const { id } = req.params;
-  const record = consultationStore.get(id);
-
-  if (!record) {
-    return res.status(404).json({ error: `Consultation not found: ${id}` });
-  }
-
-  return res.json(record);
+router.get('/pathways/list', (req, res) => {
+  const pathways = listAvailablePathways();
+  return res.json({ pathways });
 });
 
 /**
@@ -148,13 +140,19 @@ router.get('/', (req, res) => {
 });
 
 /**
- * GET /api/consultation/pathways/list
+ * GET /api/consultation/:id
  *
- * Returns a list of all available clinical pathways.
+ * Retrieve a stored consultation by its ID.
  */
-router.get('/pathways/list', (req, res) => {
-  const pathways = listAvailablePathways();
-  return res.json({ pathways });
+router.get('/:id', (req, res) => {
+  const { id } = req.params;
+  const record = consultationStore.get(id);
+
+  if (!record) {
+    return res.status(404).json({ error: `Consultation not found: ${id}` });
+  }
+
+  return res.json(record);
 });
 
 module.exports = router;
