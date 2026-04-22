@@ -1,0 +1,144 @@
+{
+  "_comment": "Clinical decision pathway for Sore Throat. Based on NICE NG84 and FeverPAIN/Centor scoring.",
+  "pathway": "sore_throat",
+  "label": "Sore Throat",
+  "applicableGenders": ["Male", "Female", "Other"],
+  "minimumAge": 5,
+  "maximumAge": null,
+  "questions": [
+    {
+      "id": "q1",
+      "text": "How long have you had a sore throat?",
+      "type": "select",
+      "options": ["Less than 3 days", "3–7 days", "More than 7 days"],
+      "required": true
+    },
+    {
+      "id": "q2",
+      "text": "Do you have difficulty swallowing?",
+      "type": "boolean",
+      "required": true
+    },
+    {
+      "id": "q3",
+      "text": "Do you have difficulty breathing or opening your mouth fully?",
+      "type": "boolean",
+      "required": true,
+      "redFlagHint": true
+    },
+    {
+      "id": "q4",
+      "text": "Do you have a fever (temperature above 38°C)?",
+      "type": "boolean",
+      "required": true
+    },
+    {
+      "id": "q5",
+      "text": "Have you noticed a skin rash?",
+      "type": "boolean",
+      "required": true
+    },
+    {
+      "id": "q6",
+      "text": "Do you have swollen glands in your neck?",
+      "type": "boolean",
+      "required": true
+    },
+    {
+      "id": "q7",
+      "text": "Have you coughed in the last 24 hours?",
+      "type": "boolean",
+      "required": true,
+      "clinicalNote": "Absence of cough increases likelihood of bacterial cause (Centor criterion)"
+    },
+    {
+      "id": "q8",
+      "text": "Can you see any white patches or pus on your tonsils?",
+      "type": "boolean",
+      "required": true
+    }
+  ],
+  "redFlags": [
+    {
+      "code": "RF_ST_001",
+      "condition": "q3 === true",
+      "description": "Difficulty breathing or trismus — possible peritonsillar abscess or epiglottitis",
+      "outcome": "emergency_999",
+      "message": "Difficulty breathing with a sore throat can be very serious. Call 999 or go to A&E immediately."
+    },
+    {
+      "code": "RF_ST_002",
+      "condition": "q2 === true && q4 === true && q1 === 'More than 7 days'",
+      "description": "Severe sore throat, difficulty swallowing, high fever lasting over 7 days — possible quinsy",
+      "outcome": "urgent_care",
+      "message": "Your symptoms suggest a possible serious throat infection. Please attend urgent care or A&E today."
+    },
+    {
+      "code": "RF_ST_003",
+      "condition": "q5 === true && q4 === true",
+      "description": "Sore throat with fever and rash — possible scarlet fever",
+      "outcome": "gp",
+      "message": "A rash with fever and sore throat needs GP assessment today — possible scarlet fever."
+    }
+  ],
+  "eligibilityRules": [
+    {
+      "id": "elig_1",
+      "condition": "q3 === false && q5 === false",
+      "eligible": true
+    },
+    {
+      "id": "elig_2",
+      "condition": "q5 === true",
+      "eligible": false,
+      "reason": "Rash present — not suitable for pharmacy treatment without GP assessment"
+    }
+  ],
+  "feverPainScore": {
+    "description": "FeverPAIN scoring to estimate likelihood of streptococcal infection",
+    "criteria": [
+      { "criterion": "Fever in last 24 hours (q4)", "score": 1 },
+      { "criterion": "Purulence — pus on tonsils (q8)", "score": 1 },
+      { "criterion": "Attend rapidly — within 3 days of onset (q1 = less than 3 days)", "score": 1 },
+      { "criterion": "Inflamed tonsils — swollen glands (q6)", "score": 1 },
+      { "criterion": "No cough or coryza (q7 = false)", "score": 1 }
+    ],
+    "scoring": [
+      { "score": "0–1", "recommendation": "self_care", "antibioticLikelihood": "13–18%" },
+      { "score": "2–3", "recommendation": "pharmacy_or_gp", "antibioticLikelihood": "34–40%" },
+      { "score": "4–5", "recommendation": "gp", "antibioticLikelihood": "62–65%" }
+    ]
+  },
+  "outcomeRules": [
+    {
+      "priority": 1,
+      "condition": "redFlagTriggered === true",
+      "outcome": "escalated_by_red_flag"
+    },
+    {
+      "priority": 2,
+      "condition": "feverPainScore >= 4",
+      "outcome": "gp",
+      "reason": "High FeverPAIN score — likely bacterial infection, antibiotic prescription likely needed"
+    },
+    {
+      "priority": 3,
+      "condition": "feverPainScore >= 2 && feverPainScore <= 3 && pharmacyEligible === true",
+      "outcome": "pharmacy",
+      "reason": "Moderate FeverPAIN score — pharmacy assessment appropriate"
+    },
+    {
+      "priority": 4,
+      "condition": "feverPainScore <= 1",
+      "outcome": "self_care",
+      "reason": "Low FeverPAIN score — likely viral, self-care recommended"
+    }
+  ],
+  "selfCareAdvice": "Rest and drink plenty of fluids. Paracetamol or ibuprofen for pain relief. Gargle with warm salt water. Throat lozenges may help.",
+  "pharmacyTreatmentOptions": [
+    "Throat lozenges / sprays for pain relief",
+    "Phenoxymethylpenicillin (if bacterial cause confirmed by pharmacist)",
+    "Amoxicillin (alternative)"
+  ],
+  "safetyNetAdvice": "Seek urgent help if: you have difficulty breathing, cannot swallow fluids, or symptoms rapidly worsen."
+}

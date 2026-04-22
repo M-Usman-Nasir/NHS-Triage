@@ -1,0 +1,130 @@
+{
+  "_comment": "Clinical decision pathway for Acute Otitis Media (ear infection). Based on NICE CG60.",
+  "pathway": "otitis_media",
+  "label": "Acute Otitis Media (Ear Infection)",
+  "applicableGenders": ["Male", "Female", "Other"],
+  "minimumAge": 1,
+  "maximumAge": null,
+  "questions": [
+    {
+      "id": "q1",
+      "text": "How long have you had ear pain?",
+      "type": "select",
+      "options": ["Less than 3 days", "3–7 days", "More than 7 days"],
+      "required": true
+    },
+    {
+      "id": "q2",
+      "text": "Do you have discharge coming from your ear?",
+      "type": "boolean",
+      "required": true
+    },
+    {
+      "id": "q3",
+      "text": "Do you have a fever (temperature above 38°C)?",
+      "type": "boolean",
+      "required": true
+    },
+    {
+      "id": "q4",
+      "text": "Do you have dizziness or problems with your balance?",
+      "type": "boolean",
+      "required": true,
+      "redFlagHint": true
+    },
+    {
+      "id": "q5",
+      "text": "Do you have any facial weakness or drooping?",
+      "type": "boolean",
+      "required": true,
+      "redFlagHint": true
+    },
+    {
+      "id": "q6",
+      "text": "Do you have swelling or redness behind the ear?",
+      "type": "boolean",
+      "required": true,
+      "redFlagHint": true
+    },
+    {
+      "id": "q7",
+      "text": "Have you had any recent hearing loss in the affected ear?",
+      "type": "boolean",
+      "required": true
+    },
+    {
+      "id": "q8",
+      "text": "Do you have a perforated eardrum (diagnosed previously)?",
+      "type": "boolean",
+      "required": true
+    }
+  ],
+  "redFlags": [
+    {
+      "code": "RF_OM_001",
+      "condition": "q5 === true",
+      "description": "Facial nerve weakness — possible facial nerve palsy from inner ear infection",
+      "outcome": "emergency_999",
+      "message": "Facial weakness is an emergency. Call 999 immediately."
+    },
+    {
+      "code": "RF_OM_002",
+      "condition": "q6 === true",
+      "description": "Post-auricular swelling/redness — possible mastoiditis",
+      "outcome": "emergency_999",
+      "message": "Swelling behind the ear may indicate mastoiditis. Go to A&E immediately."
+    },
+    {
+      "code": "RF_OM_003",
+      "condition": "q4 === true && q3 === true",
+      "description": "Dizziness with fever — possible inner ear infection or labyrinthitis",
+      "outcome": "urgent_care",
+      "message": "Dizziness and fever together need urgent medical assessment today."
+    }
+  ],
+  "eligibilityRules": [
+    {
+      "id": "elig_1",
+      "condition": "q8 === true && q2 === true",
+      "eligible": false,
+      "reason": "Ear discharge with known perforated eardrum — requires GP assessment before treatment"
+    },
+    {
+      "id": "elig_2",
+      "condition": "q1 === 'Less than 3 days' && q3 === false",
+      "eligible": false,
+      "reason": "Mild symptoms under 3 days without fever — self-care first approach recommended"
+    }
+  ],
+  "outcomeRules": [
+    {
+      "priority": 1,
+      "condition": "redFlagTriggered === true",
+      "outcome": "escalated_by_red_flag"
+    },
+    {
+      "priority": 2,
+      "condition": "q1 === 'Less than 3 days' && q3 === false",
+      "outcome": "self_care",
+      "reason": "Mild early-stage ear infection — watchful waiting with self-care"
+    },
+    {
+      "priority": 3,
+      "condition": "pharmacyEligible === false",
+      "outcome": "gp",
+      "reason": "Requires GP assessment"
+    },
+    {
+      "priority": 4,
+      "condition": "pharmacyEligible === true",
+      "outcome": "pharmacy",
+      "reason": "Acute otitis media eligible for pharmacy-led treatment"
+    }
+  ],
+  "selfCareAdvice": "Paracetamol or ibuprofen for pain relief. Warm compress against the ear. Most ear infections resolve within 3 days without antibiotics.",
+  "pharmacyTreatmentOptions": [
+    "Amoxicillin 500mg three times daily for 5 days",
+    "Clarithromycin 500mg twice daily for 5 days (penicillin allergy)"
+  ],
+  "safetyNetAdvice": "Return urgently if: swelling behind the ear, facial weakness, dizziness, or if a child becomes very unwell."
+}

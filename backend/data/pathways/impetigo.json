@@ -1,0 +1,137 @@
+{
+  "_comment": "Clinical decision pathway for Impetigo. Based on NICE CKS Impetigo guidance.",
+  "pathway": "impetigo",
+  "label": "Impetigo",
+  "applicableGenders": ["Male", "Female", "Other"],
+  "minimumAge": 1,
+  "maximumAge": null,
+  "questions": [
+    {
+      "id": "q1",
+      "text": "How long have you had the skin sores or rash?",
+      "type": "select",
+      "options": ["Less than 3 days", "3–7 days", "More than 7 days"],
+      "required": true
+    },
+    {
+      "id": "q2",
+      "text": "Where on your body are the sores? (Select all that apply)",
+      "type": "multiselect",
+      "options": ["Face", "Around the mouth/nose", "Arms or hands", "Legs", "Body/torso", "Widespread across multiple areas"],
+      "required": true
+    },
+    {
+      "id": "q3",
+      "text": "Do the sores look crusty, golden/yellow coloured, or weeping?",
+      "type": "boolean",
+      "required": true,
+      "clinicalNote": "Golden crusting is classic non-bullous impetigo"
+    },
+    {
+      "id": "q4",
+      "text": "Are there any fluid-filled blisters?",
+      "type": "boolean",
+      "required": true,
+      "clinicalNote": "Blisters suggest bullous impetigo — requires assessment"
+    },
+    {
+      "id": "q5",
+      "text": "Do you have a fever (temperature above 38°C)?",
+      "type": "boolean",
+      "required": true
+    },
+    {
+      "id": "q6",
+      "text": "Is the affected area rapidly spreading or getting larger quickly?",
+      "type": "boolean",
+      "required": true
+    },
+    {
+      "id": "q7",
+      "text": "Do you have any conditions that affect your immune system (e.g. diabetes, cancer, HIV, on steroids)?",
+      "type": "boolean",
+      "required": true
+    },
+    {
+      "id": "q8",
+      "text": "Are you pregnant?",
+      "type": "boolean",
+      "required": true
+    }
+  ],
+  "redFlags": [
+    {
+      "code": "RF_IMP_001",
+      "condition": "q5 === true && q6 === true",
+      "description": "Rapidly spreading impetigo with fever — possible ecthyma or systemic infection",
+      "outcome": "urgent_care",
+      "message": "Spreading skin infection with fever needs same-day urgent medical care."
+    },
+    {
+      "code": "RF_IMP_002",
+      "condition": "q7 === true",
+      "description": "Immunocompromised patient — higher risk of complications",
+      "outcome": "gp",
+      "message": "Skin infections in people with immune conditions require GP review."
+    }
+  ],
+  "eligibilityRules": [
+    {
+      "id": "elig_1",
+      "condition": "q4 === true",
+      "eligible": false,
+      "reason": "Bullous impetigo — requires GP assessment before treatment"
+    },
+    {
+      "id": "elig_2",
+      "condition": "q7 === true",
+      "eligible": false,
+      "reason": "Immunocompromised — requires GP management"
+    },
+    {
+      "id": "elig_3",
+      "condition": "q8 === true",
+      "eligible": false,
+      "reason": "Pregnancy — certain antibiotics not suitable, requires GP assessment"
+    },
+    {
+      "id": "elig_4",
+      "condition": "q3 === true && q4 === false && q7 === false",
+      "eligible": true,
+      "reason": "Non-bullous impetigo without complicating factors — pharmacy eligible"
+    }
+  ],
+  "outcomeRules": [
+    {
+      "priority": 1,
+      "condition": "redFlagTriggered === true",
+      "outcome": "escalated_by_red_flag"
+    },
+    {
+      "priority": 2,
+      "condition": "pharmacyEligible === false",
+      "outcome": "gp",
+      "reason": "Requires GP assessment"
+    },
+    {
+      "priority": 3,
+      "condition": "q2_areas_count <= 1 && pharmacyEligible === true",
+      "outcome": "pharmacy",
+      "reason": "Localised non-bullous impetigo — topical treatment appropriate"
+    },
+    {
+      "priority": 4,
+      "condition": "q2_areas_count > 1 && pharmacyEligible === true",
+      "outcome": "pharmacy",
+      "reason": "Widespread non-bullous impetigo — oral antibiotic treatment via pharmacy"
+    }
+  ],
+  "selfCareAdvice": "Keep sores clean. Do not share towels or clothing. Avoid school/work until 48 hours after starting treatment or until sores have crusted over.",
+  "pharmacyTreatmentOptions": [
+    "Hydrogen peroxide 1% cream (mild localised impetigo)",
+    "Fusidic acid 2% cream applied 3 times daily for 5 days (localised)",
+    "Flucloxacillin 500mg four times daily for 5 days (widespread)",
+    "Clarithromycin 250mg twice daily for 5 days (penicillin allergy)"
+  ],
+  "safetyNetAdvice": "Return if: sores spread significantly, fever develops, you feel generally unwell, or there is no improvement after 7 days of treatment."
+}

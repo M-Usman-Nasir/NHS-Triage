@@ -1,0 +1,142 @@
+{
+  "_comment": "Clinical decision pathway for Sinusitis. Based on NICE CG NG107.",
+  "pathway": "sinusitis",
+  "label": "Sinusitis",
+  "applicableGenders": ["Male", "Female", "Other"],
+  "minimumAge": 12,
+  "maximumAge": null,
+  "questions": [
+    {
+      "id": "q1",
+      "text": "How long have you had sinus symptoms?",
+      "type": "select",
+      "options": ["Less than 10 days", "10 days to 12 weeks", "More than 12 weeks"],
+      "required": true
+    },
+    {
+      "id": "q2",
+      "text": "Do you have facial pain or pressure around your cheeks, forehead, or eyes?",
+      "type": "boolean",
+      "required": true
+    },
+    {
+      "id": "q3",
+      "text": "Do you have a blocked or runny nose?",
+      "type": "boolean",
+      "required": true
+    },
+    {
+      "id": "q4",
+      "text": "Do you have a fever (temperature above 38°C)?",
+      "type": "boolean",
+      "required": true
+    },
+    {
+      "id": "q5",
+      "text": "Do you have severe headache or pain that is worsening?",
+      "type": "boolean",
+      "required": true
+    },
+    {
+      "id": "q6",
+      "text": "Do you have any visual changes, double vision, or eye swelling?",
+      "type": "boolean",
+      "required": true,
+      "redFlagHint": true
+    },
+    {
+      "id": "q7",
+      "text": "Do you have neck stiffness or sensitivity to light?",
+      "type": "boolean",
+      "required": true,
+      "redFlagHint": true
+    },
+    {
+      "id": "q8",
+      "text": "Have you had sinusitis before? How many times in the last year?",
+      "type": "select",
+      "options": ["First time", "1–2 previous episodes", "3 or more previous episodes"],
+      "required": true
+    },
+    {
+      "id": "q9",
+      "text": "Do you have any dental pain or recent dental work?",
+      "type": "boolean",
+      "required": false
+    }
+  ],
+  "redFlags": [
+    {
+      "code": "RF_SIN_001",
+      "condition": "q6 === true",
+      "description": "Visual changes or periorbital swelling — possible orbital cellulitis or intracranial complication",
+      "outcome": "emergency_999",
+      "message": "Eye swelling or vision changes with sinusitis is a medical emergency. Call 999 immediately."
+    },
+    {
+      "code": "RF_SIN_002",
+      "condition": "q7 === true",
+      "description": "Neck stiffness or photophobia — possible meningitis",
+      "outcome": "emergency_999",
+      "message": "Neck stiffness and light sensitivity are emergency symptoms. Call 999 immediately."
+    },
+    {
+      "code": "RF_SIN_003",
+      "condition": "q5 === true && q4 === true",
+      "description": "Severe worsening headache with fever — possible intracranial spread",
+      "outcome": "urgent_care",
+      "message": "Severe headache with fever needs urgent medical assessment today."
+    }
+  ],
+  "eligibilityRules": [
+    {
+      "id": "elig_1",
+      "condition": "q1 === 'Less than 10 days'",
+      "eligible": false,
+      "reason": "Symptoms under 10 days are likely viral — self-care is appropriate first"
+    },
+    {
+      "id": "elig_2",
+      "condition": "q1 === 'More than 12 weeks'",
+      "eligible": false,
+      "reason": "Chronic sinusitis (>12 weeks) requires GP assessment and possibly ENT referral"
+    },
+    {
+      "id": "elig_3",
+      "condition": "q8 === '3 or more previous episodes'",
+      "eligible": false,
+      "reason": "Recurrent sinusitis requires GP review"
+    }
+  ],
+  "outcomeRules": [
+    {
+      "priority": 1,
+      "condition": "redFlagTriggered === true",
+      "outcome": "escalated_by_red_flag"
+    },
+    {
+      "priority": 2,
+      "condition": "q1 === 'Less than 10 days'",
+      "outcome": "self_care",
+      "reason": "Likely viral — self-care recommended for first 10 days"
+    },
+    {
+      "priority": 3,
+      "condition": "q1 === 'More than 12 weeks'",
+      "outcome": "gp",
+      "reason": "Chronic sinusitis requires GP management"
+    },
+    {
+      "priority": 4,
+      "condition": "pharmacyEligible === true",
+      "outcome": "pharmacy",
+      "reason": "Acute bacterial sinusitis (10 days to 12 weeks) — pharmacy referral appropriate"
+    }
+  ],
+  "selfCareAdvice": "Steam inhalation, saline nasal spray, rest, paracetamol/ibuprofen. Most viral sinusitis resolves within 2–3 weeks.",
+  "pharmacyTreatmentOptions": [
+    "Amoxicillin 500mg three times daily for 5 days",
+    "Doxycycline 200mg day 1 then 100mg daily for 4 days (if penicillin allergy)"
+  ],
+  "safetyNetAdvice": "Return if symptoms worsen rapidly, you develop eye swelling, severe headache, neck stiffness, or symptoms persist beyond 3 weeks."
+}

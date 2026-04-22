@@ -1,0 +1,151 @@
+{
+  "_comment": "Clinical decision pathway for Shingles (Herpes Zoster). Based on NICE CKS Shingles guidance.",
+  "pathway": "shingles",
+  "label": "Shingles (Herpes Zoster)",
+  "applicableGenders": ["Male", "Female", "Other"],
+  "minimumAge": 18,
+  "maximumAge": null,
+  "questions": [
+    {
+      "id": "q1",
+      "text": "When did the rash first appear?",
+      "type": "select",
+      "options": ["Today (within 24 hours)", "1–2 days ago", "3 days ago", "More than 3 days ago"],
+      "required": true,
+      "clinicalNote": "Antiviral treatment is most effective within 72 hours of rash onset"
+    },
+    {
+      "id": "q2",
+      "text": "Is the rash only on ONE side of your body?",
+      "type": "boolean",
+      "required": true,
+      "clinicalNote": "Unilateral rash is characteristic of shingles"
+    },
+    {
+      "id": "q3",
+      "text": "Where is the rash located?",
+      "type": "select",
+      "options": ["Torso / chest / back", "Face or forehead", "Around one eye", "Scalp", "Arm or leg"],
+      "required": true
+    },
+    {
+      "id": "q4",
+      "text": "Do you have pain, burning, or tingling in the same area as the rash?",
+      "type": "boolean",
+      "required": true
+    },
+    {
+      "id": "q5",
+      "text": "Do you have any pain or changes in or around your eye?",
+      "type": "boolean",
+      "required": true,
+      "redFlagHint": true
+    },
+    {
+      "id": "q6",
+      "text": "Do you have any ear pain, hearing problems, or a rash inside your ear?",
+      "type": "boolean",
+      "required": true,
+      "clinicalNote": "Ramsay Hunt syndrome — shingles affecting the ear"
+    },
+    {
+      "id": "q7",
+      "text": "Are you immunocompromised? (e.g. HIV, cancer treatment, on immunosuppressants)",
+      "type": "boolean",
+      "required": true
+    },
+    {
+      "id": "q8",
+      "text": "Are you pregnant?",
+      "type": "boolean",
+      "required": true
+    }
+  ],
+  "redFlags": [
+    {
+      "code": "RF_SHG_001",
+      "condition": "q5 === true || q3 === 'Around one eye'",
+      "description": "Ophthalmic zoster — shingles involving the eye, risk of vision loss",
+      "outcome": "emergency_999",
+      "message": "Shingles affecting your eye is a medical emergency. Go to A&E immediately to protect your sight."
+    },
+    {
+      "code": "RF_SHG_002",
+      "condition": "q6 === true",
+      "description": "Ramsay Hunt syndrome — shingles affecting the ear/facial nerve",
+      "outcome": "urgent_care",
+      "message": "Ear pain and hearing changes with shingles (Ramsay Hunt syndrome) requires same-day urgent care."
+    },
+    {
+      "code": "RF_SHG_003",
+      "condition": "q7 === true",
+      "description": "Immunocompromised patient — higher risk of complications, possible IV antiviral needed",
+      "outcome": "gp",
+      "message": "Shingles in people with immune conditions requires urgent GP assessment today."
+    },
+    {
+      "code": "RF_SHG_004",
+      "condition": "q8 === true",
+      "description": "Shingles in pregnancy — requires obstetric and infectious disease review",
+      "outcome": "urgent_care",
+      "message": "Shingles during pregnancy requires same-day assessment. Please go to your maternity unit or urgent care."
+    }
+  ],
+  "eligibilityRules": [
+    {
+      "id": "elig_1",
+      "condition": "q1 === 'More than 3 days ago'",
+      "eligible": false,
+      "reason": "Rash onset beyond 72-hour window — antiviral treatment may not be effective, GP review needed"
+    },
+    {
+      "id": "elig_2",
+      "condition": "q7 === true",
+      "eligible": false,
+      "reason": "Immunocompromised — requires GP or specialist management"
+    },
+    {
+      "id": "elig_3",
+      "condition": "q8 === true",
+      "eligible": false,
+      "reason": "Pregnancy — requires specialist review"
+    },
+    {
+      "id": "elig_4",
+      "condition": "q2 === true && q1 !== 'More than 3 days ago' && q7 === false && q8 === false",
+      "eligible": true,
+      "reason": "Uncomplicated shingles within treatment window — pharmacy eligible"
+    }
+  ],
+  "outcomeRules": [
+    {
+      "priority": 1,
+      "condition": "redFlagTriggered === true",
+      "outcome": "escalated_by_red_flag"
+    },
+    {
+      "priority": 2,
+      "condition": "pharmacyEligible === false && q1 !== 'More than 3 days ago'",
+      "outcome": "gp",
+      "reason": "Requires GP assessment"
+    },
+    {
+      "priority": 3,
+      "condition": "q1 === 'More than 3 days ago'",
+      "outcome": "gp",
+      "reason": "Outside antiviral window — GP to assess need for treatment and pain management"
+    },
+    {
+      "priority": 4,
+      "condition": "pharmacyEligible === true",
+      "outcome": "pharmacy",
+      "reason": "Uncomplicated shingles within 72 hours — urgent pharmacy antiviral treatment"
+    }
+  ],
+  "selfCareAdvice": null,
+  "pharmacyTreatmentOptions": [
+    "Aciclovir 800mg five times daily for 7 days",
+    "Valaciclovir 1g three times daily for 7 days (preferred where available)"
+  ],
+  "safetyNetAdvice": "Return immediately if: eye pain or visual changes develop, ear symptoms worsen, or you feel very unwell. Postherpetic neuralgia (nerve pain after rash resolves) is common — GP follow-up advised."
+}

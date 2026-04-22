@@ -1,0 +1,192 @@
+{
+  "_comment": "5 completed mock consultations covering each possible triage outcome. For dev/demo use only.",
+  "consultations": [
+    {
+      "id": "c0000001-0000-0000-0000-000000000001",
+      "patient": {
+        "id": "p0000001-0000-0000-0000-000000000001",
+        "fullName": "Sarah Mitchell",
+        "age": 33,
+        "gender": "Female"
+      },
+      "sessionToken": "sess_demo_001",
+      "pathway": "uti",
+      "pathwayLabel": "Uncomplicated UTI",
+      "startedAt": "2026-04-19T09:12:00Z",
+      "completedAt": "2026-04-19T09:19:00Z",
+      "symptoms": [
+        "painful urination",
+        "frequent urination",
+        "lower abdominal pain"
+      ],
+      "answers": {
+        "q1_duration": "3 days",
+        "q2_blood_in_urine": false,
+        "q3_fever": false,
+        "q4_back_or_loin_pain": false,
+        "q5_pregnant": false,
+        "q6_catheter": false,
+        "q7_allergies": "No known allergies",
+        "q8_recent_antibiotics": false
+      },
+      "redFlagTriggered": false,
+      "redFlagReasons": [],
+      "pharmacyEligible": true,
+      "outcome": "pharmacy",
+      "outcomeLabel": "Pharmacy Referral",
+      "outcomeReason": "Symptoms consistent with uncomplicated UTI. Patient meets all pharmacy eligibility criteria. No red flags identified.",
+      "summaryText": "Patient Sarah Mitchell (Female, 33) presents with a 3-day history of painful urination, increased urinary frequency, and lower abdominal discomfort. No fever, no loin/back pain, not pregnant, no catheter. No known allergies. No recent antibiotic use. CLINICAL DECISION: Uncomplicated UTI. OUTCOME: Pharmacy referral under Pharmacy First. Recommended treatment: Trimethoprim 200mg BD for 7 days or Nitrofurantoin 100mg MR BD for 5 days — subject to pharmacist assessment and local antibiogram. Safety net: Return if symptoms worsen, fever develops, or no improvement within 48 hours.",
+      "status": "completed"
+    },
+    {
+      "id": "c0000001-0000-0000-0000-000000000002",
+      "patient": {
+        "id": "p0000001-0000-0000-0000-000000000002",
+        "fullName": "James Parker",
+        "age": 74,
+        "gender": "Male"
+      },
+      "sessionToken": "sess_demo_002",
+      "pathway": "escalated",
+      "pathwayLabel": "Emergency Escalation",
+      "startedAt": "2026-04-16T14:05:00Z",
+      "completedAt": "2026-04-16T14:07:00Z",
+      "symptoms": [
+        "chest pain",
+        "shortness of breath",
+        "sweating",
+        "left arm pain"
+      ],
+      "answers": {
+        "q1_onset": "sudden",
+        "q2_chest_pain": true,
+        "q3_radiating_pain": "left arm",
+        "q4_shortness_of_breath": true,
+        "q5_sweating": true
+      },
+      "redFlagTriggered": true,
+      "redFlagReasons": [
+        {
+          "code": "RED_FLAG_CARDIAC",
+          "description": "Sudden chest pain radiating to left arm with shortness of breath — possible acute coronary syndrome"
+        }
+      ],
+      "pharmacyEligible": false,
+      "outcome": "emergency_999",
+      "outcomeLabel": "Emergency 999",
+      "outcomeReason": "RED FLAG: Cardiac emergency symptoms detected. Patient must call 999 immediately.",
+      "summaryText": "EMERGENCY ALERT — Patient James Parker (Male, 74) presents with sudden onset chest pain radiating to left arm, shortness of breath, and sweating. RED FLAG TRIGGERED: Possible acute cardiac event. OUTCOME: 999 Emergency Services. Patient has been instructed to call 999 immediately, sit down, and not eat or drink. Aspirin 300mg advised if not allergic and available. Do not drive to hospital.",
+      "status": "completed"
+    },
+    {
+      "id": "c0000001-0000-0000-0000-000000000003",
+      "patient": {
+        "id": "p0000001-0000-0000-0000-000000000003",
+        "fullName": "Aisha Patel",
+        "age": 37,
+        "gender": "Female"
+      },
+      "sessionToken": "sess_demo_003",
+      "pathway": "sore_throat",
+      "pathwayLabel": "Sore Throat",
+      "startedAt": "2026-04-20T11:30:00Z",
+      "completedAt": "2026-04-20T11:38:00Z",
+      "symptoms": [
+        "severe sore throat",
+        "high fever",
+        "difficulty swallowing",
+        "red rash on chest"
+      ],
+      "answers": {
+        "q1_duration": "5 days",
+        "q2_difficulty_swallowing": true,
+        "q3_difficulty_breathing": false,
+        "q4_temperature": "38.9°C",
+        "q5_rash": true,
+        "q5_rash_location": "chest and abdomen",
+        "q6_tonsil_swelling": true
+      },
+      "redFlagTriggered": false,
+      "redFlagReasons": [],
+      "pharmacyEligible": false,
+      "outcome": "gp",
+      "outcomeLabel": "GP Referral",
+      "outcomeReason": "Sore throat with high fever, rash, and difficulty swallowing for 5 days suggests possible scarlet fever or severe bacterial tonsillitis. Requires GP assessment.",
+      "summaryText": "Patient Aisha Patel (Female, 37) presents with a 5-day history of severe sore throat, fever (38.9°C), difficulty swallowing, and a red rash on the chest and abdomen. Tonsils reported as swollen. No breathing difficulty. CLINICAL DECISION: Presentation consistent with possible scarlet fever or peritonsillar abscess. OUTCOME: GP referral required. Pharmacy treatment not clinically appropriate. GP to consider throat swab, blood tests, and antibiotic prescription. Safety net: If breathing becomes difficult or patient unable to swallow fluids, attend A&E immediately.",
+      "status": "completed"
+    },
+    {
+      "id": "c0000001-0000-0000-0000-000000000004",
+      "patient": {
+        "id": "p0000001-0000-0000-0000-000000000007",
+        "fullName": "Emma Wilson",
+        "age": 24,
+        "gender": "Female"
+      },
+      "sessionToken": "sess_demo_004",
+      "pathway": "sinusitis",
+      "pathwayLabel": "Sinusitis",
+      "startedAt": "2026-04-18T15:20:00Z",
+      "completedAt": "2026-04-18T15:27:00Z",
+      "symptoms": [
+        "blocked nose",
+        "facial pressure around cheeks",
+        "mild headache"
+      ],
+      "answers": {
+        "q1_duration": "2 days",
+        "q2_fever": false,
+        "q3_facial_pain_severity": "mild",
+        "q4_vision_changes": false,
+        "q5_neck_stiffness": false,
+        "q6_previous_episodes": "No",
+        "q7_dental_pain": false
+      },
+      "redFlagTriggered": false,
+      "redFlagReasons": [],
+      "pharmacyEligible": false,
+      "outcome": "self_care",
+      "outcomeLabel": "Self-Care Advice",
+      "outcomeReason": "Mild sinusitis symptoms for only 2 days. Likely viral. Self-care is appropriate at this stage.",
+      "summaryText": "Patient Emma Wilson (Female, 24) presents with 2-day history of nasal congestion, mild facial pressure around the cheeks, and mild headache. No fever, no visual disturbances, no neck stiffness, no dental pain. First episode. CLINICAL DECISION: Mild, early-stage viral sinusitis. OUTCOME: Self-care advice. Recommended: Steam inhalation twice daily, isotonic saline nasal spray, paracetamol or ibuprofen for pain relief. Adequate hydration. Safety net: If symptoms worsen significantly, fever develops, symptoms persist beyond 10 days, or new severe headache occurs, seek further medical advice.",
+      "status": "completed"
+    },
+    {
+      "id": "c0000001-0000-0000-0000-000000000005",
+      "patient": {
+        "id": "p0000001-0000-0000-0000-000000000009",
+        "fullName": "Chloe Davies",
+        "age": 30,
+        "gender": "Female"
+      },
+      "sessionToken": "sess_demo_005",
+      "pathway": "shingles",
+      "pathwayLabel": "Shingles",
+      "startedAt": "2026-04-21T08:45:00Z",
+      "completedAt": "2026-04-21T08:53:00Z",
+      "symptoms": [
+        "painful rash on one side of body",
+        "blistering skin",
+        "burning sensation",
+        "nerve pain"
+      ],
+      "answers": {
+        "q1_rash_onset": "today",
+        "q2_rash_location": "left torso",
+        "q3_rash_bilateral": false,
+        "q4_eye_involvement": false,
+        "q5_immunosuppressed": false,
+        "q6_pregnant": false,
+        "q7_within_72_hours": true
+      },
+      "redFlagTriggered": false,
+      "redFlagReasons": [],
+      "pharmacyEligible": true,
+      "outcome": "pharmacy",
+      "outcomeLabel": "Urgent Pharmacy Referral",
+      "outcomeReason": "Shingles presentation within 72-hour antiviral treatment window. Urgent pharmacy referral for antiviral therapy.",
+      "summaryText": "Patient Chloe Davies (Female, 30) presents with same-day onset of unilateral painful rash and blistering on left torso with burning/nerve pain. No eye involvement. Not immunocompromised. Not pregnant. WITHIN 72-HOUR TREATMENT WINDOW. CLINICAL DECISION: Shingles (herpes zoster). OUTCOME: Urgent pharmacy referral. Antiviral treatment must be initiated within 72 hours of rash onset for maximum efficacy. Recommended: Aciclovir 800mg five times daily for 7 days (subject to pharmacist assessment). Pain management: Paracetamol / Ibuprofen. Safety net: If eye pain or visual changes develop, attend A&E immediately — risk of ophthalmic zoster.",
+      "status": "completed"
+    }
+  ]
+}

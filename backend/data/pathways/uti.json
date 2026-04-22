@@ -1,0 +1,138 @@
+{
+  "_comment": "Clinical decision pathway for Uncomplicated UTI. Based on NICE CG149 and Pharmacy First guidance.",
+  "pathway": "uti",
+  "label": "Uncomplicated Urinary Tract Infection (UTI)",
+  "applicableGenders": ["Female"],
+  "minimumAge": 16,
+  "maximumAge": 64,
+  "questions": [
+    {
+      "id": "q1",
+      "text": "How long have you had these symptoms?",
+      "type": "select",
+      "options": ["Less than 24 hours", "1–3 days", "4–7 days", "More than 7 days"],
+      "required": true
+    },
+    {
+      "id": "q2",
+      "text": "Do you have blood in your urine?",
+      "type": "boolean",
+      "required": true
+    },
+    {
+      "id": "q3",
+      "text": "Do you have a fever (temperature above 38°C)?",
+      "type": "boolean",
+      "required": true
+    },
+    {
+      "id": "q4",
+      "text": "Do you have pain in your back or side (loin pain)?",
+      "type": "boolean",
+      "required": true
+    },
+    {
+      "id": "q5",
+      "text": "Are you pregnant or could you be pregnant?",
+      "type": "boolean",
+      "required": true
+    },
+    {
+      "id": "q6",
+      "text": "Do you have a urinary catheter?",
+      "type": "boolean",
+      "required": true
+    },
+    {
+      "id": "q7",
+      "text": "Have you taken antibiotics for a UTI in the last 3 months?",
+      "type": "boolean",
+      "required": true
+    },
+    {
+      "id": "q8",
+      "text": "Do you have any known kidney problems or recurring UTIs (3+ per year)?",
+      "type": "boolean",
+      "required": true
+    },
+    {
+      "id": "q9",
+      "text": "Do you have any drug allergies? If yes, please specify.",
+      "type": "text",
+      "required": false
+    }
+  ],
+  "redFlags": [
+    {
+      "code": "RF_UTI_001",
+      "condition": "q3 === true && q4 === true",
+      "description": "Fever with loin/back pain — possible pyelonephritis (kidney infection)",
+      "outcome": "urgent_care",
+      "message": "Your symptoms may indicate a kidney infection. Please seek urgent medical attention today."
+    },
+    {
+      "code": "RF_UTI_002",
+      "condition": "q5 === true",
+      "description": "Pregnant patient with UTI symptoms — requires GP management",
+      "outcome": "gp",
+      "message": "UTI during pregnancy requires prompt GP assessment. Please contact your GP or midwife today."
+    },
+    {
+      "code": "RF_UTI_003",
+      "condition": "q6 === true",
+      "description": "Catheter-associated UTI — not suitable for pharmacy treatment",
+      "outcome": "gp",
+      "message": "Catheter-related infections require GP or specialist review."
+    }
+  ],
+  "eligibilityRules": [
+    {
+      "id": "elig_1",
+      "condition": "gender === 'Female' && age >= 16 && age <= 64",
+      "eligible": true
+    },
+    {
+      "id": "elig_2",
+      "condition": "q7 === true",
+      "eligible": false,
+      "reason": "Recent antibiotic use may indicate treatment resistance — GP review required"
+    },
+    {
+      "id": "elig_3",
+      "condition": "q8 === true",
+      "eligible": false,
+      "reason": "Recurrent UTIs or kidney problems require GP assessment"
+    }
+  ],
+  "outcomeRules": [
+    {
+      "priority": 1,
+      "condition": "redFlagTriggered === true",
+      "outcome": "escalated_by_red_flag"
+    },
+    {
+      "priority": 2,
+      "condition": "pharmacyEligible === false",
+      "outcome": "gp",
+      "reason": "Ineligible for pharmacy treatment — GP review required"
+    },
+    {
+      "priority": 3,
+      "condition": "q1 === 'More than 7 days'",
+      "outcome": "gp",
+      "reason": "Prolonged symptoms — GP assessment needed"
+    },
+    {
+      "priority": 4,
+      "condition": "pharmacyEligible === true",
+      "outcome": "pharmacy",
+      "reason": "Meets all criteria for Pharmacy First UTI service"
+    }
+  ],
+  "selfCareAdvice": null,
+  "pharmacyTreatmentOptions": [
+    "Trimethoprim 200mg twice daily for 7 days",
+    "Nitrofurantoin MR 100mg twice daily for 5 days"
+  ],
+  "safetyNetAdvice": "Return or seek further help if: fever develops, symptoms worsen, or no improvement within 48 hours of treatment."
+}

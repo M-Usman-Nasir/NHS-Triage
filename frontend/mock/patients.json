@@ -1,0 +1,140 @@
+{
+  "_comment": "Mock patient records for Aegis Health AI — development and demo use only",
+  "patients": [
+    {
+      "id": "p0000001-0000-0000-0000-000000000001",
+      "fullName": "Sarah Mitchell",
+      "dateOfBirth": "1992-03-14",
+      "age": 33,
+      "gender": "Female",
+      "postcode": "SW1A 1AA",
+      "phone": "07700900001",
+      "email": "sarah.mitchell@example.com",
+      "lastConsultation": {
+        "date": "2026-04-19",
+        "pathway": "uti",
+        "outcome": "pharmacy",
+        "id": "c0000001-0000-0000-0000-000000000001"
+      }
+    },
+    {
+      "id": "p0000001-0000-0000-0000-000000000002",
+      "fullName": "James Parker",
+      "dateOfBirth": "1951-11-22",
+      "age": 74,
+      "gender": "Male",
+      "postcode": "M1 1AE",
+      "phone": "07700900002",
+      "email": "james.parker@example.com",
+      "lastConsultation": {
+        "date": "2026-04-16",
+        "pathway": "sore_throat",
+        "outcome": "emergency_999",
+        "id": "c0000001-0000-0000-0000-000000000002"
+      }
+    },
+    {
+      "id": "p0000001-0000-0000-0000-000000000003",
+      "fullName": "Aisha Patel",
+      "dateOfBirth": "1988-07-05",
+      "age": 37,
+      "gender": "Female",
+      "postcode": "B1 1BB",
+      "phone": "07700900003",
+      "email": "aisha.patel@example.com",
+      "lastConsultation": {
+        "date": "2026-04-20",
+        "pathway": "sore_throat",
+        "outcome": "gp",
+        "id": "c0000001-0000-0000-0000-000000000003"
+      }
+    },
+    {
+      "id": "p0000001-0000-0000-0000-000000000004",
+      "fullName": "Tom Henderson",
+      "dateOfBirth": "1975-01-30",
+      "age": 51,
+      "gender": "Male",
+      "postcode": "LS1 1AB",
+      "phone": "07700900004",
+      "email": "tom.henderson@example.com",
+      "lastConsultation": null
+    },
+    {
+      "id": "p0000001-0000-0000-0000-000000000005",
+      "fullName": "Fatima Al-Hassan",
+      "dateOfBirth": "2000-09-18",
+      "age": 25,
+      "gender": "Female",
+      "postcode": "E1 6AN",
+      "phone": "07700900005",
+      "email": "fatima.alhassan@example.com",
+      "lastConsultation": null
+    },
+    {
+      "id": "p0000001-0000-0000-0000-000000000006",
+      "fullName": "David Chen",
+      "dateOfBirth": "1965-06-12",
+      "age": 60,
+      "gender": "Male",
+      "postcode": "BS1 4DJ",
+      "phone": "07700900006",
+      "email": "david.chen@example.com",
+      "lastConsultation": null
+    },
+    {
+      "id": "p0000001-0000-0000-0000-000000000007",
+      "fullName": "Emma Wilson",
+      "dateOfBirth": "2001-04-25",
+      "age": 24,
+      "gender": "Female",
+      "postcode": "OX1 1NP",
+      "phone": "07700900007",
+      "email": "emma.wilson@example.com",
+      "lastConsultation": {
+        "date": "2026-04-18",
+        "pathway": "sinusitis",
+        "outcome": "self_care",
+        "id": "c0000001-0000-0000-0000-000000000004"
+      }
+    },
+    {
+      "id": "p0000001-0000-0000-0000-000000000008",
+      "fullName": "Robert Okafor",
+      "dateOfBirth": "1983-12-03",
+      "age": 42,
+      "gender": "Male",
+      "postcode": "NE1 7RU",
+      "phone": "07700900008",
+      "email": "robert.okafor@example.com",
+      "lastConsultation": null
+    },
+    {
+      "id": "p0000001-0000-0000-0000-000000000009",
+      "fullName": "Chloe Davies",
+      "dateOfBirth": "1995-08-17",
+      "age": 30,
+      "gender": "Female",
+      "postcode": "CF10 1EP",
+      "phone": "07700900009",
+      "email": "chloe.davies@example.com",
+      "lastConsultation": {
+        "date": "2026-04-21",
+        "pathway": "shingles",
+        "outcome": "pharmacy",
+        "id": "c0000001-0000-0000-0000-000000000005"
+      }
+    },
+    {
+      "id": "p0000001-0000-0000-0000-000000000010",
+      "fullName": "Mohammed Iqbal",
+      "dateOfBirth": "1970-02-08",
+      "age": 56,
+      "gender": "Male",
+      "postcode": "BB1 1AA",
+      "phone": "07700900010",
+      "email": "mohammed.iqbal@example.com",
+      "lastConsultation": null
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+
+# Next.js (frontend)
+.next/
+out/
+
+# Build / caches
+*.tsbuildinfo
+.turbo/
+
+# Environment and secrets (keep tracked examples)
+.env
+.env.*
+!.env.example
+
+# Logs and debug
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Testing / coverage
+coverage/
+.nyc_output/
+
+# Runtime / local data (adjust if you commit specific local DBs)
+*.sqlite
+*.sqlite3
+*.db
+
+# Vercel / deploy tooling
+.vercel/
+
+# OS
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Editors
+.idea/
+*.swp
+*.swo
+*~

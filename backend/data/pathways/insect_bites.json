@@ -1,0 +1,137 @@
+{
+  "_comment": "Clinical decision pathway for Infected Insect Bites. Based on NICE CKS and Pharmacy First criteria.",
+  "pathway": "insect_bites",
+  "label": "Infected Insect Bites",
+  "applicableGenders": ["Male", "Female", "Other"],
+  "minimumAge": 1,
+  "maximumAge": null,
+  "questions": [
+    {
+      "id": "q1",
+      "text": "When were you bitten?",
+      "type": "select",
+      "options": ["Within the last 24 hours", "1–3 days ago", "4–7 days ago", "More than 7 days ago"],
+      "required": true
+    },
+    {
+      "id": "q2",
+      "text": "Is the bite area red, swollen, warm, or oozing?",
+      "type": "boolean",
+      "required": true
+    },
+    {
+      "id": "q3",
+      "text": "Is the redness spreading beyond the immediate bite area?",
+      "type": "boolean",
+      "required": true,
+      "clinicalNote": "Spreading redness (erythema) suggests cellulitis"
+    },
+    {
+      "id": "q4",
+      "text": "Do you have a fever (temperature above 38°C) or feel generally unwell?",
+      "type": "boolean",
+      "required": true
+    },
+    {
+      "id": "q5",
+      "text": "Is there a red line tracking up from the bite toward your body?",
+      "type": "boolean",
+      "required": true,
+      "redFlagHint": true
+    },
+    {
+      "id": "q6",
+      "text": "Do you have difficulty breathing, swelling of the face or throat, or a severe rash all over your body?",
+      "type": "boolean",
+      "required": true,
+      "redFlagHint": true
+    },
+    {
+      "id": "q7",
+      "text": "Were you bitten while abroad (possible exotic tick or insect bite)?",
+      "type": "boolean",
+      "required": true
+    },
+    {
+      "id": "q8",
+      "text": "Do you have any known allergies to antibiotics?",
+      "type": "text",
+      "required": false
+    }
+  ],
+  "redFlags": [
+    {
+      "code": "RF_IB_001",
+      "condition": "q6 === true",
+      "description": "Anaphylaxis — breathing difficulty, facial/throat swelling, widespread rash",
+      "outcome": "emergency_999",
+      "message": "These symptoms could be anaphylaxis — a life-threatening allergic reaction. Call 999 immediately."
+    },
+    {
+      "code": "RF_IB_002",
+      "condition": "q5 === true",
+      "description": "Red line tracking from bite — possible lymphangitis (blood poisoning)",
+      "outcome": "emergency_999",
+      "message": "A red line spreading from a bite is a medical emergency. Go to A&E or call 999 immediately."
+    },
+    {
+      "code": "RF_IB_003",
+      "condition": "q4 === true && q3 === true",
+      "description": "Spreading cellulitis with systemic infection signs",
+      "outcome": "urgent_care",
+      "message": "Spreading infection with fever needs same-day medical assessment."
+    },
+    {
+      "code": "RF_IB_004",
+      "condition": "q7 === true",
+      "description": "Bite from abroad — possible tick-borne illness or tropical disease",
+      "outcome": "gp",
+      "message": "Bites from abroad may carry tropical diseases. Please see your GP today."
+    }
+  ],
+  "eligibilityRules": [
+    {
+      "id": "elig_1",
+      "condition": "q2 === true && q3 === false && q4 === false",
+      "eligible": true,
+      "reason": "Localised bite infection without spreading or systemic signs — pharmacy eligible"
+    },
+    {
+      "id": "elig_2",
+      "condition": "q7 === true",
+      "eligible": false,
+      "reason": "Travel-associated bite — requires GP review"
+    }
+  ],
+  "outcomeRules": [
+    {
+      "priority": 1,
+      "condition": "redFlagTriggered === true",
+      "outcome": "escalated_by_red_flag"
+    },
+    {
+      "priority": 2,
+      "condition": "q2 === false",
+      "outcome": "self_care",
+      "reason": "No signs of infection — self-care appropriate"
+    },
+    {
+      "priority": 3,
+      "condition": "pharmacyEligible === true",
+      "outcome": "pharmacy",
+      "reason": "Localised infected insect bite — pharmacy treatment appropriate"
+    },
+    {
+      "priority": 4,
+      "condition": "pharmacyEligible === false",
+      "outcome": "gp",
+      "reason": "Requires GP assessment"
+    }
+  ],
+  "selfCareAdvice": "Clean the area with soap and water. Apply a cold compress. Avoid scratching. Antihistamine cream or oral antihistamine for itching. Monitor for spreading redness.",
+  "pharmacyTreatmentOptions": [
+    "Flucloxacillin 500mg four times daily for 5–7 days",
+    "Clarithromycin 500mg twice daily for 5 days (penicillin allergy)"
+  ],
+  "safetyNetAdvice": "Return urgently if: redness spreads significantly, a red line appears, fever develops, or you feel very unwell."
+}
