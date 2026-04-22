@@ -1,0 +1,51 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "summary-get.response.json",
+  "title": "GET /api/summary/:id success response",
+  "type": "object",
+  "required": ["id", "pathway", "pathwayLabel", "redFlagTriggered", "pharmacyEligible", "outcome", "outcomeLabel", "outcomeReason", "summaryText"],
+  "additionalProperties": true,
+  "properties": {
+    "id": { "type": "string" },
+    "createdAt": { "type": "string" },
+    "patient": {
+      "type": "object",
+      "properties": {
+        "fullName": { "type": "string" },
+        "age": { "type": "integer" },
+        "gender": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "pathway": { "type": "string" },
+    "pathwayLabel": { "type": "string" },
+    "symptoms": { "type": "array", "items": { "type": "string" } },
+    "answers": { "type": "object", "additionalProperties": true },
+    "redFlagTriggered": { "type": "boolean" },
+    "redFlagReasons": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["code"],
+        "properties": {
+          "code": { "type": "string" },
+          "description": { "type": "string" },
+          "message": { "type": "string" }
+        },
+        "additionalProperties": true
+      }
+    },
+    "pharmacyEligible": { "type": "boolean" },
+    "outcome": { "type": "string" },
+    "outcomeLabel": { "type": "string" },
+    "outcomeReason": { "type": "string" },
+    "summaryText": { "type": "string" },
+    "safetyNetAdvice": { "type": ["string", "null"] },
+    "pharmacyTreatmentOptions": {
+      "type": ["array", "null"],
+      "items": { "type": "string" }
+    },
+    "selfCareAdvice": { "type": ["string", "null"] },
+    "status": { "type": "string" }
+  }
+}

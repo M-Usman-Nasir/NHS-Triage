@@ -171,7 +171,7 @@ Express API (Node)
 PostgreSQL (schema in repo; not all flows persist to DB in demo)
 ```
 
-**Important:** `GET /api/summary/:id` today is backed by **mock JSON**, while `POST /api/consultation` stores in an **in-memory Map** — unify persistence for production (see §9).
+**Important:** `POST /api/consultation` and `GET /api/summary/:id` both read the same **in-memory consultation store** (seeded demo rows + live submissions). Unify on PostgreSQL for production (see §9).
 
 ---
 
@@ -203,8 +203,9 @@ Use this table in **planning meetings** and tick rows in git issues when scope c
 | Admin analytics / pathways / rules | **Demo** | `routes/admin.js` | Auth + real DB |
 | CRM APIs + pages | **Demo** | `routes/crm.js`, `frontend/pages/crm/*` | Real DB; remove mock-only gaps |
 | Patient landing + consent | **Done** | `pages/index.tsx` | Privacy page URL |
-| Consultation UI | **Done** | `pages/consultation.tsx` | **Server-driven** branching (E-03); full questions for all 7 pathways |
-| Result UI | **Done** | `pages/result.tsx` | Align all copy with CLINICAL-GOVERNANCE |
+| Consultation UI | **Done** | `pages/consultation.tsx`, `lib/pathwayQuestions.ts`, `lib/api.ts` | **Server-driven** branching (E-03) remains future; questionnaire text/options match all 7 pathway JSON files (including impetigo multiselect + `q2_areas_count`) |
+| Result UI | **Done** | `pages/result.tsx`, `lib/mapSummaryToResult.ts` | Live summary vs `?demo=true`; errors do not fall back to mock silently |
+| API contracts (schemas) | **Partial** | `frontend/schemas/*.json`, `types/consultation.ts` | Wire CI validation / OpenAPI when backend stabilises |
 | JWT + RBAC on APIs | **Not done** | Admin comments note no middleware | E-07 security |
 | Immutable DB audit trail | **Partial** | `schema.sql` + console `[AUDIT]` | Write audit_rows on every decision |
 | WCAG evidence pack | **In progress** | Landing/consultation improved | Formal audit (E-12) |
@@ -223,6 +224,9 @@ Use this table in **planning meetings** and tick rows in git issues when scope c
 | `frontend/pages/pharmacist/` | Pharmacist |
 | `frontend/pages/crm/` | CRM |
 | `frontend/lib/triageOutcomeIcons.tsx` | Outcome icons |
+| `frontend/lib/api.ts`, `frontend/.env.example` | `NEXT_PUBLIC_API_URL` for patient + CRM fetches |
+| `frontend/schemas/` | JSON Schema drafts for consultation POST + summary GET |
+| `frontend/types/consultation.ts` | Shared TS types for payloads and summary |
 | `backend/engine/*.js` | Triage engine |
 | `backend/routes/*.js` | HTTP API |
 | `backend/data/pathways/` | Rule data |

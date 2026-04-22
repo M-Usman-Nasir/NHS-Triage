@@ -14,6 +14,7 @@ import { useState, useEffect } from 'react';
 import { Search } from 'lucide-react';
 import { useRouter } from 'next/router';
 import CRMLayout from '../../../components/CRMLayout';
+import { apiUrl } from '../../../lib/api';
 
 interface Patient {
   id: string; fullName: string; dateOfBirth: string; age: number; gender: string;
@@ -67,7 +68,7 @@ export default function PatientsPage() {
   });
 
   useEffect(() => {
-    fetch(`http://localhost:4000/api/crm/patients`)
+    fetch(apiUrl('/api/crm/patients'))
       .then((r) => r.json())
       .then((d) => { if (d.items?.length) setPatients(d.items); })
       .catch(() => {});

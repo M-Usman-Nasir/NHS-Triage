@@ -12,6 +12,7 @@
 import { useState } from 'react';
 import { Check, Plus, Send, X } from 'lucide-react';
 import CRMLayout from '../../components/CRMLayout';
+import { apiUrl } from '../../lib/api';
 import { ChannelIcon } from '../../lib/channelIcons';
 
 const MOCK_COMMS = [
@@ -49,7 +50,7 @@ export default function CommunicationsPage() {
     setSent(true);
     setTimeout(() => { setSent(false); setShowCompose(false); setCompose({ patientName:'', channel:'email', subject:'', body:'' }); }, 1500);
 
-    await fetch('http://localhost:4000/api/crm/communications', {
+    await fetch(apiUrl('/api/crm/communications'), {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ patientId: 'PAT-NEW', ...compose }),
     }).catch(() => {});

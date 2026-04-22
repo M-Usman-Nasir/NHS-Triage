@@ -16,6 +16,7 @@ import { Check, ListChecks, MessageSquare } from 'lucide-react';
 import { useRouter } from 'next/router';
 import CRMLayout from '../../../components/CRMLayout';
 import Link from 'next/link';
+import { apiUrl } from '../../../lib/api';
 import { ChannelIcon } from '../../../lib/channelIcons';
 
 const MOCK_PROFILES: Record<string, any> = {
@@ -76,14 +77,14 @@ export default function PatientProfile() {
     const mock = MOCK_PROFILES[id];
     if (mock) { setPatient(mock); setNotes(mock.notes); return; }
 
-    fetch(`http://localhost:4000/api/crm/patients/${id}`)
+    fetch(apiUrl(`/api/crm/patients/${id}`))
       .then((r) => r.json())
       .then((d) => { setPatient(d); setNotes(d.notes || ''); })
       .catch(() => {});
   }, [id]);
 
   const handleSaveNotes = async () => {
-    await fetch(`http://localhost:4000/api/crm/patients/${id}/notes`, {
+    await fetch(apiUrl(`/api/crm/patients/${id}/notes`), {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ notes }),
     }).catch(() => {});

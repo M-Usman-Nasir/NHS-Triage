@@ -16,6 +16,7 @@ import { useState, useEffect } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { CheckCircle2, Pill, Search, Siren, Sparkles } from 'lucide-react';
 import CRMLayout from '../../components/CRMLayout';
+import { apiUrl } from '../../lib/api';
 import { TriageOutcomeIcon } from '../../lib/triageOutcomeIcons';
 
 interface Case {
@@ -66,7 +67,7 @@ export default function CasesPage() {
     setCases((prev) => prev.map((c) => c.id === caseId ? { ...c, stage: newStage } : c));
     setSelectedCase((prev) => prev?.id === caseId ? { ...prev, stage: newStage } : prev);
 
-    await fetch(`http://localhost:4000/api/crm/cases/${caseId}/stage`, {
+    await fetch(apiUrl(`/api/crm/cases/${caseId}/stage`), {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ stage: newStage }),
     }).catch(() => {});

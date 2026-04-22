@@ -1,24 +1,11 @@
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { ArrowLeft, Mail, Phone, Pill, Printer, TriangleAlert, User } from 'lucide-react';
+import { apiUrl } from '../lib/api';
+import { mapSummaryToResult } from '../lib/mapSummaryToResult';
 import { TriageOutcomeIcon } from '../lib/triageOutcomeIcons';
-
-interface TriageResult {
-  consultationId: string;
-  patient?: { fullName: string; age: number; gender: string };
-  pathway?: string;
-  pathwayLabel?: string;
-  outcome: string;
-  outcomeLabel: string;
-  outcomeReason: string;
-  redFlagTriggered: boolean;
-  redFlags?: Array<{ code: string; description: string; message: string }>;
-  pharmacyEligible: boolean;
-  summaryText: string;
-  safetyNetAdvice?: string;
-  pharmacyTreatmentOptions?: string[];
-  selfCareAdvice?: string;
-}
+import type { SummaryApiResponse, TriageResultView } from '../types/consultation';
 
 const OUTCOME_CONFIG: Record<string, {
   gradient: string;
@@ -70,7 +57,7 @@ const OUTCOME_CONFIG: Record<string, {
   },
 };
 
-const MOCK_RESULT: TriageResult = {
+const MOCK_RESULT: TriageResultView = {
   consultationId: 'c0000001-0000-0000-0000-000000000001',
   patient: { fullName: 'Sarah Mitchell', age: 33, gender: 'Female' },
   pathway: 'uti',
@@ -93,41 +80,59 @@ export default function ResultPage() {
   const router = useRouter();
   const { id, demo } = router.query;
 
-  const [result, setResult] = useState<TriageResult | null>(null);
+  const [result, setResult] = useState<TriageResultView | null>(null);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!router.isReady) return;
-    if (demo === 'true' || !id) {
+
+    const idParam = id;
+    const consultationId =
+      typeof idParam === 'string' ? idParam : Array.isArray(idParam) ? idParam[0] : undefined;
+
+    if (demo === 'true' || !consultationId) {
       setResult(MOCK_RESULT);
+      setFetchError(null);
       setLoading(false);
       return;
     }
-    fetch(`http://localhost:4000/api/summary/${id}`)
-      .then((r) => r.json())
-      .then((data) => {
-        setResult({
-          consultationId: data.id,
-          patient: data.patient,
-          pathway: data.pathway,
-          pathwayLabel: data.pathwayLabel,
-          outcome: data.outcome,
-          outcomeLabel: data.outcomeLabel,
-          outcomeReason: data.outcomeReason,
-          redFlagTriggered: data.redFlagTriggered,
-          redFlags: data.redFlagReasons,
-          pharmacyEligible: data.pharmacyEligible,
-          summaryText: data.summaryText,
-          safetyNetAdvice: data.safetyNetAdvice,
-          pharmacyTreatmentOptions: data.pharmacyTreatmentOptions,
-          selfCareAdvice: data.selfCareAdvice,
-        });
+
+    let cancelled = false;
+    setFetchError(null);
+
+    (async () => {
+      try {
+        const r = await fetch(apiUrl(`/api/summary/${encodeURIComponent(consultationId)}`));
+        let data: SummaryApiResponse | { error?: string } = {} as SummaryApiResponse;
+        try {
+          data = await r.json();
+        } catch {
+          data = {};
+        }
+        if (cancelled) return;
+        if (!r.ok) {
+          const msg = typeof (data as { error?: string }).error === 'string'
+            ? (data as { error: string }).error
+            : `Could not load summary (HTTP ${r.status}).`;
+          setFetchError(msg);
+          setResult(null);
+          setLoading(false);
+          return;
+        }
+        setResult(mapSummaryToResult(data as SummaryApiResponse));
         setLoading(false);
-      })
-      .catch(() => {
-        setResult(MOCK_RESULT);
+      } catch {
+        if (cancelled) return;
+        setFetchError('Network error while loading your summary.');
+        setResult(null);
         setLoading(false);
-      });
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [router.isReady, id, demo]);
 
   if (loading) {
@@ -137,6 +142,44 @@ export default function ResultPage() {
           <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" aria-hidden />
           <p className="text-muted-foreground text-sm">Loading your results…</p>
         </div>
+      </div>
+    );
+  }
+
+  if (fetchError && !result) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <header className="bg-brand-header text-primary-foreground shadow-card-md sticky top-0 z-30">
+          <div className="max-w-lg mx-auto px-4 py-3 flex items-center gap-3">
+            <div className="w-8 h-8 bg-card rounded-xl flex items-center justify-center flex-shrink-0 shadow-card">
+              <span className="text-primary font-black text-sm">A</span>
+            </div>
+            <div>
+              <p className="font-bold text-sm leading-tight">Aegis Health AI</p>
+              <p className="text-brand-header-subtle text-xs">Consultation</p>
+            </div>
+          </div>
+        </header>
+        <main className="max-w-lg mx-auto px-4 py-8 flex-1">
+          <div className="bg-card rounded-2xl shadow-card border border-border p-6 text-center">
+            <p className="text-destructive text-sm font-semibold mb-2" role="alert">Unable to load results</p>
+            <p className="text-muted-foreground text-sm mb-6">{fetchError}</p>
+            <div className="flex flex-col gap-3">
+              <Link
+                href="/"
+                className="inline-flex w-full items-center justify-center rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground"
+              >
+                Start again
+              </Link>
+              <Link
+                href="/result?demo=true"
+                className="inline-flex w-full items-center justify-center rounded-xl border border-input py-3 text-sm font-semibold text-muted-foreground hover:bg-muted"
+              >
+                View demo result
+              </Link>
+            </div>
+          </div>
+        </main>
       </div>
     );
   }

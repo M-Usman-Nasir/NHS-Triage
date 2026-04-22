@@ -20,23 +20,7 @@ import {
   TriangleAlert,
   Zap,
 } from 'lucide-react';
-
-type Pathway = {
-  code: string;
-  label: string;
-  fullLabel: string;
-  description: string;
-};
-
-const PATHWAYS: Pathway[] = [
-  { code: 'uti',          label: 'UTI',           fullLabel: 'Urinary Tract Infection', description: 'Painful or frequent urination' },
-  { code: 'sore_throat',  label: 'Sore Throat',   fullLabel: 'Sore Throat',             description: 'Throat pain, difficulty swallowing' },
-  { code: 'sinusitis',    label: 'Sinusitis',     fullLabel: 'Sinusitis',               description: 'Blocked nose, facial pressure' },
-  { code: 'otitis_media', label: 'Ear Infection', fullLabel: 'Ear Infection',           description: 'Ear pain, discharge' },
-  { code: 'insect_bites', label: 'Insect Bite',   fullLabel: 'Infected Insect Bite',    description: 'Redness, swelling at bite site' },
-  { code: 'impetigo',     label: 'Impetigo',      fullLabel: 'Impetigo',                description: 'Crusty, golden sores on skin' },
-  { code: 'shingles',     label: 'Shingles',      fullLabel: 'Shingles',                description: 'Painful rash on one side' },
-];
+import { PATIENT_PATHWAYS } from '../lib/patientPathways';
 
 const PATHWAY_ICONS: Record<string, LucideIcon> = {
   uti: Droplets,
@@ -71,7 +55,7 @@ export default function LandingPage() {
     router.push(`/consultation?pathway=${selectedPathway}`);
   };
 
-  const selected = PATHWAYS.find((p) => p.code === selectedPathway);
+  const selected = PATIENT_PATHWAYS.find((p) => p.code === selectedPathway);
 
   return (
     <div className="relative flex min-h-screen flex-col overflow-x-hidden bg-gradient-to-b from-primary/[0.08] via-background to-muted/80">
@@ -166,7 +150,7 @@ export default function LandingPage() {
                 Tap one pathway. You can change your choice before you begin.
               </p>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4">
-                {PATHWAYS.map((p) => {
+                {PATIENT_PATHWAYS.map((p) => {
                   const PathwayIcon = PATHWAY_ICONS[p.code];
                   const isSelected = selectedPathway === p.code;
                   return (
