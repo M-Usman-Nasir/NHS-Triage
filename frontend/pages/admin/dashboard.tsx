@@ -15,6 +15,7 @@
  */
 
 import { useState } from 'react';
+import { LayoutDashboard, Map, TriangleAlert } from 'lucide-react';
 
 // ─── Mock analytics data ──────────────────────────────────────────────────────
 
@@ -71,15 +72,14 @@ export default function AdminDashboard() {
   const maxDaily = Math.max(...dailyTrend.map((d) => d.total));
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-gray-900 text-white py-4 px-6">
+    <div className="min-h-screen bg-background">
+      <header className="border-b border-sidebar-border bg-sidebar py-4 px-6 text-sidebar-foreground shadow-sm">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div>
-            <h1 className="font-bold text-lg">Aegis Health AI</h1>
-            <p className="text-gray-400 text-xs">Admin Dashboard — Dr. Admin User</p>
+            <h1 className="font-bold text-lg text-foreground">Aegis Health AI</h1>
+            <p className="text-xs text-sidebar-muted">Admin Dashboard — Dr. Admin User</p>
           </div>
-          <span className="bg-green-500 text-white text-xs px-3 py-1 rounded-full font-medium">
+          <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-800">
             System Online
           </span>
         </div>
@@ -88,18 +88,26 @@ export default function AdminDashboard() {
       <div className="max-w-7xl mx-auto px-4 py-8">
 
         {/* Tab navigation */}
-        <div className="flex gap-4 mb-8 border-b border-gray-200">
-          {(['overview', 'pathways', 'rules'] as const).map((tab) => (
+        <div className="flex gap-4 mb-8 border-b border-border">
+          {(
+            [
+              { id: 'overview' as const, label: 'Overview', Icon: LayoutDashboard },
+              { id: 'pathways' as const, label: 'Pathways', Icon: Map },
+              { id: 'rules' as const, label: 'Rules', Icon: TriangleAlert },
+            ] as const
+          ).map(({ id, label, Icon }) => (
             <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`pb-3 px-1 text-sm font-medium capitalize border-b-2 transition-all ${
-                activeTab === tab
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              type="button"
+              key={id}
+              onClick={() => setActiveTab(id)}
+              className={`pb-3 px-1 text-sm font-medium border-b-2 transition-all inline-flex items-center gap-2 ${
+                activeTab === id
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
               }`}
             >
-              {tab === 'overview' ? '📊 Overview' : tab === 'pathways' ? '🗺️ Pathways' : '⚠️ Rules'}
+              <Icon className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
+              {label}
             </button>
           ))}
         </div>
@@ -111,22 +119,22 @@ export default function AdminDashboard() {
             {/* KPI Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {[
-                { label: 'Total Consultations',   value: summary.totalConsultations.toLocaleString(), colour: 'text-blue-600',  bg: 'bg-blue-50' },
+                { label: 'Total Consultations',   value: summary.totalConsultations.toLocaleString(), colour: 'text-primary',  bg: 'bg-primary/10' },
                 { label: 'Pharmacy Referral Rate', value: summary.pharmacyReferralRate,                colour: 'text-green-600', bg: 'bg-green-50' },
                 { label: 'Red Flag Rate',          value: summary.redFlagRate,                         colour: 'text-red-600',   bg: 'bg-red-50' },
                 { label: 'Red Flags Triggered',    value: summary.totalRedFlagsTriggered.toString(),   colour: 'text-orange-600',bg: 'bg-orange-50' },
               ].map((kpi) => (
-                <div key={kpi.label} className={`${kpi.bg} rounded-xl p-5 border border-white shadow-sm`}>
-                  <p className="text-xs text-gray-500 font-medium">{kpi.label}</p>
+                <div key={kpi.label} className={`${kpi.bg} rounded-xl p-5 border border-border shadow-card`}>
+                  <p className="text-xs text-muted-foreground font-medium">{kpi.label}</p>
                   <p className={`text-3xl font-bold mt-1 ${kpi.colour}`}>{kpi.value}</p>
-                  <p className="text-xs text-gray-400 mt-1">Last 7 days</p>
+                  <p className="text-xs text-muted-foreground mt-1">Last 7 days</p>
                 </div>
               ))}
             </div>
 
             {/* Outcome breakdown */}
-            <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
-              <h3 className="font-semibold text-gray-700 mb-4">Outcome Distribution</h3>
+            <div className="bg-card rounded-2xl shadow-card p-6 border border-border">
+              <h3 className="font-semibold text-foreground mb-4">Outcome Distribution</h3>
               <div className="space-y-3">
                 {[
                   { label: 'Self-Care',   value: summary.outcomeBreakdown.selfCare,   colour: 'bg-green-400' },
@@ -138,14 +146,14 @@ export default function AdminDashboard() {
                   const pct = ((item.value / summary.totalConsultations) * 100).toFixed(1);
                   return (
                     <div key={item.label} className="flex items-center gap-3">
-                      <span className="text-sm text-gray-600 w-24">{item.label}</span>
-                      <div className="flex-1 bg-gray-100 rounded-full h-3">
+                      <span className="text-sm text-muted-foreground w-24">{item.label}</span>
+                      <div className="flex-1 bg-muted rounded-full h-3">
                         <div
                           className={`${item.colour} h-3 rounded-full`}
                           style={{ width: `${pct}%` }}
                         />
                       </div>
-                      <span className="text-sm text-gray-500 w-16 text-right">{item.value} ({pct}%)</span>
+                      <span className="text-sm text-muted-foreground w-16 text-right">{item.value} ({pct}%)</span>
                     </div>
                   );
                 })}
@@ -153,17 +161,17 @@ export default function AdminDashboard() {
             </div>
 
             {/* Daily volume chart */}
-            <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
-              <h3 className="font-semibold text-gray-700 mb-4">Daily Consultation Volume</h3>
+            <div className="bg-card rounded-2xl shadow-card p-6 border border-border">
+              <h3 className="font-semibold text-foreground mb-4">Daily Consultation Volume</h3>
               <div className="flex items-end gap-3 h-32">
                 {dailyTrend.map((day) => (
                   <div key={day.date} className="flex-1 flex flex-col items-center gap-1">
-                    <span className="text-xs text-gray-500">{day.total}</span>
+                    <span className="text-xs text-muted-foreground">{day.total}</span>
                     <div
-                      className="w-full bg-blue-500 rounded-t-sm"
+                      className="w-full bg-primary rounded-t-sm"
                       style={{ height: `${(day.total / maxDaily) * 100}px` }}
                     />
-                    <span className="text-xs text-gray-400">{day.date}</span>
+                    <span className="text-xs text-muted-foreground">{day.date}</span>
                   </div>
                 ))}
               </div>
@@ -173,21 +181,21 @@ export default function AdminDashboard() {
 
         {/* ── Pathways Tab ──────────────────────────────────────────────────── */}
         {activeTab === 'pathways' && (
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="bg-card rounded-2xl shadow-card border border-border overflow-hidden">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-100">
+              <thead className="bg-muted border-b border-border">
                 <tr>
                   {['Pathway', 'Code', 'Questions', 'Red Flags', 'Status'].map((h) => (
-                    <th key={h} className="text-left text-xs font-semibold text-gray-500 uppercase px-5 py-3">{h}</th>
+                    <th key={h} className="text-left text-xs font-semibold text-muted-foreground uppercase px-5 py-3">{h}</th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-border/60">
                 {PATHWAYS.map((p) => (
-                  <tr key={p.code} className="hover:bg-gray-50">
-                    <td className="px-5 py-4 font-medium text-gray-800 text-sm">{p.label}</td>
-                    <td className="px-5 py-4 text-gray-400 text-xs font-mono">{p.code}</td>
-                    <td className="px-5 py-4 text-gray-600 text-sm">{p.questions}</td>
+                  <tr key={p.code} className="hover:bg-muted/50">
+                    <td className="px-5 py-4 font-medium text-foreground text-sm">{p.label}</td>
+                    <td className="px-5 py-4 text-muted-foreground text-xs font-mono">{p.code}</td>
+                    <td className="px-5 py-4 text-muted-foreground text-sm">{p.questions}</td>
                     <td className="px-5 py-4 text-sm">
                       <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded-full text-xs font-medium">{p.redFlags} flags</span>
                     </td>
@@ -204,24 +212,27 @@ export default function AdminDashboard() {
         {/* ── Rules Tab ─────────────────────────────────────────────────────── */}
         {activeTab === 'rules' && (
           <div className="space-y-4">
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-700">
-              ⚠️ Rules displayed here are read-only in this view. Editing clinical rules requires a full release process and clinical sign-off.
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-700 flex gap-3">
+              <TriangleAlert className="h-5 w-5 shrink-0 text-amber-600 mt-0.5" strokeWidth={1.75} aria-hidden />
+              <p>
+                Rules displayed here are read-only in this view. Editing clinical rules requires a full release process and clinical sign-off.
+              </p>
             </div>
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="bg-card rounded-2xl shadow-card border border-border overflow-hidden">
               <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-100">
+                <thead className="bg-muted border-b border-border">
                   <tr>
                     {['Pathway', 'Rule Code', 'Trigger Condition', 'Escalation', 'Active'].map((h) => (
-                      <th key={h} className="text-left text-xs font-semibold text-gray-500 uppercase px-5 py-3">{h}</th>
+                      <th key={h} className="text-left text-xs font-semibold text-muted-foreground uppercase px-5 py-3">{h}</th>
                     ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50">
+                <tbody className="divide-y divide-border/60">
                   {RED_FLAG_SAMPLES.map((r) => (
-                    <tr key={r.code} className="hover:bg-gray-50">
-                      <td className="px-5 py-4 text-gray-800 text-sm font-medium">{r.pathway}</td>
-                      <td className="px-5 py-4 text-gray-400 text-xs font-mono">{r.code}</td>
-                      <td className="px-5 py-4 text-gray-600 text-sm">{r.condition}</td>
+                    <tr key={r.code} className="hover:bg-muted/50">
+                      <td className="px-5 py-4 text-foreground text-sm font-medium">{r.pathway}</td>
+                      <td className="px-5 py-4 text-muted-foreground text-xs font-mono">{r.code}</td>
+                      <td className="px-5 py-4 text-muted-foreground text-sm">{r.condition}</td>
                       <td className="px-5 py-4">
                         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                           r.outcome === '999' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'

@@ -13,7 +13,10 @@
  */
 
 import { useState, useEffect } from 'react';
+import type { LucideIcon } from 'lucide-react';
+import { CheckCircle2, Pill, Search, Siren, Sparkles } from 'lucide-react';
 import CRMLayout from '../../components/CRMLayout';
+import { TriageOutcomeIcon } from '../../lib/triageOutcomeIcons';
 
 interface Case {
   id: string; patientId: string; patientName: string; title: string;
@@ -31,23 +34,25 @@ const MOCK_CASES: Case[] = [
   { id:'CASE-006', patientId:'PAT-006', patientName:'David Chen',      title:'Impetigo — GP Referral (Diabetic)',              pathway:'Impetigo',             outcome:'gp',            stage:'new',        priority:'high',     assignedTo:'Dr. Leila Thompson', openedAt:'2026-04-21', closedAt:null,        notes:'Diabetic patient. Urgent GP appointment needed.',         followUpDate:'2026-04-23' },
 ];
 
-const COLUMNS = [
-  { id: 'new',       label: 'New',       icon: '🆕', colour: 'border-t-gray-400',   headerBg: 'bg-gray-100' },
-  { id: 'in_review', label: 'In Review', icon: '🔍', colour: 'border-t-blue-400',   headerBg: 'bg-blue-50' },
-  { id: 'treated',   label: 'Treated',   icon: '💊', colour: 'border-t-green-400',  headerBg: 'bg-green-50' },
-  { id: 'escalated', label: 'Escalated', icon: '🚨', colour: 'border-t-red-400',    headerBg: 'bg-red-50' },
-  { id: 'closed',    label: 'Closed',    icon: '✅', colour: 'border-t-gray-300',   headerBg: 'bg-gray-50' },
+const COLUMNS: Array<{
+  id: string;
+  label: string;
+  Icon: LucideIcon;
+  colour: string;
+  headerBg: string;
+}> = [
+  { id: 'new',       label: 'New',       Icon: Sparkles,   colour: 'border-t-gray-400',   headerBg: 'bg-muted' },
+  { id: 'in_review', label: 'In Review', Icon: Search,     colour: 'border-t-primary',   headerBg: 'bg-primary/10' },
+  { id: 'treated',   label: 'Treated',   Icon: Pill,       colour: 'border-t-green-400',  headerBg: 'bg-green-50' },
+  { id: 'escalated', label: 'Escalated', Icon: Siren,      colour: 'border-t-red-400',    headerBg: 'bg-red-50' },
+  { id: 'closed',    label: 'Closed',    Icon: CheckCircle2, colour: 'border-t-gray-300',   headerBg: 'bg-muted/80' },
 ];
 
 const PRIORITY_CONFIG: Record<string, { label: string; colour: string; dot: string }> = {
   critical: { label: 'Critical', colour: 'bg-red-100 text-red-700',    dot: 'bg-red-500' },
   high:     { label: 'High',     colour: 'bg-orange-100 text-orange-700', dot: 'bg-orange-400' },
   medium:   { label: 'Medium',   colour: 'bg-yellow-100 text-yellow-700', dot: 'bg-yellow-400' },
-  low:      { label: 'Low',      colour: 'bg-gray-100 text-gray-500',   dot: 'bg-gray-300' },
-};
-
-const OUTCOME_ICONS: Record<string, string> = {
-  pharmacy: '💊', gp: '🩺', self_care: '🏠', urgent_care: '⚠️', emergency_999: '🚨',
+  low:      { label: 'Low',      colour: 'bg-muted text-muted-foreground',   dot: 'bg-gray-300' },
 };
 
 export default function CasesPage() {
@@ -77,7 +82,7 @@ export default function CasesPage() {
         <select
           value={priorityFilter}
           onChange={(e) => setPriorityFilter(e.target.value)}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+          className="border border-input rounded-lg px-3 py-2 text-sm bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
         >
           <option value="">All priorities</option>
           <option value="critical">Critical</option>
@@ -85,29 +90,31 @@ export default function CasesPage() {
           <option value="medium">Medium</option>
           <option value="low">Low</option>
         </select>
-        <span className="text-sm text-gray-400 self-center">{filtered.length} cases total</span>
+        <span className="text-sm text-muted-foreground self-center">{filtered.length} cases total</span>
       </div>
 
       <div className="flex gap-4 overflow-x-auto pb-4">
         {COLUMNS.map((col) => {
           const colCases = filtered.filter((c) => c.stage === col.id);
+          const ColIcon = col.Icon;
           return (
             <div key={col.id} className="flex-shrink-0 w-64">
-              {/* Column header */}
-              <div className={`${col.headerBg} rounded-t-xl px-3 py-2 flex items-center justify-between border border-b-0 border-gray-200`}>
+              <div className={`${col.headerBg} rounded-t-xl px-3 py-2 flex items-center justify-between border border-b-0 border-border`}>
                 <div className="flex items-center gap-2">
-                  <span>{col.icon}</span>
-                  <span className="font-semibold text-sm text-gray-700">{col.label}</span>
+                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-card/80 text-foreground shadow-sm">
+                    <ColIcon className="h-4 w-4" strokeWidth={1.75} aria-hidden />
+                  </span>
+                  <span className="font-semibold text-sm text-foreground">{col.label}</span>
                 </div>
-                <span className="bg-white text-gray-600 text-xs font-bold px-2 py-0.5 rounded-full border border-gray-200">
+                <span className="bg-card text-muted-foreground text-xs font-bold px-2 py-0.5 rounded-full border border-border">
                   {colCases.length}
                 </span>
               </div>
 
               {/* Cards */}
-              <div className={`bg-white border border-gray-200 rounded-b-xl min-h-64 p-2 space-y-2 border-t-4 ${col.colour}`}>
+              <div className={`bg-card border border-border rounded-b-xl min-h-64 p-2 space-y-2 border-t-4 ${col.colour}`}>
                 {colCases.length === 0 && (
-                  <div className="text-center py-8 text-gray-300 text-xs">No cases</div>
+                  <div className="text-center py-8 text-muted-foreground/50 text-xs">No cases</div>
                 )}
                 {colCases.map((c) => {
                   const pCfg = PRIORITY_CONFIG[c.priority] || PRIORITY_CONFIG.medium;
@@ -115,21 +122,23 @@ export default function CasesPage() {
                     <div
                       key={c.id}
                       onClick={() => setSelectedCase(c)}
-                      className={`bg-white rounded-xl border-2 p-3 cursor-pointer hover:shadow-md transition-all ${
-                        selectedCase?.id === c.id ? 'border-blue-400 shadow-md' : 'border-gray-100 hover:border-blue-200'
+                      className={`bg-card rounded-xl border-2 p-3 cursor-pointer hover:shadow-md transition-all ${
+                        selectedCase?.id === c.id ? 'border-primary/50 shadow-md' : 'border-border hover:border-primary/30'
                       }`}
                     >
                       <div className="flex items-start justify-between gap-1 mb-1">
-                        <span className="text-xs font-semibold text-gray-700 leading-tight">{c.title}</span>
+                        <span className="text-xs font-semibold text-foreground leading-tight">{c.title}</span>
                         <span className={`flex-shrink-0 w-2 h-2 rounded-full mt-1 ${pCfg.dot}`} />
                       </div>
-                      <p className="text-xs text-gray-400 mb-2">{c.patientName}</p>
+                      <p className="text-xs text-muted-foreground mb-2">{c.patientName}</p>
                       <div className="flex items-center justify-between">
-                        <span className="text-sm">{OUTCOME_ICONS[c.outcome] || '•'}</span>
+                        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                          <TriageOutcomeIcon outcome={c.outcome} className="h-4 w-4" strokeWidth={1.75} />
+                        </span>
                         <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${pCfg.colour}`}>{pCfg.label}</span>
                       </div>
                       {c.followUpDate && (
-                        <p className="text-xs text-gray-400 mt-1">Follow-up: {c.followUpDate}</p>
+                        <p className="text-xs text-muted-foreground mt-1">Follow-up: {c.followUpDate}</p>
                       )}
                     </div>
                   );
@@ -142,13 +151,13 @@ export default function CasesPage() {
 
       {/* Case detail panel */}
       {selectedCase && (
-        <div className="fixed right-0 top-0 h-full w-80 bg-white shadow-2xl border-l border-gray-200 z-50 flex flex-col">
-          <div className="p-5 border-b border-gray-100 flex items-start justify-between">
+        <div className="fixed right-0 top-0 h-full w-80 bg-card shadow-2xl border-l border-border z-50 flex flex-col">
+          <div className="p-5 border-b border-border flex items-start justify-between">
             <div>
-              <h3 className="font-bold text-gray-800 text-sm leading-tight">{selectedCase.title}</h3>
-              <p className="text-xs text-gray-400 mt-1">{selectedCase.id} · {selectedCase.patientName}</p>
+              <h3 className="font-bold text-foreground text-sm leading-tight">{selectedCase.title}</h3>
+              <p className="text-xs text-muted-foreground mt-1">{selectedCase.id} · {selectedCase.patientName}</p>
             </div>
-            <button onClick={() => setSelectedCase(null)} className="text-gray-400 hover:text-gray-600 text-xl leading-none flex-shrink-0">×</button>
+            <button type="button" onClick={() => setSelectedCase(null)} className="text-muted-foreground hover:text-foreground text-xl leading-none flex-shrink-0">×</button>
           </div>
 
           <div className="flex-1 overflow-y-auto p-5 space-y-4">
@@ -161,37 +170,41 @@ export default function CasesPage() {
                 { label: 'Assigned', value: selectedCase.assignedTo || '—' },
                 { label: 'Opened',   value: selectedCase.openedAt },
               ].map((f) => (
-                <div key={f.label} className="bg-gray-50 rounded-lg p-2">
-                  <p className="text-xs text-gray-400">{f.label}</p>
-                  <p className="text-xs font-semibold text-gray-700 capitalize">{f.value}</p>
+                <div key={f.label} className="bg-muted rounded-lg p-2">
+                  <p className="text-xs text-muted-foreground">{f.label}</p>
+                  <p className="text-xs font-semibold text-foreground capitalize">{f.value}</p>
                 </div>
               ))}
             </div>
 
             {selectedCase.notes && (
               <div>
-                <p className="text-xs font-semibold text-gray-400 uppercase mb-1">Notes</p>
-                <p className="text-xs text-gray-600 bg-gray-50 rounded-lg p-3">{selectedCase.notes}</p>
+                <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">Notes</p>
+                <p className="text-xs text-muted-foreground bg-muted rounded-lg p-3">{selectedCase.notes}</p>
               </div>
             )}
 
             <div>
-              <p className="text-xs font-semibold text-gray-400 uppercase mb-2">Move to Stage</p>
+              <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">Move to Stage</p>
               <div className="grid grid-cols-1 gap-1">
-                {COLUMNS.map((col) => (
+                {COLUMNS.map((col) => {
+                  const MoveIcon = col.Icon;
+                  return (
                   <button
                     key={col.id}
                     onClick={() => moveCase(selectedCase.id, col.id)}
                     disabled={selectedCase.stage === col.id}
-                    className={`py-2 px-3 rounded-lg text-xs font-medium text-left transition-all ${
+                    className={`py-2 px-3 rounded-lg text-xs font-medium text-left transition-all inline-flex items-center gap-2 ${
                       selectedCase.stage === col.id
-                        ? 'bg-blue-600 text-white cursor-default'
-                        : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                        ? 'bg-primary text-primary-foreground cursor-default'
+                        : 'bg-muted text-muted-foreground hover:bg-secondary'
                     }`}
                   >
-                    {col.icon} {col.label}
+                    <MoveIcon className="h-3.5 w-3.5 shrink-0 opacity-90" strokeWidth={1.75} aria-hidden />
+                    {col.label}
                   </button>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>

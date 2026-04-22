@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
+import { Check, TriangleAlert, X } from 'lucide-react';
 
 interface Question {
   id: string;
@@ -147,41 +148,41 @@ export default function ConsultationPage() {
 
   if (!pathway) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" aria-hidden />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col">
 
-      {/* Header */}
-      <header className="bg-blue-700 text-white sticky top-0 z-30 shadow-md">
+      <header className="bg-brand-header text-primary-foreground sticky top-0 z-30 shadow-card-md">
         <div className="max-w-lg mx-auto px-4 py-3 flex items-center gap-3">
           <button
+            type="button"
             onClick={() => step === 'questions' && currentQuestionIndex > 0
               ? setCurrentQuestionIndex((i) => i - 1)
               : router.back()}
-            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/20 flex-shrink-0"
+            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-primary-foreground/15 flex-shrink-0"
+            aria-label="Go back"
           >
             ←
           </button>
           <div className="flex-1 min-w-0">
             <p className="font-bold text-sm leading-tight truncate">Aegis Health AI</p>
-            <p className="text-blue-200 text-xs truncate">{PATHWAY_LABELS[pathway] || pathway} Consultation</p>
+            <p className="text-brand-header-subtle text-xs truncate">{PATHWAY_LABELS[pathway] || pathway} Consultation</p>
           </div>
           {step === 'questions' && (
-            <span className="text-blue-200 text-xs flex-shrink-0">
+            <span className="text-brand-header-subtle text-xs flex-shrink-0">
               {currentQuestionIndex + 1}/{questions.length}
             </span>
           )}
         </div>
-        {/* Progress bar in header for questions */}
         {step === 'questions' && (
-          <div className="h-1 bg-blue-800">
+          <div className="h-1 bg-primary-foreground/20">
             <div
-              className="h-1 bg-white/70 transition-all duration-300"
+              className="h-1 bg-primary-foreground/80 transition-all duration-300"
               style={{ width: `${progressPct}%` }}
             />
           </div>
@@ -190,45 +191,45 @@ export default function ConsultationPage() {
 
       <main className="flex-1 max-w-lg mx-auto w-full px-4 py-6">
 
-        {/* ── Step 1: Demographics ─────────────────────────────── */}
         {step === 'demographics' && (
           <div>
             <div className="mb-6">
-              <h2 className="text-xl font-bold text-gray-800">Before we begin</h2>
-              <p className="text-gray-500 text-sm mt-1">A few details to personalise your consultation.</p>
+              <p className="text-xs font-semibold text-primary uppercase tracking-wide mb-1">Step 1 of 2</p>
+              <h2 className="text-xl font-bold text-foreground">Before we begin</h2>
+              <p className="text-muted-foreground text-sm mt-1">A few details to personalise your consultation.</p>
             </div>
 
             <div className="space-y-4">
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5 space-y-4">
+              <div className="bg-card rounded-2xl shadow-card border border-border p-5 space-y-4">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Full Name</label>
+                  <label className="block text-sm font-semibold text-foreground mb-1.5">Full Name</label>
                   <input
                     type="text"
                     placeholder="e.g. Sarah Mitchell"
                     value={patient.fullName}
                     onChange={(e) => setPatient({ ...patient, fullName: e.target.value })}
-                    className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full border border-input rounded-xl px-4 py-3 text-sm bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Age</label>
+                  <label className="block text-sm font-semibold text-foreground mb-1.5">Age</label>
                   <input
                     type="number"
                     placeholder="e.g. 34"
-                    min="1"
-                    max="120"
+                    min={1}
+                    max={120}
                     inputMode="numeric"
                     value={patient.age}
                     onChange={(e) => setPatient({ ...patient, age: e.target.value })}
-                    className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full border border-input rounded-xl px-4 py-3 text-sm bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Gender</label>
+                  <label className="block text-sm font-semibold text-foreground mb-1.5">Gender</label>
                   <select
                     value={patient.gender}
                     onChange={(e) => setPatient({ ...patient, gender: e.target.value })}
-                    className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                    className="w-full border border-input rounded-xl px-4 py-3 text-sm bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                   >
                     <option value="">Select gender</option>
                     <option>Female</option>
@@ -238,28 +239,29 @@ export default function ConsultationPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                    Describe your symptoms <span className="text-gray-400 font-normal">(optional)</span>
+                  <label className="block text-sm font-semibold text-foreground mb-1.5">
+                    Describe your symptoms <span className="text-muted-foreground font-normal">(optional)</span>
                   </label>
                   <input
                     type="text"
                     placeholder="e.g. painful urination, fever"
                     value={symptoms}
                     onChange={(e) => setSymptoms(e.target.value)}
-                    className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full border border-input rounded-xl px-4 py-3 text-sm bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
                   />
                 </div>
               </div>
 
               {error && (
-                <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-red-600 text-sm">
+                <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-red-600 text-sm" role="alert">
                   {error}
                 </div>
               )}
 
               <button
+                type="button"
                 onClick={handleDemographicsSubmit}
-                className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold text-base hover:bg-blue-700 active:scale-95 transition-all shadow-md shadow-blue-200"
+                className="w-full bg-primary text-primary-foreground py-4 rounded-xl font-bold text-base hover:bg-primary/90 active:scale-[0.98] transition-all shadow-card-md shadow-primary/20"
               >
                 Continue →
               </button>
@@ -267,57 +269,66 @@ export default function ConsultationPage() {
           </div>
         )}
 
-        {/* ── Step 2: Questions ────────────────────────────────── */}
         {step === 'questions' && currentQuestion && (
           <div>
-            {/* Red flag hint */}
+            <p className="text-xs font-semibold text-primary uppercase tracking-wide mb-3">Step 2 of 2</p>
             {currentQuestion.redFlagHint && (
               <div className="bg-red-50 border border-red-200 rounded-xl p-3 mb-4 flex items-start gap-2">
-                <span className="flex-shrink-0">⚠️</span>
+                <TriangleAlert className="h-4 w-4 shrink-0 text-red-600" strokeWidth={2} aria-hidden />
                 <p className="text-red-700 text-xs font-semibold">Safety question — please answer honestly.</p>
               </div>
             )}
 
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5">
-              <p className="text-xs font-medium text-blue-600 mb-2 uppercase tracking-wide">
+            <div className="bg-card rounded-2xl shadow-card border border-border p-5">
+              <p className="text-xs font-medium text-primary mb-2 uppercase tracking-wide">
                 Question {currentQuestionIndex + 1} of {questions.length}
               </p>
-              <h2 className="text-lg font-bold text-gray-800 mb-6 leading-snug">
+              <h2 className="text-lg font-bold text-foreground mb-6 leading-snug">
                 {currentQuestion.text}
               </h2>
 
-              {/* Boolean */}
               {currentQuestion.type === 'boolean' && (
                 <div className="grid grid-cols-2 gap-3">
                   {['Yes', 'No'].map((opt) => (
                     <button
                       key={opt}
+                      type="button"
                       onClick={() => handleAnswer(opt === 'Yes')}
-                      className={`py-4 rounded-xl border-2 font-bold text-base transition-all active:scale-95 ${
+                      className={`py-4 rounded-xl border-2 font-bold text-base transition-all active:scale-[0.98] ${
                         answers[currentQuestion.id] === (opt === 'Yes')
                           ? opt === 'Yes'
-                            ? 'border-blue-500 bg-blue-50 text-blue-700'
-                            : 'border-gray-400 bg-gray-50 text-gray-700'
-                          : 'border-gray-200 text-gray-600 hover:border-blue-300'
+                            ? 'border-primary bg-primary/10 text-primary'
+                            : 'border-muted-foreground/40 bg-muted text-foreground'
+                          : 'border-border text-muted-foreground hover:border-primary/40'
                       }`}
                     >
-                      {opt === 'Yes' ? '✓ Yes' : '✗ No'}
+                      {opt === 'Yes' ? (
+                        <span className="inline-flex items-center justify-center gap-1.5">
+                          <Check className="h-4 w-4 shrink-0" strokeWidth={2.5} aria-hidden />
+                          Yes
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center justify-center gap-1.5">
+                          <X className="h-4 w-4 shrink-0" strokeWidth={2.5} aria-hidden />
+                          No
+                        </span>
+                      )}
                     </button>
                   ))}
                 </div>
               )}
 
-              {/* Select */}
               {currentQuestion.type === 'select' && (
                 <div className="space-y-2">
                   {currentQuestion.options?.map((opt) => (
                     <button
                       key={opt}
+                      type="button"
                       onClick={() => handleAnswer(opt)}
-                      className={`w-full text-left px-4 py-3.5 rounded-xl border-2 text-sm font-medium transition-all active:scale-95 ${
+                      className={`w-full text-left px-4 py-3.5 rounded-xl border-2 text-sm font-medium transition-all active:scale-[0.98] ${
                         answers[currentQuestion.id] === opt
-                          ? 'border-blue-500 bg-blue-50 text-blue-700'
-                          : 'border-gray-200 text-gray-700 hover:border-blue-300 hover:bg-gray-50'
+                          ? 'border-primary bg-primary/10 text-primary'
+                          : 'border-border text-card-foreground hover:border-primary/40 hover:bg-muted/60'
                       }`}
                     >
                       {answers[currentQuestion.id] === opt ? '● ' : '○ '}{opt}
@@ -326,25 +337,24 @@ export default function ConsultationPage() {
                 </div>
               )}
 
-              {/* Text */}
               {currentQuestion.type === 'text' && (
                 <textarea
                   placeholder="Type here (or leave blank if not applicable)"
                   value={String(answers[currentQuestion.id] || '')}
                   onChange={(e) => setAnswers({ ...answers, [currentQuestion.id]: e.target.value })}
                   rows={3}
-                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  className="w-full border border-input rounded-xl px-4 py-3 text-sm bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
                 />
               )}
 
-              {error && <p className="text-red-500 text-sm mt-3">{error}</p>}
+              {error && <p className="text-destructive text-sm mt-3" role="alert">{error}</p>}
 
-              {/* Navigation — only for non-boolean */}
               {currentQuestion.type !== 'boolean' && (
                 <div className="mt-5">
                   <button
+                    type="button"
                     onClick={() => advanceQuestion()}
-                    className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold hover:bg-blue-700 active:scale-95 transition-all"
+                    className="w-full bg-primary text-primary-foreground py-4 rounded-xl font-bold hover:bg-primary/90 active:scale-[0.98] transition-all"
                   >
                     {currentQuestionIndex === questions.length - 1 ? 'Submit Consultation' : 'Next →'}
                   </button>
@@ -354,12 +364,11 @@ export default function ConsultationPage() {
           </div>
         )}
 
-        {/* ── Submitting ───────────────────────────────────────── */}
         {step === 'submitting' && (
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-10 text-center">
-            <div className="w-14 h-14 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-5" />
-            <h2 className="text-xl font-bold text-gray-800 mb-2">Analysing your responses…</h2>
-            <p className="text-gray-500 text-sm">Our clinical decision engine is evaluating your symptoms safely.</p>
+          <div className="bg-card rounded-2xl shadow-card border border-border p-10 text-center">
+            <div className="w-14 h-14 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-5" aria-hidden />
+            <h2 className="text-xl font-bold text-foreground mb-2">Analysing your responses…</h2>
+            <p className="text-muted-foreground text-sm">Our clinical decision engine is evaluating your symptoms safely.</p>
           </div>
         )}
       </main>

@@ -11,7 +11,16 @@
  */
 
 import { useState } from 'react';
+import type { LucideIcon } from 'lucide-react';
+import { AlarmClock, ArrowRight, Calendar, Check, ClipboardList, Phone, Stethoscope, User, X } from 'lucide-react';
 import CRMLayout from '../../components/CRMLayout';
+
+const TYPE_ICON: Record<string, LucideIcon> = {
+  follow_up: Phone,
+  clinical: Stethoscope,
+  admin: ClipboardList,
+  reminder: AlarmClock,
+};
 
 const MOCK_TASKS = [
   { id:'TASK-001', title:'Follow up — Sarah Mitchell UTI treatment response',      description:'Check if patient improved after Nitrofurantoin. Advise if symptoms persist.',           patientName:'Sarah Mitchell', caseId:'CASE-001', assignedTo:'Priya Sharma',   dueDate:'2026-04-21', priority:'medium',   status:'overdue',   type:'follow_up', createdAt:'2026-04-19' },
@@ -26,11 +35,7 @@ const PRIORITY_CONFIG: Record<string, { label: string; bg: string; text: string;
   critical: { label: 'Critical', bg: 'bg-red-50',    text: 'text-red-700',    border: 'border-red-200',    dot: 'bg-red-500' },
   high:     { label: 'High',     bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200', dot: 'bg-orange-400' },
   medium:   { label: 'Medium',   bg: 'bg-yellow-50', text: 'text-yellow-700', border: 'border-yellow-200', dot: 'bg-yellow-400' },
-  low:      { label: 'Low',      bg: 'bg-gray-50',   text: 'text-gray-500',   border: 'border-gray-200',   dot: 'bg-gray-300' },
-};
-
-const TYPE_ICONS: Record<string, string> = {
-  follow_up: '📞', clinical: '🩺', admin: '📋', reminder: '⏰',
+  low:      { label: 'Low',      bg: 'bg-muted',   text: 'text-muted-foreground',   border: 'border-border',   dot: 'bg-gray-300' },
 };
 
 export default function TasksPage() {
@@ -88,9 +93,9 @@ export default function TasksPage() {
           { label: 'Completed', value: completedCnt, bg: 'bg-green-50',  text: 'text-green-600',  filter: 'completed' },
         ].map((s) => (
           <button key={s.label} onClick={() => setStatusFilter(statusFilter === s.filter ? '' : s.filter)}
-            className={`${s.bg} rounded-xl p-4 text-left border-2 transition-all ${statusFilter === s.filter ? 'border-blue-400' : 'border-transparent'}`}>
+            className={`${s.bg} rounded-xl p-4 text-left border-2 transition-all ${statusFilter === s.filter ? 'border-primary/50' : 'border-transparent'}`}>
             <p className={`text-2xl font-bold ${s.text}`}>{s.value}</p>
-            <p className="text-xs text-gray-500 mt-0.5">{s.label}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{s.label}</p>
           </button>
         ))}
       </div>
@@ -98,41 +103,41 @@ export default function TasksPage() {
       {/* Toolbar */}
       <div className="flex gap-3 mb-5">
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-400">
+          className="border border-input rounded-lg px-3 py-2 text-sm bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-ring">
           <option value="">All statuses</option>
           <option value="overdue">Overdue</option>
           <option value="pending">Pending</option>
           <option value="completed">Completed</option>
         </select>
-        <button onClick={() => setShowCreate(true)}
-          className="ml-auto bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 transition">
+        <button type="button" onClick={() => setShowCreate(true)}
+          className="ml-auto bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary/90 transition">
           + New Task
         </button>
       </div>
 
       {/* Task list */}
       <div className="space-y-3">
-        {filtered.length === 0 && <p className="text-center text-gray-400 py-12">No tasks found.</p>}
+        {filtered.length === 0 && <p className="text-center text-muted-foreground py-12">No tasks found.</p>}
         {filtered.map((t) => {
           const pCfg = PRIORITY_CONFIG[t.priority] || PRIORITY_CONFIG.medium;
           const isCompleted = t.status === 'completed';
           return (
-            <div key={t.id} className={`bg-white rounded-2xl border-2 p-4 transition-all ${
+            <div key={t.id} className={`bg-card rounded-2xl border-2 p-4 transition-all ${
               t.status === 'overdue' ? 'border-red-200 bg-red-50' :
-              isCompleted ? 'border-gray-100 opacity-60' : 'border-gray-100 hover:border-blue-200'
+              isCompleted ? 'border-border opacity-60' : 'border-border hover:border-primary/30'
             }`}>
               <div className="flex items-start gap-4">
                 {/* Complete checkbox */}
                 <button onClick={() => !isCompleted && markComplete(t.id)}
                   className={`mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${
-                    isCompleted ? 'bg-green-500 border-green-500' : 'border-gray-300 hover:border-green-400'
+                    isCompleted ? 'bg-green-500 border-green-500' : 'border-input hover:border-green-400'
                   }`}>
-                  {isCompleted && <span className="text-white text-xs">✓</span>}
+                  {isCompleted && <Check className="h-3 w-3 text-white" strokeWidth={3} aria-hidden />}
                 </button>
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2">
-                    <p className={`font-semibold text-sm ${isCompleted ? 'line-through text-gray-400' : 'text-gray-800'}`}>{t.title}</p>
+                    <p className={`font-semibold text-sm ${isCompleted ? 'line-through text-muted-foreground' : 'text-foreground'}`}>{t.title}</p>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       {t.status === 'overdue' && (
                         <span className="bg-red-100 text-red-700 text-xs px-2 py-0.5 rounded-full font-bold">OVERDUE</span>
@@ -140,12 +145,31 @@ export default function TasksPage() {
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${pCfg.bg} ${pCfg.text}`}>{pCfg.label}</span>
                     </div>
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">{t.description}</p>
-                  <div className="flex items-center gap-4 mt-2 text-xs text-gray-400">
-                    <span>{TYPE_ICONS[t.type]} {t.type.replace('_', ' ')}</span>
-                    {t.patientName && <span>👤 {t.patientName}</span>}
-                    {t.assignedTo && <span>→ {t.assignedTo}</span>}
-                    <span className={t.status === 'overdue' ? 'text-red-600 font-semibold' : ''}>📅 {t.dueDate}</span>
+                  <p className="text-xs text-muted-foreground mt-1">{t.description}</p>
+                  <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                    <span className="inline-flex items-center gap-1">
+                      {(() => {
+                        const Ti = TYPE_ICON[t.type] || ClipboardList;
+                        return <Ti className="h-3.5 w-3.5 shrink-0 text-muted-foreground" strokeWidth={1.75} aria-hidden />;
+                      })()}
+                      {t.type.replace('_', ' ')}
+                    </span>
+                    {t.patientName && (
+                      <span className="inline-flex items-center gap-1">
+                        <User className="h-3.5 w-3.5 shrink-0 text-muted-foreground" strokeWidth={1.75} aria-hidden />
+                        {t.patientName}
+                      </span>
+                    )}
+                    {t.assignedTo && (
+                      <span className="inline-flex items-center gap-1">
+                        <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" strokeWidth={1.75} aria-hidden />
+                        {t.assignedTo}
+                      </span>
+                    )}
+                    <span className={`inline-flex items-center gap-1 ${t.status === 'overdue' ? 'text-red-600 font-semibold' : 'text-muted-foreground'}`}>
+                      <Calendar className={`h-3.5 w-3.5 shrink-0 ${t.status === 'overdue' ? 'text-red-500' : 'text-muted-foreground'}`} strokeWidth={1.75} aria-hidden />
+                      {t.dueDate}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -157,10 +181,12 @@ export default function TasksPage() {
       {/* Create task modal */}
       {showCreate && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+          <div className="bg-card rounded-2xl shadow-2xl w-full max-w-md p-6 border border-border">
             <div className="flex items-center justify-between mb-5">
-              <h3 className="font-bold text-gray-800">New Task</h3>
-              <button onClick={() => setShowCreate(false)} className="text-gray-400 hover:text-gray-600 text-xl">×</button>
+              <h3 className="font-bold text-foreground">New Task</h3>
+              <button type="button" onClick={() => setShowCreate(false)} className="text-muted-foreground hover:text-foreground p-1 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="Close">
+                <X className="h-5 w-5" strokeWidth={2} aria-hidden />
+              </button>
             </div>
             <div className="space-y-3">
               {[
@@ -171,17 +197,17 @@ export default function TasksPage() {
                 { label: 'Due Date', key: 'dueDate', type: 'date', placeholder: '' },
               ].map((f) => (
                 <div key={f.key}>
-                  <label className="text-xs font-semibold text-gray-500 uppercase block mb-1">{f.label}</label>
+                  <label className="text-xs font-semibold text-muted-foreground uppercase block mb-1">{f.label}</label>
                   <input type={f.type} value={(form as any)[f.key]} placeholder={f.placeholder}
                     onChange={(e) => setForm({ ...form, [f.key]: e.target.value })}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                    className="w-full border border-input rounded-lg px-3 py-2 text-sm bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
                 </div>
               ))}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-semibold text-gray-500 uppercase block mb-1">Priority</label>
+                  <label className="text-xs font-semibold text-muted-foreground uppercase block mb-1">Priority</label>
                   <select value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-400">
+                    className="w-full border border-input rounded-lg px-3 py-2 text-sm bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-ring">
                     <option value="critical">Critical</option>
                     <option value="high">High</option>
                     <option value="medium">Medium</option>
@@ -189,9 +215,9 @@ export default function TasksPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-gray-500 uppercase block mb-1">Type</label>
+                  <label className="text-xs font-semibold text-muted-foreground uppercase block mb-1">Type</label>
                   <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-400">
+                    className="w-full border border-input rounded-lg px-3 py-2 text-sm bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-ring">
                     <option value="follow_up">Follow-up</option>
                     <option value="clinical">Clinical</option>
                     <option value="admin">Admin</option>
@@ -201,14 +227,21 @@ export default function TasksPage() {
               </div>
             </div>
             <div className="flex gap-3 mt-5">
-              <button onClick={() => setShowCreate(false)}
-                className="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm hover:bg-gray-50">Cancel</button>
-              <button onClick={handleCreate} disabled={!form.title}
+              <button type="button" onClick={() => setShowCreate(false)}
+                className="flex-1 border border-input text-muted-foreground py-2 rounded-lg text-sm hover:bg-muted">Cancel</button>
+              <button type="button" onClick={handleCreate} disabled={!form.title}
                 className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${
                   created ? 'bg-green-500 text-white' :
-                  form.title ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  form.title ? 'bg-primary text-primary-foreground hover:bg-primary/90' : 'bg-secondary text-muted-foreground cursor-not-allowed'
                 }`}>
-                {created ? '✓ Created!' : 'Create Task'}
+                {created ? (
+                  <span className="inline-flex items-center justify-center gap-2">
+                    <Check className="h-4 w-4" strokeWidth={2.5} aria-hidden />
+                    Created!
+                  </span>
+                ) : (
+                  'Create Task'
+                )}
               </button>
             </div>
           </div>

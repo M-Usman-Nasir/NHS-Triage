@@ -10,6 +10,8 @@
  */
 
 import { useState } from 'react';
+import type { LucideIcon } from 'lucide-react';
+import { CircleHelp, Mail, Phone, Pill, Stethoscope, X } from 'lucide-react';
 import CRMLayout from '../../components/CRMLayout';
 
 const MOCK_PROVIDERS = [
@@ -19,9 +21,9 @@ const MOCK_PROVIDERS = [
   { id:'PROV-004', name:'Dr. Helena Cross', role:'gp',         organisation:'Pimlico Medical Centre',           address:'4 Warwick Way, London, SW1V 1RX',     phone:'020 7834 1234', email:'helena.cross@pimlico-medical.nhs.uk', nhsCode:'G98765', activePatients:3, casesThisMonth:4,  avgResponseTime:'48 hrs',  status:'active', specialties:['General Practice','Women\'s Health'],        lastLogin:'2026-04-19T17:00:00Z' },
 ];
 
-const ROLE_CONFIG: Record<string, { label: string; colour: string; icon: string }> = {
-  pharmacist: { label: 'Pharmacist', colour: 'bg-blue-100 text-blue-700',   icon: '💊' },
-  gp:         { label: 'GP',         colour: 'bg-yellow-100 text-yellow-700', icon: '🩺' },
+const ROLE_CONFIG: Record<string, { label: string; colour: string; Icon: LucideIcon }> = {
+  pharmacist: { label: 'Pharmacist', colour: 'bg-primary/10 text-primary',   Icon: Pill },
+  gp:         { label: 'GP',         colour: 'bg-yellow-100 text-yellow-700', Icon: Stethoscope },
 };
 
 export default function ProvidersPage() {
@@ -33,40 +35,39 @@ export default function ProvidersPage() {
   return (
     <CRMLayout title="Provider Directory" subtitle="Pharmacists and GPs in the Aegis Health network">
 
-      {/* Toolbar */}
       <div className="flex gap-3 mb-5">
         <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-400">
+          className="border border-input rounded-lg px-3 py-2 text-sm bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-ring">
           <option value="">All roles</option>
           <option value="pharmacist">Pharmacists</option>
           <option value="gp">GPs</option>
         </select>
-        <span className="text-sm text-gray-400 self-center">{filtered.length} providers</span>
+        <span className="text-sm text-muted-foreground self-center">{filtered.length} providers</span>
       </div>
 
       <div className="flex gap-6">
 
-        {/* Provider cards */}
         <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
           {filtered.map((p) => {
-            const roleCfg = ROLE_CONFIG[p.role] || { label: p.role, colour: 'bg-gray-100 text-gray-600', icon: '•' };
+            const roleCfg = ROLE_CONFIG[p.role] || { label: p.role, colour: 'bg-muted text-muted-foreground', Icon: CircleHelp };
+            const RoleIcon = roleCfg.Icon;
             return (
               <div key={p.id} onClick={() => setSelected(p)}
-                className={`bg-white rounded-2xl border-2 p-5 cursor-pointer transition-all hover:shadow-md ${
-                  selected?.id === p.id ? 'border-blue-400 shadow-md' : 'border-gray-100 hover:border-blue-200'
+                className={`bg-card rounded-2xl border-2 p-5 cursor-pointer transition-all hover:shadow-md ${
+                  selected?.id === p.id ? 'border-primary/50 shadow-md' : 'border-border hover:border-primary/30'
                 }`}>
                 <div className="flex items-start gap-4 mb-4">
-                  <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl flex-shrink-0 ${
-                    p.role === 'pharmacist' ? 'bg-blue-100' : 'bg-yellow-100'
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
+                    p.role === 'pharmacist' ? 'bg-primary/10 text-primary' : 'bg-yellow-100 text-yellow-800'
                   }`}>
-                    {roleCfg.icon}
+                    <RoleIcon className="h-6 w-6" strokeWidth={1.65} aria-hidden />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-gray-800">{p.name}</h3>
-                    <p className="text-sm text-gray-500 truncate">{p.organisation}</p>
+                    <h3 className="font-bold text-foreground">{p.name}</h3>
+                    <p className="text-sm text-muted-foreground truncate">{p.organisation}</p>
                     <div className="flex items-center gap-2 mt-1">
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${roleCfg.colour}`}>{roleCfg.label}</span>
-                      <span className="text-xs text-gray-400 font-mono">{p.nhsCode}</span>
+                      <span className="text-xs text-muted-foreground font-mono">{p.nhsCode}</span>
                     </div>
                   </div>
                 </div>
@@ -77,16 +78,16 @@ export default function ProvidersPage() {
                     { label: 'Cases/Month',     value: p.casesThisMonth },
                     { label: 'Avg Response',    value: p.avgResponseTime },
                   ].map((s) => (
-                    <div key={s.label} className="bg-gray-50 rounded-lg p-2">
-                      <p className="font-bold text-gray-700 text-sm">{s.value}</p>
-                      <p className="text-xs text-gray-400">{s.label}</p>
+                    <div key={s.label} className="bg-muted rounded-lg p-2">
+                      <p className="font-bold text-foreground text-sm">{s.value}</p>
+                      <p className="text-xs text-muted-foreground">{s.label}</p>
                     </div>
                   ))}
                 </div>
 
                 <div className="flex flex-wrap gap-1 mt-3">
                   {p.specialties.map((s) => (
-                    <span key={s} className="bg-gray-100 text-gray-500 text-xs px-2 py-0.5 rounded">{s}</span>
+                    <span key={s} className="bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded">{s}</span>
                   ))}
                 </div>
               </div>
@@ -94,19 +95,22 @@ export default function ProvidersPage() {
           })}
         </div>
 
-        {/* Detail panel */}
-        {selected && (
+        {selected && (() => {
+          const DetailIcon = ROLE_CONFIG[selected.role]?.Icon || CircleHelp;
+          return (
           <div className="w-72 flex-shrink-0">
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 sticky top-0 space-y-4">
+            <div className="bg-card rounded-2xl shadow-card border border-border p-5 sticky top-0 space-y-4">
               <div className="flex items-start justify-between">
-                <div className={`w-14 h-14 rounded-full flex items-center justify-center text-2xl ${selected.role === 'pharmacist' ? 'bg-blue-100' : 'bg-yellow-100'}`}>
-                  {ROLE_CONFIG[selected.role]?.icon}
+                <div className={`w-14 h-14 rounded-full flex items-center justify-center ${selected.role === 'pharmacist' ? 'bg-primary/10 text-primary' : 'bg-yellow-100 text-yellow-800'}`}>
+                  <DetailIcon className="h-7 w-7" strokeWidth={1.65} aria-hidden />
                 </div>
-                <button onClick={() => setSelected(null)} className="text-gray-400 hover:text-gray-600">×</button>
+                <button type="button" onClick={() => setSelected(null)} className="text-muted-foreground hover:text-foreground p-1 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="Close panel">
+                  <X className="h-5 w-5" strokeWidth={2} aria-hidden />
+                </button>
               </div>
               <div>
-                <h3 className="font-bold text-gray-800">{selected.name}</h3>
-                <p className="text-sm text-gray-500">{selected.organisation}</p>
+                <h3 className="font-bold text-foreground">{selected.name}</h3>
+                <p className="text-sm text-muted-foreground">{selected.organisation}</p>
               </div>
               <div className="space-y-2 text-sm">
                 {[
@@ -118,24 +122,27 @@ export default function ProvidersPage() {
                   { label: 'Last Login', value: new Date(selected.lastLogin).toLocaleString() },
                 ].map((f) => (
                   <div key={f.label}>
-                    <p className="text-xs text-gray-400">{f.label}</p>
-                    <p className="text-xs font-medium text-gray-700">{f.value}</p>
+                    <p className="text-xs text-muted-foreground">{f.label}</p>
+                    <p className="text-xs font-medium text-foreground">{f.value}</p>
                   </div>
                 ))}
               </div>
               <div className="flex flex-col gap-2">
                 <a href={`mailto:${selected.email}`}
-                  className="flex items-center justify-center gap-2 bg-blue-50 text-blue-600 py-2 rounded-lg text-sm font-medium hover:bg-blue-100 transition">
-                  📧 Send Email
+                  className="flex items-center justify-center gap-2 bg-primary/10 text-primary py-2 rounded-lg text-sm font-medium hover:bg-primary/15 transition">
+                  <Mail className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
+                  Send Email
                 </a>
                 <a href={`tel:${selected.phone}`}
-                  className="flex items-center justify-center gap-2 bg-gray-50 text-gray-600 py-2 rounded-lg text-sm font-medium hover:bg-gray-100 transition">
-                  📞 Call
+                  className="flex items-center justify-center gap-2 bg-muted text-muted-foreground py-2 rounded-lg text-sm font-medium hover:bg-secondary transition">
+                  <Phone className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
+                  Call
                 </a>
               </div>
             </div>
           </div>
-        )}
+          );
+        })()}
       </div>
     </CRMLayout>
   );

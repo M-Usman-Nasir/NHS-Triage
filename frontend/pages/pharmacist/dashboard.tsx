@@ -15,6 +15,8 @@
  */
 
 import { useState } from 'react';
+import type { LucideIcon } from 'lucide-react';
+import { CheckCircle2, Clock, ListChecks, Pill, Printer, Stethoscope } from 'lucide-react';
 
 // ─── Mock data (in production: fetch from GET /api/summary) ──────────────────
 
@@ -56,25 +58,36 @@ export default function PharmacistDashboard() {
     }
   };
 
-  const STATUS_LABELS: Record<string, string> = {
-    pending:  '⏳ Pending Review',
-    reviewed: '✅ Reviewed',
-    treated:  '💊 Treated',
-    referred: '🩺 Referred to GP',
+  const STATUS_META: Record<string, { Icon: LucideIcon; label: string }> = {
+    pending:  { Icon: Clock, label: 'Pending Review' },
+    reviewed: { Icon: CheckCircle2, label: 'Reviewed' },
+    treated:  { Icon: Pill, label: 'Treated' },
+    referred: { Icon: Stethoscope, label: 'Referred to GP' },
+  };
+
+  const statusChip = (status: string) => {
+    const m = STATUS_META[status];
+    if (!m) return <span>{status}</span>;
+    const I = m.Icon;
+    return (
+      <span className="inline-flex items-center gap-1">
+        <I className="h-3.5 w-3.5 shrink-0" strokeWidth={2} aria-hidden />
+        {m.label}
+      </span>
+    );
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-blue-800 text-white py-4 px-6">
+    <div className="min-h-screen bg-background">
+      <header className="bg-brand-header text-primary-foreground py-4 px-6 shadow-card-md">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div>
             <h1 className="font-bold text-lg">Aegis Health AI</h1>
-            <p className="text-blue-200 text-xs">Pharmacist Dashboard — Priya Sharma</p>
+            <p className="text-brand-header-subtle text-xs">Pharmacist Dashboard — Priya Sharma</p>
           </div>
           <div className="text-right">
             <p className="text-sm font-medium">Lloyds Pharmacy, London</p>
-            <p className="text-blue-200 text-xs">21 April 2026</p>
+            <p className="text-brand-header-subtle text-xs">21 April 2026</p>
           </div>
         </div>
       </header>
@@ -83,48 +96,48 @@ export default function PharmacistDashboard() {
 
         {/* Case List */}
         <div className="w-1/2 space-y-3">
-          <h2 className="text-lg font-bold text-gray-800 mb-4">
-            Pharmacy Referrals <span className="text-sm font-normal text-gray-500 ml-1">({cases.length} cases)</span>
+          <h2 className="text-lg font-bold text-foreground mb-4">
+            Pharmacy Referrals <span className="text-sm font-normal text-muted-foreground ml-1">({cases.length} cases)</span>
           </h2>
 
           {cases.map((c) => (
             <div
               key={c.id}
               onClick={() => setSelectedCase(c)}
-              className={`bg-white rounded-xl p-4 border-2 cursor-pointer transition-all shadow-sm ${
+              className={`bg-card rounded-xl p-4 border-2 cursor-pointer transition-all shadow-card ${
                 selectedCase?.id === c.id
-                  ? 'border-blue-500'
+                  ? 'border-primary'
                   : c.urgency === 'urgent'
                     ? 'border-orange-300 hover:border-orange-400'
-                    : 'border-gray-200 hover:border-blue-300'
+                    : 'border-border hover:border-primary/40'
               }`}
             >
               <div className="flex items-start justify-between">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-semibold text-gray-800">{c.patient.fullName}</span>
+                    <span className="font-semibold text-foreground">{c.patient.fullName}</span>
                     {c.urgency === 'urgent' && (
                       <span className="bg-orange-100 text-orange-700 text-xs px-2 py-0.5 rounded-full font-medium">URGENT</span>
                     )}
                   </div>
-                  <p className="text-gray-500 text-xs mt-0.5">{c.patient.age}y {c.patient.gender} · {c.pathway}</p>
-                  <p className="text-gray-400 text-xs mt-1">Referred: {c.referredAt}</p>
+                  <p className="text-muted-foreground text-xs mt-0.5">{c.patient.age}y {c.patient.gender} · {c.pathway}</p>
+                  <p className="text-muted-foreground text-xs mt-1">Referred: {c.referredAt}</p>
                 </div>
                 <span className={`text-xs px-2 py-1 rounded-full font-medium ${
                   c.status === 'pending'  ? 'bg-yellow-100 text-yellow-700' :
                   c.status === 'treated'  ? 'bg-green-100 text-green-700' :
-                  c.status === 'referred' ? 'bg-blue-100 text-blue-700' :
-                  'bg-gray-100 text-gray-600'
+                  c.status === 'referred' ? 'bg-primary/10 text-primary' :
+                  'bg-muted text-muted-foreground'
                 }`}>
-                  {STATUS_LABELS[c.status]}
+                  {statusChip(c.status)}
                 </span>
               </div>
             </div>
           ))}
 
           {cases.length === 0 && (
-            <div className="text-center py-12 text-gray-400">
-              <p className="text-4xl mb-2">✓</p>
+            <div className="text-center py-12 text-muted-foreground">
+              <CheckCircle2 className="h-12 w-12 mx-auto mb-2 text-green-500/80" strokeWidth={1.5} aria-hidden />
               <p>No pending referrals</p>
             </div>
           )}
@@ -133,11 +146,11 @@ export default function PharmacistDashboard() {
         {/* Case Detail Panel */}
         <div className="w-1/2">
           {selectedCase ? (
-            <div className="bg-white rounded-2xl shadow-md p-6 sticky top-6 space-y-5">
+            <div className="bg-card rounded-2xl shadow-card-md border border-border p-6 sticky top-6 space-y-5">
               <div className="flex items-start justify-between">
                 <div>
-                  <h3 className="text-xl font-bold text-gray-800">{selectedCase.patient.fullName}</h3>
-                  <p className="text-gray-500 text-sm">{selectedCase.patient.age}y · {selectedCase.patient.gender} · {selectedCase.pathway}</p>
+                  <h3 className="text-xl font-bold text-foreground">{selectedCase.patient.fullName}</h3>
+                  <p className="text-muted-foreground text-sm">{selectedCase.patient.age}y · {selectedCase.patient.gender} · {selectedCase.pathway}</p>
                 </div>
                 {selectedCase.urgency === 'urgent' && (
                   <span className="bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-sm font-bold">URGENT</span>
@@ -146,53 +159,56 @@ export default function PharmacistDashboard() {
 
               {/* Summary */}
               <div>
-                <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Consultation Summary</h4>
-                <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg">{selectedCase.summaryText}</p>
+                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Consultation Summary</h4>
+                <p className="text-sm text-foreground bg-muted p-3 rounded-lg">{selectedCase.summaryText}</p>
               </div>
 
               {/* Treatment options */}
               <div>
-                <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Suggested Treatments</h4>
+                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Suggested Treatments</h4>
                 <ul className="space-y-1">
                   {selectedCase.treatmentOptions.map((t) => (
-                    <li key={t} className="flex items-start gap-2 text-sm text-gray-700">
-                      <span className="text-blue-400 mt-0.5">•</span>
+                    <li key={t} className="flex items-start gap-2 text-sm text-foreground">
+                      <span className="text-primary mt-0.5">•</span>
                       {t}
                     </li>
                   ))}
                 </ul>
-                <p className="text-xs text-gray-400 mt-1">Subject to clinical assessment by pharmacist.</p>
+                <p className="text-xs text-muted-foreground mt-1">Subject to clinical assessment by pharmacist.</p>
               </div>
 
               {/* Action buttons */}
               <div>
-                <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Update Status</h4>
+                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Update Status</h4>
                 <div className="grid grid-cols-2 gap-2">
-                  {['reviewed', 'treated', 'referred'].map((status) => (
+                  {(['reviewed', 'treated', 'referred'] as const).map((status) => (
                     <button
+                      type="button"
                       key={status}
                       onClick={() => updateStatus(selectedCase.id, status)}
-                      className={`py-2 rounded-lg text-sm font-medium border transition-all ${
+                      className={`py-2 rounded-lg text-sm font-medium border transition-all inline-flex items-center justify-center gap-1.5 ${
                         selectedCase.status === status
-                          ? 'bg-blue-600 text-white border-blue-600'
-                          : 'border-gray-300 text-gray-600 hover:bg-gray-50'
+                          ? 'bg-primary text-primary-foreground border-primary'
+                          : 'border-input text-muted-foreground hover:bg-muted'
                       }`}
                     >
-                      {STATUS_LABELS[status]}
+                      {statusChip(status)}
                     </button>
                   ))}
                   <button
+                    type="button"
                     onClick={() => window.print()}
-                    className="py-2 rounded-lg text-sm font-medium border border-gray-300 text-gray-600 hover:bg-gray-50"
+                    className="py-2 rounded-lg text-sm font-medium border border-input text-muted-foreground hover:bg-muted inline-flex items-center justify-center gap-1.5"
                   >
-                    🖨️ Print
+                    <Printer className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
+                    Print
                   </button>
                 </div>
               </div>
             </div>
           ) : (
-            <div className="bg-white rounded-2xl shadow-sm p-12 text-center text-gray-400 border border-gray-100">
-              <p className="text-4xl mb-3">👈</p>
+            <div className="bg-card rounded-2xl shadow-card p-12 text-center text-muted-foreground border border-border">
+              <ListChecks className="h-12 w-12 mx-auto mb-3 opacity-35" strokeWidth={1.25} aria-hidden />
               <p>Select a case to view details</p>
             </div>
           )}
