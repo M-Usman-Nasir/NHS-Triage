@@ -52,6 +52,22 @@ If a red flag matches:
 
 Design principle: **over-escalate rather than under-escalate**.
 
+### Uncertainty and default escalation (NHS governance alignment)
+
+Where the automated rule set **cannot be evaluated reliably** or **demographics needed for age/sex checks are missing**, the product **must not** silently assume the lowest-acuity disposition (especially Pharmacy First–style supply). Implemented behaviour (see `redFlagDetector.js`, `pharmacyEligibility.js`, `decisionEngine.js`):
+
+| Situation | Default |
+|-----------|---------|
+| A **safety** (red flag / emergency override) condition expression throws or cannot be evaluated | Treat as **triggered escalation** to **same-day urgent care** with a patient-appropriate message, plus an auditable `RF_GOVERNANCE_RULE_EVALUATION` marker. |
+| **Age** is required by the pathway but missing or non-numeric | **Not pharmacy eligible**; route to **GP** with explicit governance wording. |
+| **Gender** is required by `applicableGenders` but missing | **Not pharmacy eligible**; safer default to **GP**. |
+| An **ineligibility** (exclusion) rule cannot be evaluated | **Not pharmacy eligible** (do not risk false “eligible”). |
+| An **eligible** rule cannot be evaluated | That rule is skipped; if eligibility cannot be confirmed, default remains **ineligible** / **GP** as already encoded. |
+| **Outcome** rules cannot be evaluated or **no** outcome rule matches after errors | **Urgent care** disposition with explicit wording (higher-touch than routine GP where the engine is uncertain). |
+| Outcome is **self-care** or **pharmacy** but any **governance uncertainty** flag is set (e.g. partial rule-engine failure on eligibility) | **Upgrade to GP** and **withdraw pharmacy eligibility** so lower-acuity paths are not finalised under uncertainty. |
+
+This is consistent with **DCB0129** expectations for deterministic CDS: auditable decisions, conservative defaults when the logic boundary is unclear, and **no silent under-triage** when the engine is unsure.
+
 ### Stage 2 — Pharmacy eligibility
 
 Runs **only if** no red flag (or per written policy for edge cases — document exceptions).

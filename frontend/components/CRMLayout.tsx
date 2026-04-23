@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   ListTodo,
   MessageSquare,
+  Shield,
   Users,
 } from 'lucide-react';
 
@@ -27,6 +28,7 @@ const NAV_ITEMS: Array<{ href: string; label: string; Icon: LucideIcon }> = [
   { href: '/crm/communications', label: 'Comms', Icon: MessageSquare },
   { href: '/crm/providers',      label: 'Providers', Icon: Hospital },
   { href: '/crm/reports',        label: 'Reports', Icon: ChartColumn },
+  { href: '/admin/dashboard',   label: 'Admin', Icon: Shield },
 ];
 
 const BOTTOM_NAV = NAV_ITEMS.slice(0, 5);
@@ -37,6 +39,7 @@ export default function CRMLayout({ children, title, subtitle }: CRMLayoutProps)
 
   const isActive = (href: string) => {
     if (href === '/crm') return router.pathname === '/crm';
+    if (href === '/admin/dashboard') return router.pathname.startsWith('/admin');
     return router.pathname.startsWith(href);
   };
 

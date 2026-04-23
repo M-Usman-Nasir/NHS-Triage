@@ -36,6 +36,24 @@ function loadPathway(pathwayCode) {
 }
 
 /**
+ * Ensures every pathway question id exists on the context so rule expressions
+ * never hit ReferenceError when a branch skipped questions.
+ *
+ * @param {object} pathway
+ * @param {object} answersOrContext
+ * @returns {object}
+ */
+function mergePathwayAnswerDefaults(pathway, answersOrContext) {
+  const out = { ...(answersOrContext || {}) };
+  for (const q of pathway.questions || []) {
+    if (!Object.prototype.hasOwnProperty.call(out, q.id)) {
+      out[q.id] = undefined;
+    }
+  }
+  return out;
+}
+
+/**
  * Safely evaluates a rule condition string against patient answers.
  *
  * Conditions are simple boolean expressions defined in the JSON pathway files.
@@ -45,25 +63,44 @@ function loadPathway(pathwayCode) {
  * @param {string} condition - Condition string from pathway JSON e.g. "q3 === true && q4 === true"
  * @param {object} answers   - Patient's answers object e.g. { q3: true, q4: false }
  * @param {object} patient   - Patient demographic data e.g. { age: 34, gender: 'Female' }
+ * @param {object|null} pathway - When set, binds all pathway question ids (undefined if unanswered)
  * @returns {boolean}
  */
-function evaluateCondition(condition, answers, patient = {}) {
+function tryEvaluateCondition(condition, answers, patient = {}, pathway = null) {
+  if (condition == null || typeof condition !== 'string' || condition.trim() === '') {
+    return { ok: true, value: false };
+  }
   try {
+    let merged = answers;
+    if (pathway) {
+      merged = mergePathwayAnswerDefaults(pathway, answers);
+    }
+    const ageVal = patient.age === undefined || patient.age === null || patient.age === '' ? null : Number(patient.age);
     const context = {
-      ...answers,
-      age: patient.age || null,
-      gender: patient.gender || null,
+      ...merged,
+      age: Number.isFinite(ageVal) ? ageVal : null,
+      gender: patient.gender ?? null,
     };
     const keys = Object.keys(context);
     const values = Object.values(context);
     // eslint-disable-next-line no-new-func
     const fn = new Function(...keys, `return (${condition});`);
-    return fn(...values);
+    return { ok: true, value: fn(...values) };
   } catch (err) {
-    // If a rule condition fails to parse, default to false (do not trigger flag)
-    console.warn(`[RedFlagDetector] Failed to evaluate condition: "${condition}" — ${err.message}`);
+    return { ok: false, error: err.message };
+  }
+}
+
+/**
+ * @returns {boolean} false when evaluation fails (non-safety callers); see tryEvaluateCondition for safety paths.
+ */
+function evaluateCondition(condition, answers, patient = {}, pathway = null) {
+  const r = tryEvaluateCondition(condition, answers, patient, pathway);
+  if (!r.ok) {
+    console.warn(`[RedFlagDetector] Failed to evaluate condition: "${condition}" — ${r.error}`);
     return false;
   }
+  return r.value;
 }
 
 /**
@@ -83,24 +120,49 @@ function detectRedFlags(pathwayCode, answers, patient = {}) {
   const pathway = loadPathway(pathwayCode);
   const triggeredFlags = [];
 
-  if (!pathway.redFlags || pathway.redFlags.length === 0) {
-    return { triggered: false, flags: [], highestSeverityOutcome: null };
+  const emergencyOverrides = pathway.emergencyOverrides || [];
+  const redFlags = pathway.redFlags || [];
+  const safetyRules = [
+    ...emergencyOverrides.map((f) => ({ ...f, tier: 'emergency_override' })),
+    ...redFlags.map((f) => ({ ...f, tier: 'red_flag' })),
+  ];
+
+  if (safetyRules.length === 0) {
+    return { triggered: false, flags: [], highestSeverityOutcome: null, governanceEvalFailure: false };
   }
 
-  for (const flag of pathway.redFlags) {
-    const matched = evaluateCondition(flag.condition, answers, patient);
-    if (matched) {
+  let governanceEvalFailure = false;
+  for (const flag of safetyRules) {
+    const ev = tryEvaluateCondition(flag.condition, answers, patient, pathway);
+    if (!ev.ok) {
+      governanceEvalFailure = true;
+      console.warn(`[RedFlagDetector] Safety rule "${flag.code || 'unknown'}" not evaluable — applying governance default escalation.`);
+      continue;
+    }
+    if (ev.value) {
       triggeredFlags.push({
         code: flag.code,
         description: flag.description,
         outcome: flag.outcome,
         message: flag.message,
+        tier: flag.tier || 'red_flag',
       });
     }
   }
 
+  if (governanceEvalFailure) {
+    triggeredFlags.push({
+      code: 'RF_GOVERNANCE_RULE_EVALUATION',
+      description: 'At least one automated safety check could not be evaluated — conservative escalation applied',
+      outcome: 'urgent_care',
+      message:
+        'We could not safely run every automated safety check on your answers. Please get same-day clinical advice (contact your GP practice for an urgent assessment, use NHS 111 online or by phone, or visit an urgent treatment centre).',
+      tier: 'red_flag',
+    });
+  }
+
   if (triggeredFlags.length === 0) {
-    return { triggered: false, flags: [], highestSeverityOutcome: null };
+    return { triggered: false, flags: [], highestSeverityOutcome: null, governanceEvalFailure: false };
   }
 
   // Determine the most severe outcome from all triggered flags
@@ -118,6 +180,7 @@ function detectRedFlags(pathwayCode, answers, patient = {}) {
     triggered: true,
     flags: triggeredFlags,
     highestSeverityOutcome,
+    governanceEvalFailure: governanceEvalFailure || triggeredFlags.some((f) => f.code === 'RF_GOVERNANCE_RULE_EVALUATION'),
   };
 }
 
@@ -130,9 +193,15 @@ function detectRedFlags(pathwayCode, answers, patient = {}) {
  */
 function getRedFlagMessage(flags) {
   const outcomePriority = ['emergency_999', 'urgent_care', 'gp'];
+  const tierOrder = ['emergency_override', 'red_flag'];
   for (const priority of outcomePriority) {
-    const flag = flags.find((f) => f.outcome === priority);
-    if (flag) return flag.message;
+    const inTier = flags.filter((f) => f.outcome === priority);
+    for (const tier of tierOrder) {
+      const flag = inTier.find((f) => f.tier === tier);
+      if (flag) return flag.message;
+    }
+    const fallback = inTier[0];
+    if (fallback) return fallback.message;
   }
   return 'Please seek medical attention.';
 }
@@ -141,4 +210,6 @@ module.exports = {
   detectRedFlags,
   getRedFlagMessage,
   evaluateCondition,
+  tryEvaluateCondition,
+  mergePathwayAnswerDefaults,
 };

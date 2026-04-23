@@ -16,5 +16,8 @@ export function mapSummaryToResult(data: SummaryApiResponse): TriageResultView {
     safetyNetAdvice: data.safetyNetAdvice ?? undefined,
     pharmacyTreatmentOptions: data.pharmacyTreatmentOptions ?? undefined,
     selfCareAdvice: data.selfCareAdvice ?? undefined,
+    patientExplanation: data.patientExplanation ?? undefined,
+    comorbidityModifiersApplied: data.comorbidityModifiersApplied ?? undefined,
+    governanceUncertainty: data.governanceUncertainty ?? undefined,
   };
 }

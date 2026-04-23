@@ -42,9 +42,10 @@
 
 const fs = require('fs');
 const path = require('path');
-const { detectRedFlags, getRedFlagMessage } = require('./redFlagDetector');
+const { detectRedFlags, getRedFlagMessage, evaluateCondition, tryEvaluateCondition } = require('./redFlagDetector');
 const { checkPharmacyEligibility } = require('./pharmacyEligibility');
-const { evaluateCondition } = require('./redFlagDetector');
+const { evaluateComorbidityModifiers } = require('./comorbidityModifiers');
+const { buildPatientExplanation } = require('./patientExplanation');
 
 // Human-readable labels for each outcome code
 const OUTCOME_LABELS = {
@@ -84,24 +85,43 @@ function loadPathway(pathwayCode) {
  * @param {Array}  outcomeRules  - Array of rule objects from pathway JSON
  * @param {object} context       - Merged context: answers + eligibility + flags
  * @param {object} patient       - Patient demographics
- * @returns {{ outcome: string, reason: string }}
+ * @returns {{ outcome: string, reason: string, engineUncertainty: boolean }}
  */
-function evaluateOutcomeRules(outcomeRules, context, patient) {
+function evaluateOutcomeRules(outcomeRules, context, patient, pathway) {
   // Sort rules by priority (ascending — lower number = evaluated first)
   const sorted = [...outcomeRules].sort((a, b) => (a.priority || 99) - (b.priority || 99));
 
+  let engineUncertainty = false;
   for (const rule of sorted) {
     // Skip escalation placeholder — handled separately
     if (rule.outcome === 'escalated_by_red_flag') continue;
 
-    const matched = evaluateCondition(rule.condition, context, patient);
-    if (matched) {
-      return { outcome: rule.outcome, reason: rule.reason || '' };
+    const ev = tryEvaluateCondition(rule.condition, context, patient, pathway);
+    if (!ev.ok) {
+      engineUncertainty = true;
+      console.warn(`[DecisionEngine] Outcome rule (priority ${rule.priority}) not evaluable — ${ev.error}`);
+      continue;
+    }
+    if (ev.value) {
+      return { outcome: rule.outcome, reason: rule.reason || '', engineUncertainty };
     }
   }
 
-  // Safety fallback — should not normally be reached
-  return { outcome: 'gp', reason: 'Unable to determine a specific outcome. GP assessment recommended.' };
+  // NHS governance: when automated disposition is unclear or rules failed to evaluate, prefer higher-touch care
+  if (engineUncertainty) {
+    return {
+      outcome: 'urgent_care',
+      reason:
+        'The system could not reliably match your answers to a single automated outcome. Same-day clinical assessment is recommended (GP urgent appointment, NHS 111, or urgent treatment centre).',
+      engineUncertainty: true,
+    };
+  }
+
+  return {
+    outcome: 'gp',
+    reason: 'Unable to determine a specific outcome from the current rule set. GP assessment recommended.',
+    engineUncertainty: false,
+  };
 }
 
 /**
@@ -158,6 +178,8 @@ function generateSummary({ patient, pathway, symptoms, answers, redFlagResult, p
  *     safetyNetAdvice: string,
  *     pharmacyTreatmentOptions: Array | null,
  *     selfCareAdvice: string | null,
+ *     patientExplanation: string,
+ *     comorbidityModifiersApplied: Array<{ id?: string, blockPharmacy?: boolean, reason?: string }>,
  *   }
  */
 function runTriage({ pathwayCode, answers, patient, symptoms = [] }) {
@@ -172,6 +194,13 @@ function runTriage({ pathwayCode, answers, patient, symptoms = [] }) {
   if (redFlagResult.triggered) {
     const flagMessage = getRedFlagMessage(redFlagResult.flags);
     const outcome = redFlagResult.highestSeverityOutcome || 'urgent_care';
+    const patientExplanation = buildPatientExplanation({
+      outcome,
+      outcomeReason: flagMessage,
+      redFlagTriggered: true,
+      redFlagMessage: flagMessage,
+      comorbidityFragments: [],
+    });
 
     return {
       outcome,
@@ -188,30 +217,64 @@ function runTriage({ pathwayCode, answers, patient, symptoms = [] }) {
       safetyNetAdvice: pathway.safetyNetAdvice || null,
       pharmacyTreatmentOptions: null,
       selfCareAdvice: null,
+      patientExplanation,
+      comorbidityModifiersApplied: [],
+      governanceUncertainty: redFlagResult.governanceEvalFailure ? ['safety_rule_engine_uncertainty'] : [],
     };
   }
 
   // Step 2: Pharmacy eligibility check
-  const { eligible: pharmacyEligible, reason: eligibilityReason } = checkPharmacyEligibility(
-    pathwayCode, answers, patient
-  );
+  const baseElig = checkPharmacyEligibility(pathwayCode, answers, patient);
+  const comorb = evaluateComorbidityModifiers(pathwayCode, answers, patient);
+
+  let pharmacyEligible = baseElig.eligible;
+  let eligibilityReason = baseElig.reason;
+
+  if (baseElig.eligible && comorb.blockPharmacy) {
+    pharmacyEligible = false;
+    eligibilityReason = comorb.blockReasons.join(' ') || baseElig.reason;
+  }
 
   // Step 3: Outcome rule evaluation
+  const ageForRules = Number.isFinite(Number(patient.age)) ? Number(patient.age) : null;
   const context = {
     ...answers,
     pharmacyEligible,
     redFlagTriggered: false,
-    age: patient.age || null,
+    age: ageForRules,
     gender: patient.gender || null,
   };
 
-  const { outcome, reason: outcomeReason } = evaluateOutcomeRules(
-    pathway.outcomeRules || [],
-    context,
-    patient
-  );
+  const {
+    outcome: resolvedOutcome,
+    reason: outcomeReason,
+    engineUncertainty: outcomeEngineUncertainty,
+  } = evaluateOutcomeRules(pathway.outcomeRules || [], context, patient, pathway);
 
-  const finalReason = outcomeReason || eligibilityReason || '';
+  const governanceUncertainty = [...(baseElig.governanceUncertainty || [])];
+  if (outcomeEngineUncertainty) {
+    governanceUncertainty.push('outcome_rule_engine_uncertainty');
+  }
+  if (comorb.applied.some((a) => String(a.id).endsWith('_eval_failed'))) {
+    governanceUncertainty.push('comorbidity_rule_engine_uncertainty');
+  }
+
+  let outcome = resolvedOutcome;
+  let finalReason = outcomeReason || eligibilityReason || '';
+
+  if (governanceUncertainty.length > 0 && (outcome === 'self_care' || outcome === 'pharmacy')) {
+    outcome = 'gp';
+    pharmacyEligible = false;
+    finalReason = `${finalReason} A safer default applies: where any automated check is incomplete or uncertain, the system does not finalise self-care or pharmacy supply without GP-level review (NHS clinical governance expectation).`.trim();
+  }
+
+  const patientExplanation = buildPatientExplanation({
+    outcome,
+    outcomeReason: finalReason,
+    redFlagTriggered: false,
+    comorbidityFragments: comorb.patientExplanationFragments,
+    governanceUncertainty,
+  });
 
   // Step 4: Generate consultation summary
   const summaryText = generateSummary({
@@ -236,6 +299,9 @@ function runTriage({ pathwayCode, answers, patient, symptoms = [] }) {
     selfCareAdvice: outcome === 'self_care'
       ? (pathway.selfCareAdvice || null)
       : null,
+    patientExplanation,
+    comorbidityModifiersApplied: comorb.applied,
+    governanceUncertainty,
   };
 }
 

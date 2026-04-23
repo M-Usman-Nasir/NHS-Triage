@@ -86,13 +86,22 @@ export default function LandingPage() {
               <p className="hidden text-xs leading-tight text-brand-header-subtle sm:block">NHS-aligned Clinical Triage</p>
             </div>
           </div>
-          <Link
-            href="/crm"
-            className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-primary-foreground/15 px-2.5 py-1.5 text-xs font-medium transition-colors hover:bg-primary-foreground/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground/80 focus-visible:ring-offset-2 focus-visible:ring-offset-brand-header"
-          >
-            Staff CRM
-            <ArrowRight className="h-3.5 w-3.5 opacity-90" strokeWidth={2} aria-hidden />
-          </Link>
+          <div className="flex shrink-0 items-center gap-1.5">
+            <Link
+              href="/crm"
+              className="inline-flex items-center gap-1 rounded-lg bg-primary-foreground/15 px-2.5 py-1.5 text-xs font-medium transition-colors hover:bg-primary-foreground/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground/80 focus-visible:ring-offset-2 focus-visible:ring-offset-brand-header"
+            >
+              Staff CRM
+              <ArrowRight className="h-3.5 w-3.5 opacity-90" strokeWidth={2} aria-hidden />
+            </Link>
+            <Link
+              href="/admin/dashboard"
+              className="inline-flex items-center gap-1 rounded-lg border border-primary-foreground/20 bg-primary-foreground/10 px-2.5 py-1.5 text-xs font-medium transition-colors hover:bg-primary-foreground/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground/80 focus-visible:ring-offset-2 focus-visible:ring-offset-brand-header"
+            >
+              <Shield className="h-3.5 w-3.5 opacity-90" strokeWidth={2} aria-hidden />
+              Admin
+            </Link>
+          </div>
         </div>
       </header>
 

@@ -61,6 +61,33 @@
       "required": true
     }
   ],
+  "questionGraph": {
+    "startId": "q1",
+    "nodes": {
+      "q1": { "next": "q2" },
+      "q2": {
+        "branches": [
+          { "condition": "q2 === false", "next": null },
+          { "condition": "true", "next": "q3" }
+        ]
+      },
+      "q3": { "next": "q4" },
+      "q4": { "next": "q5" },
+      "q5": { "next": "q6" },
+      "q6": { "next": "q7" },
+      "q7": { "next": "q8" },
+      "q8": { "next": null }
+    }
+  },
+  "emergencyOverrides": [
+    {
+      "code": "EO_SHG_DUAL",
+      "condition": "q5 === true && q6 === true",
+      "description": "Combined eye-area and ear symptoms with shingles — highest acuity",
+      "outcome": "emergency_999",
+      "message": "Eye symptoms together with ear pain or hearing changes during shingles can be an emergency. Call 999 or go to A&E now."
+    }
+  ],
   "redFlags": [
     {
       "code": "RF_SHG_001",
@@ -125,18 +152,24 @@
     },
     {
       "priority": 2,
+      "condition": "q2 === false",
+      "outcome": "gp",
+      "reason": "Shingles almost always causes a one-sided rash. A doctor should check other possible causes of your symptoms."
+    },
+    {
+      "priority": 3,
       "condition": "pharmacyEligible === false && q1 !== 'More than 3 days ago'",
       "outcome": "gp",
       "reason": "Requires GP assessment"
     },
     {
-      "priority": 3,
+      "priority": 4,
       "condition": "q1 === 'More than 3 days ago'",
       "outcome": "gp",
       "reason": "Outside antiviral window — GP to assess need for treatment and pain management"
     },
     {
-      "priority": 4,
+      "priority": 5,
       "condition": "pharmacyEligible === true",
       "outcome": "pharmacy",
       "reason": "Uncomplicated shingles within 72 hours — urgent pharmacy antiviral treatment"

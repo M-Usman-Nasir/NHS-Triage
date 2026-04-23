@@ -28,6 +28,9 @@ export interface SummaryApiResponse {
   pharmacyTreatmentOptions?: string[] | null;
   selfCareAdvice?: string | null;
   status?: string;
+  patientExplanation?: string;
+  comorbidityModifiersApplied?: Array<{ id: string; blockPharmacy?: boolean; reason?: string; patientExplanationAppend?: string }>;
+  governanceUncertainty?: string[];
 }
 
 export interface TriageResultView {
@@ -45,4 +48,7 @@ export interface TriageResultView {
   safetyNetAdvice?: string;
   pharmacyTreatmentOptions?: string[];
   selfCareAdvice?: string;
+  patientExplanation?: string;
+  comorbidityModifiersApplied?: Array<{ id: string; blockPharmacy?: boolean; reason?: string; patientExplanationAppend?: string }>;
+  governanceUncertainty?: string[];
 }

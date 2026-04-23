@@ -203,7 +203,7 @@ Use this table in **planning meetings** and tick rows in git issues when scope c
 | Admin analytics / pathways / rules | **Demo** | `routes/admin.js` | Auth + real DB |
 | CRM APIs + pages | **Demo** | `routes/crm.js`, `frontend/pages/crm/*` | Real DB; remove mock-only gaps |
 | Patient landing + consent | **Done** | `pages/index.tsx` | Privacy page URL |
-| Consultation UI | **Done** | `pages/consultation.tsx`, `lib/pathwayQuestions.ts`, `lib/api.ts` | **Server-driven** branching (E-03) remains future; questionnaire text/options match all 7 pathway JSON files (including impetigo multiselect + `q2_areas_count`) |
+| Consultation UI | **Done** | `pages/consultation.tsx`, `GET/POST` consultation definitions + `question/next`, `lib/pathwayQuestions.ts` (fallback) | **Server-driven branching** (E-03): `questionGraph` in pathway JSON (e.g. sinusitis, shingles); offline fallback uses linear `PATHWAY_QUESTIONS` |
 | Result UI | **Done** | `pages/result.tsx`, `lib/mapSummaryToResult.ts` | Live summary vs `?demo=true`; errors do not fall back to mock silently |
 | API contracts (schemas) | **Partial** | `frontend/schemas/*.json`, `types/consultation.ts` | Wire CI validation / OpenAPI when backend stabilises |
 | JWT + RBAC on APIs | **Not done** | Admin comments note no middleware | E-07 security |

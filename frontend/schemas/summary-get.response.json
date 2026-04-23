@@ -46,6 +46,25 @@
       "items": { "type": "string" }
     },
     "selfCareAdvice": { "type": ["string", "null"] },
-    "status": { "type": "string" }
+    "status": { "type": "string" },
+    "patientExplanation": { "type": "string" },
+    "comorbidityModifiersApplied": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id"],
+        "properties": {
+          "id": { "type": "string" },
+          "blockPharmacy": { "type": "boolean" },
+          "reason": { "type": "string" },
+          "patientExplanationAppend": { "type": "string" }
+        },
+        "additionalProperties": true
+      }
+    },
+    "governanceUncertainty": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
   }
 }

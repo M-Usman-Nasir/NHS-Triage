@@ -75,6 +75,8 @@ app.get('/', (req, res) => {
     endpoints: {
       health:       'GET  /health',
       consultation: 'POST /api/consultation',
+      consultationDefinitions: 'GET  /api/consultation/definitions/:pathwayCode',
+      consultationQuestionNext: 'POST /api/consultation/question/next',
       summary:      'GET  /api/summary/:id',
       admin:        'GET  /api/admin/analytics',
       pathways:     'GET  /api/admin/pathways',

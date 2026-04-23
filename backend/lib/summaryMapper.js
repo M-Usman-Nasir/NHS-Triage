@@ -21,6 +21,7 @@ function normalizeRedFlags(raw) {
     code: f.code,
     description: f.description,
     message: f.message || f.description || 'Please seek urgent medical advice.',
+    ...(f.tier ? { tier: f.tier } : {}),
   }));
 }
 
@@ -52,6 +53,9 @@ function recordToSummaryResponse(rec) {
     pharmacyTreatmentOptions: rec.pharmacyTreatmentOptions ?? null,
     selfCareAdvice: rec.selfCareAdvice ?? null,
     status: rec.status || 'completed',
+    patientExplanation: rec.patientExplanation || '',
+    comorbidityModifiersApplied: rec.comorbidityModifiersApplied || [],
+    governanceUncertainty: rec.governanceUncertainty || [],
   };
 }
 

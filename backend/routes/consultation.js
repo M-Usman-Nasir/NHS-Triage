@@ -5,9 +5,11 @@
  * Handles patient consultation submissions.
  *
  * Endpoints:
- *   POST /api/consultation        — Submit a new consultation
- *   GET  /api/consultation/:id    — Retrieve a consultation by ID
- *   GET  /api/consultation        — List all consultations (paginated, admin only)
+ *   POST /api/consultation              — Submit a new consultation
+ *   GET  /api/consultation/definitions/:pathwayCode — Pathway questions + first step (branching)
+ *   POST /api/consultation/question/next — Server-driven next clinical question
+ *   GET  /api/consultation/:id          — Retrieve a consultation by ID
+ *   GET  /api/consultation              — List all consultations (paginated, admin only)
  */
 
 'use strict';
@@ -15,6 +17,11 @@
 const express = require('express');
 const { v4: uuidv4 } = require('uuid');
 const { runTriage, listAvailablePathways } = require('../engine/decisionEngine');
+const {
+  getNextQuestionState,
+  loadPathway: loadPathwayForGraph,
+  validateClinicalAnswersComplete,
+} = require('../engine/questionGraph');
 const { consultationStore } = require('../store/consultationStore');
 
 const router = express.Router();
@@ -67,6 +74,15 @@ router.post('/', (req, res) => {
     });
   }
 
+  const flowCheck = validateClinicalAnswersComplete(pathwayCode, answers, patient || {});
+  if (!flowCheck.ok) {
+    return res.status(400).json({
+      error: 'Clinical questionnaire is incomplete for this pathway.',
+      missingQuestionId: flowCheck.missing,
+      detail: flowCheck.error,
+    });
+  }
+
   let triageResult;
   try {
     triageResult = runTriage({
@@ -112,6 +128,74 @@ router.post('/', (req, res) => {
 router.get('/pathways/list', (req, res) => {
   const pathways = listAvailablePathways();
   return res.json({ pathways });
+});
+
+/**
+ * GET /api/consultation/definitions/:pathwayCode
+ *
+ * Pathway questionnaire + first clinical question (server-driven flow).
+ */
+router.get('/definitions/:pathwayCode', (req, res) => {
+  const { pathwayCode } = req.params;
+  const availablePathways = listAvailablePathways();
+  if (!availablePathways.includes(pathwayCode)) {
+    return res.status(400).json({
+      error: `Unknown pathway: "${pathwayCode}".`,
+      availablePathways,
+    });
+  }
+  try {
+    const pathway = loadPathwayForGraph(pathwayCode);
+    const initial = getNextQuestionState(pathwayCode, null, {}, {});
+    return res.json({
+      pathwayCode,
+      label: pathway.label || pathway.pathway,
+      questions: pathway.questions || [],
+      firstQuestionId: initial.nextQuestionId,
+      progressMax: initial.progressMax,
+    });
+  } catch (err) {
+    console.error('[consultation] definitions error:', err.message);
+    return res.status(500).json({ error: 'Could not load pathway definitions.', detail: err.message });
+  }
+});
+
+/**
+ * POST /api/consultation/question/next
+ *
+ * Body: { pathwayCode, answers, patient?, currentQuestionId?: string | null }
+ * Returns the next clinical question id (or isComplete when the pathway is finished).
+ */
+router.post('/question/next', (req, res) => {
+  const { pathwayCode, answers = {}, currentQuestionId = null } = req.body;
+  const patient = req.body.patient || {};
+
+  if (!pathwayCode) {
+    return res.status(400).json({ error: 'pathwayCode is required.' });
+  }
+  const availablePathways = listAvailablePathways();
+  if (!availablePathways.includes(pathwayCode)) {
+    return res.status(400).json({
+      error: `Unknown pathway: "${pathwayCode}".`,
+      availablePathways,
+    });
+  }
+  if (!answers || typeof answers !== 'object') {
+    return res.status(400).json({ error: 'answers must be an object.' });
+  }
+
+  try {
+    const state = getNextQuestionState(pathwayCode, currentQuestionId, answers, patient);
+    return res.json({
+      nextQuestionId: state.nextQuestionId,
+      isComplete: state.isComplete,
+      nextQuestion: state.nextQuestion,
+      progressMax: state.progressMax,
+    });
+  } catch (err) {
+    console.error('[consultation] question/next error:', err.message);
+    return res.status(500).json({ error: 'Could not resolve next question.', detail: err.message });
+  }
 });
 
 /**

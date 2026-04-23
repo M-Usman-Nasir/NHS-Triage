@@ -74,6 +74,8 @@ const MOCK_RESULT: TriageResultView = {
     'Trimethoprim 200mg twice daily for 7 days',
     'Nitrofurantoin MR 100mg twice daily for 5 days',
   ],
+  patientExplanation:
+    'Based on your answers, a pharmacist is a good next step. They can assess you and supply some treatments without a GP appointment when appropriate. Symptoms are consistent with an uncomplicated urine infection and you meet the usual Pharmacy First checks. If you become more unwell than you expected, seek help sooner — use NHS 111 or emergency services as appropriate.',
 };
 
 export default function ResultPage() {
@@ -255,6 +257,22 @@ export default function ResultPage() {
             ))}
           </div>
         )}
+
+        {result.governanceUncertainty && result.governanceUncertainty.length > 0 && (
+          <div className="rounded-2xl border border-border bg-muted/40 px-4 py-3 text-xs text-muted-foreground">
+            <span className="font-semibold text-foreground">Governance note: </span>
+            Conservative escalation was applied because the automated pathway could not confirm every check (
+            {result.governanceUncertainty.join(', ')}).
+          </div>
+        )}
+
+        {/* Patient-facing explanation */}
+        {result.patientExplanation ? (
+          <div className="rounded-2xl border border-primary/20 bg-primary/[0.06] p-5 shadow-card">
+            <p className="text-xs font-bold text-primary uppercase tracking-wide mb-2">What this means for you</p>
+            <p className="text-card-foreground text-sm leading-relaxed">{result.patientExplanation}</p>
+          </div>
+        ) : null}
 
         {/* Clinical reasoning */}
         <div className="bg-card rounded-2xl shadow-card border border-border p-5">

@@ -65,6 +65,28 @@
       "required": false
     }
   ],
+  "questionGraph": {
+    "startId": "q1",
+    "nodes": {
+      "q1": { "next": "q2" },
+      "q2": { "next": "q3" },
+      "q3": { "next": "q4" },
+      "q4": { "next": "q5" },
+      "q5": { "next": "q6" },
+      "q6": { "next": "q7" },
+      "q7": {
+        "branches": [
+          {
+            "condition": "q1 === 'Less than 10 days' || q1 === 'More than 12 weeks'",
+            "next": null
+          },
+          { "condition": "true", "next": "q8" }
+        ]
+      },
+      "q8": { "next": "q9" },
+      "q9": { "next": null }
+    }
+  },
   "redFlags": [
     {
       "code": "RF_SIN_001",

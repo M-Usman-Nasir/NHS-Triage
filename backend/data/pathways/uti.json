@@ -104,6 +104,15 @@
       "reason": "Recurrent UTIs or kidney problems require GP assessment"
     }
   ],
+  "comorbidityModifiers": [
+    {
+      "id": "cm_uti_visible_haematuria",
+      "condition": "q2 === true",
+      "blockPharmacy": true,
+      "reason": "Visible blood in the urine needs GP assessment to rule out causes that are not suitable for Pharmacy First treatment.",
+      "patientExplanationAppend": "Seeing blood in your urine is a reason to see a GP, even if you also have symptoms of a urine infection."
+    }
+  ],
   "outcomeRules": [
     {
       "priority": 1,
