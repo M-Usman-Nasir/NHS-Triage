@@ -76,6 +76,20 @@ const MOCK_RESULT: TriageResultView = {
   ],
   patientExplanation:
     'Based on your answers, a pharmacist is a good next step. They can assess you and supply some treatments without a GP appointment when appropriate. Symptoms are consistent with an uncomplicated urine infection and you meet the usual Pharmacy First checks. If you become more unwell than you expected, seek help sooner — use NHS 111 or emergency services as appropriate.',
+  regulatoryContext: {
+    intendedPurpose:
+      'Clinical decision support for NHS-aligned triage (demo). Not a diagnosis; not prescribing; pharmacist/GP accountable.',
+    mhraSamDConsiderations: {
+      postureSummary:
+        'Demo posture: CDS / care navigation. Formal SaMD classification is an organisational deliverable.',
+    },
+    pharmacyFirstAndPgd: {
+      pgdSupply: {
+        systemRole: 'This software does not complete PGD assessments or supply medicines.',
+        performedBy: 'A licensed pharmacist under applicable PGD only.',
+      },
+    },
+  },
 };
 
 export default function ResultPage() {
@@ -336,6 +350,46 @@ export default function ResultPage() {
             </button>
           </div>
         </div>
+
+        {result.regulatoryContext ? (
+          <details className="rounded-2xl border border-border bg-card/80 px-4 py-3 text-left shadow-card">
+            <summary className="cursor-pointer text-xs font-bold text-muted-foreground uppercase tracking-wide">
+              Regulatory &amp; intended use
+            </summary>
+            <div className="mt-3 space-y-2 text-[11px] leading-relaxed text-muted-foreground">
+              {result.regulatoryContext.intendedPurpose ? (
+                <p>
+                  <span className="font-semibold text-foreground">Purpose: </span>
+                  {result.regulatoryContext.intendedPurpose}
+                </p>
+              ) : null}
+              {result.regulatoryContext.mhraSamDConsiderations?.postureSummary ? (
+                <p>
+                  <span className="font-semibold text-foreground">MHRA / SaMD posture: </span>
+                  {result.regulatoryContext.mhraSamDConsiderations.postureSummary}
+                </p>
+              ) : null}
+              {result.regulatoryContext.pharmacyFirstAndPgd?.pgdSupply?.systemRole ? (
+                <p>
+                  <span className="font-semibold text-foreground">Pharmacy / PGD: </span>
+                  {result.regulatoryContext.pharmacyFirstAndPgd.pgdSupply.systemRole}{' '}
+                  {result.regulatoryContext.pharmacyFirstAndPgd.pgdSupply.performedBy
+                    ? `(${result.regulatoryContext.pharmacyFirstAndPgd.pgdSupply.performedBy})`
+                    : null}
+                </p>
+              ) : null}
+              <p className="pt-1">
+                <Link href="/privacy" className="font-medium text-primary underline-offset-4 hover:underline">
+                  Privacy notice
+                </Link>
+                {' · '}
+                <Link href="/terms" className="font-medium text-primary underline-offset-4 hover:underline">
+                  Terms
+                </Link>
+              </p>
+            </div>
+          </details>
+        ) : null}
 
         <button
           type="button"

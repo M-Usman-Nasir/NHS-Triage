@@ -42,7 +42,7 @@
 | Frontend | Next.js 14 (React, TypeScript), Tailwind CSS, **lucide-react** icons |
 | Backend | Node.js 18+, Express.js |
 | Decision data | JSON pathway definitions under `backend/data/pathways/` |
-| Database | PostgreSQL (`database/schema.sql`, `database/seed.sql`) — wire as needed; demo APIs may use in-memory stores |
+| Database | PostgreSQL (`database/schema.sql`, `database/seed.sql`, ordered `database/migrations/*.sql`) — `cd backend && npm run migrate` when `DATABASE_URL` is set; demo APIs may still use in-memory consultation store until wired |
 | Target infra | Azure / Cloudways (project choice) |
 
 **Authentication:** Admin and CRM routes are **open in demo**; production should use JWT (or equivalent) and RBAC — see `backend/routes/admin.js` comments.
@@ -181,10 +181,10 @@ Phases, epics, RACI, and pilot gates: **[docs/PLATFORM-HANDBOOK.md](./docs/PLATF
 
 | Requirement | Status (typical MVP) |
 |-------------|---------------------|
-| DTAC | In preparation |
+| DTAC | In preparation — technical hooks documented §5.3 |
 | DCB0129 / clinical safety | In preparation |
 | DCB0160 | In preparation |
-| UK GDPR / DPIA | In preparation |
+| UK GDPR / DPIA | In preparation — patient `/privacy`, demo GDPR API, structured audit (see CLINICAL-GOVERNANCE §5) |
 | DSPT | In preparation |
 | WCAG 2.x (patient UI) | In preparation |
 | MHRA / SaMD | Under organisational review |

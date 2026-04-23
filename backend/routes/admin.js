@@ -13,6 +13,7 @@
  *   GET  /api/admin/rules/:pathway   — Get rules for a specific pathway
  *   GET  /api/admin/analytics        — Get aggregated consultation analytics
  *   GET  /api/admin/pathways         — List all clinical pathways
+ *   GET  /api/admin/audit            — Query structured audit events (demo store)
  */
 
 'use strict';
@@ -20,8 +21,16 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const { logAuditEvent } = require('../lib/auditLog');
+const { queryAuditEvents } = require('../lib/auditPersistence');
 
 const router = express.Router();
+
+function clientIp(req) {
+  const x = req.headers['x-forwarded-for'];
+  if (typeof x === 'string' && x.length) return x.split(',')[0].trim();
+  return req.socket?.remoteAddress || null;
+}
 
 const PATHWAYS_DIR = path.join(__dirname, '../data/pathways');
 
@@ -146,6 +155,34 @@ router.get('/rules/:pathway', (req, res) => {
     selfCareAdvice: pathwayData.selfCareAdvice,
     pharmacyTreatmentOptions: pathwayData.pharmacyTreatmentOptions,
     safetyNetAdvice: pathwayData.safetyNetAdvice,
+  });
+});
+
+/**
+ * GET /api/admin/audit
+ * Clinical governance / IG audit trail (PostgreSQL when DATABASE_URL set, else in-memory).
+ */
+router.get('/audit', async (req, res) => {
+  const limit = parseInt(req.query.limit, 10) || 100;
+  const offset = parseInt(req.query.offset, 10) || 0;
+  const eventType = req.query.eventType ? String(req.query.eventType) : undefined;
+  const entityId = req.query.entityId ? String(req.query.entityId) : undefined;
+
+  await logAuditEvent({
+    eventType: 'admin_audit_log_accessed',
+    requestId: req.requestId,
+    entityType: 'audit',
+    entityId: null,
+    ip: clientIp(req),
+    payload: { limit, offset, eventType: eventType || null, entityId: entityId || null },
+  });
+
+  const result = await queryAuditEvents({ eventType, entityId }, { limit, offset });
+  return res.json({
+    total: result.total,
+    limit,
+    offset,
+    events: result.items,
   });
 });
 

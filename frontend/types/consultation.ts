@@ -8,6 +8,29 @@ export interface ConsultationSubmitPayload {
   symptoms: string[];
 }
 
+/** Machine-readable regulatory / intended-use block from GET /api/summary/:id */
+export interface RegulatoryContextPayload {
+  softwareVersion?: string;
+  intendedPurpose?: string;
+  ukGdpr?: { dataCategories?: string; lawfulBasisNote?: string };
+  mhraSamDConsiderations?: {
+    postureSummary?: string;
+    notForDiagnosis?: boolean;
+    notForPrescribing?: boolean;
+    accountabilityRemainsWith?: string[];
+  };
+  pharmacyFirstAndPgd?: {
+    alignment?: string;
+    pgdSupply?: { performedBy?: string; systemRole?: string };
+    complianceNotes?: string[];
+  };
+  clinicalSafetyToolkit?: { dcb0129StyleControls?: string; dsptNote?: string };
+  pathwayCode?: string;
+  dispositionOutcome?: string;
+  pharmacyRoutingSuggested?: boolean;
+  redFlagTriggered?: boolean;
+}
+
 /** GET /api/summary/:id — aligned with backend/lib/summaryMapper.js */
 export interface SummaryApiResponse {
   id: string;
@@ -31,6 +54,7 @@ export interface SummaryApiResponse {
   patientExplanation?: string;
   comorbidityModifiersApplied?: Array<{ id: string; blockPharmacy?: boolean; reason?: string; patientExplanationAppend?: string }>;
   governanceUncertainty?: string[];
+  regulatoryContext?: RegulatoryContextPayload;
 }
 
 export interface TriageResultView {
@@ -51,4 +75,5 @@ export interface TriageResultView {
   patientExplanation?: string;
   comorbidityModifiersApplied?: Array<{ id: string; blockPharmacy?: boolean; reason?: string; patientExplanationAppend?: string }>;
   governanceUncertainty?: string[];
+  regulatoryContext?: RegulatoryContextPayload;
 }

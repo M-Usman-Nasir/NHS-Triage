@@ -3,7 +3,7 @@
 **Aegis Health AI — NHS-aligned digital triage**  
 **Canonical:** Use this document to align scope, trace what is built, and record what is still required. When behaviour or scope changes, update the relevant section here (and reference the PR / ticket).
 
-**Companion (clinical & compliance depth):** [CLINICAL-GOVERNANCE.md](./CLINICAL-GOVERNANCE.md)
+**Companion (clinical & compliance depth):** [CLINICAL-GOVERNANCE.md](./CLINICAL-GOVERNANCE.md) — includes **[§5.1–5.3 regulatory & market positioning](./CLINICAL-GOVERNANCE.md#51-regulatory--compliance-positioning-product-statement)**, **[§8 — Planned NHS integration tiers (later)](./CLINICAL-GOVERNANCE.md#8-planned-nhs-integration-strategy-later)**, and **[§9 — Future ML augmentation (backlog)](./CLINICAL-GOVERNANCE.md#9-future-ml-augmentation-backlog)** (not phase 1).
 
 ---
 
@@ -202,13 +202,17 @@ Use this table in **planning meetings** and tick rows in git issues when scope c
 | GET summary by ID | **Done** | `summary.js` + `lib/summaryMapper.js` read **`store/consultationStore`** (seeded mocks + live POST) | PDF export still 501 |
 | Admin analytics / pathways / rules | **Demo** | `routes/admin.js` | Auth + real DB |
 | CRM APIs + pages | **Demo** | `routes/crm.js`, `frontend/pages/crm/*` | Real DB; remove mock-only gaps |
-| Patient landing + consent | **Done** | `pages/index.tsx` | Privacy page URL |
+| Patient landing + consent | **Done** | `pages/index.tsx` | Links to `/privacy`, `/terms`, `/accessibility` |
 | Consultation UI | **Done** | `pages/consultation.tsx`, `GET/POST` consultation definitions + `question/next`, `lib/pathwayQuestions.ts` (fallback) | **Server-driven branching** (E-03): `questionGraph` in pathway JSON (e.g. sinusitis, shingles); offline fallback uses linear `PATHWAY_QUESTIONS` |
 | Result UI | **Done** | `pages/result.tsx`, `lib/mapSummaryToResult.ts` | Live summary vs `?demo=true`; errors do not fall back to mock silently |
 | API contracts (schemas) | **Partial** | `frontend/schemas/*.json`, `types/consultation.ts` | Wire CI validation / OpenAPI when backend stabilises |
 | JWT + RBAC on APIs | **Not done** | Admin comments note no middleware | E-07 security |
-| Immutable DB audit trail | **Partial** | `schema.sql` + console `[AUDIT]` | Write audit_rows on every decision |
-| WCAG evidence pack | **In progress** | Landing/consultation improved | Formal audit (E-12) |
+| Structured audit events (application) | **Done** | `lib/auditLog.js` → `lib/auditPersistence.js`, `GET /api/admin/audit` | In-memory when no `DATABASE_URL`; else INSERT `audit_logs` |
+| SQL migrations | **Done** | `database/migrations/*.sql`, `npm run migrate` | Add `000004_*.sql` for future DDL |
+| Immutable DB audit trail | **Done** (opt-in) | `DATABASE_URL` + migrate + `pg` pool in `lib/db.js` | Retention / legal-hold policy still programme-owned |
+| GDPR demo API (access + erasure log) | **Done** | `routes/gdpr.js` | Identity verification + DPO process for production |
+| Regulatory / PGD context on API | **Done** | `lib/regulatoryContext.js`, `lib/pharmacyFirstGovernance.js` | Returned on consultation POST + summary GET |
+| WCAG evidence pack | **In progress** | Landing/consultation + `/accessibility` | Formal audit (E-12) |
 | DPIA / DTAC pack | **Not done** | See governance doc | IG programme |
 
 ---
@@ -218,6 +222,7 @@ Use this table in **planning meetings** and tick rows in git issues when scope c
 | Path | Role |
 |------|------|
 | `frontend/pages/index.tsx` | Landing |
+| `frontend/pages/privacy.tsx`, `terms.tsx`, `accessibility.tsx` | Legal / IG pages |
 | `frontend/pages/consultation.tsx` | Questionnaire |
 | `frontend/pages/result.tsx` | Outcomes |
 | `frontend/pages/admin/` | Admin |
@@ -229,6 +234,12 @@ Use this table in **planning meetings** and tick rows in git issues when scope c
 | `frontend/types/consultation.ts` | Shared TS types for payloads and summary |
 | `backend/engine/*.js` | Triage engine |
 | `backend/routes/*.js` | HTTP API |
+| `backend/lib/db.js` | Optional `pg` pool (`DATABASE_URL`) |
+| `backend/lib/auditLog.js`, `backend/lib/auditPersistence.js`, `backend/store/auditEventStore.js` | Audit trail (PostgreSQL or in-memory) |
+| `backend/scripts/run-migrations.js` | `npm run migrate` |
+| `backend/lib/regulatoryContext.js` | Intended purpose + PGD/MHRA posture JSON for clients |
+| `backend/routes/gdpr.js` | Subject access export + erasure request (demo) |
+| `database/migrations/*.sql` | Versioned DDL |
 | `backend/data/pathways/` | Rule data |
 | `database/schema.sql` | Target persistence model |
 
@@ -239,5 +250,6 @@ Use this table in **planning meetings** and tick rows in git issues when scope c
 | Version | Date | Notes |
 |---------|------|--------|
 | 1.0 | 2026-04-23 | Consolidated alignment, milestones, MVP build, patient-flow, architecture, user flows, TASKS into this handbook |
+| 1.1 | 2026-04-23 | PostgreSQL migrations + optional `audit_logs` persistence (`DATABASE_URL`, `npm run migrate`); handbook §9 status table updated |
 
 **Superseded files (removed from repo):** `alignment-and-planning.md`, `milestone-plan.md`, `patient-flow-ui-finalization.md`, `architecture.md`, `user_flows.md`, `TASKS.md`, `MVP_Build.md` (under docs), `ClientQ&A.md` — content merged here or into CLINICAL-GOVERNANCE.

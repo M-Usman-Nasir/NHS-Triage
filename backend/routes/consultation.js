@@ -23,8 +23,16 @@ const {
   validateClinicalAnswersComplete,
 } = require('../engine/questionGraph');
 const { consultationStore } = require('../store/consultationStore');
+const { logAuditEvent } = require('../lib/auditLog');
+const { buildRegulatoryContext } = require('../lib/regulatoryContext');
 
 const router = express.Router();
+
+function clientIp(req) {
+  const x = req.headers['x-forwarded-for'];
+  if (typeof x === 'string' && x.length) return x.split(',')[0].trim();
+  return req.socket?.remoteAddress || null;
+}
 
 /**
  * POST /api/consultation
@@ -55,7 +63,7 @@ const router = express.Router();
  *   "selfCareAdvice": null
  * }
  */
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   const { pathwayCode, answers, patient, symptoms } = req.body;
 
   // Validate required fields
@@ -108,14 +116,34 @@ router.post('/', (req, res) => {
     createdAt: new Date().toISOString(),
     status: 'completed',
   };
+  const regulatoryContext = buildRegulatoryContext({
+    pathwayCode,
+    outcome: triageResult.outcome,
+    pharmacyEligible: triageResult.pharmacyEligible,
+    redFlagTriggered: triageResult.redFlagTriggered,
+  });
+  record.regulatoryContext = regulatoryContext;
   consultationStore.set(consultationId, record);
 
-  // Audit log (demo — in production write to audit_logs table)
-  console.log(`[AUDIT] consultation_completed | id=${consultationId} | outcome=${triageResult.outcome} | pathway=${pathwayCode}`);
+  await logAuditEvent({
+    eventType: 'consultation_completed',
+    requestId: req.requestId,
+    entityType: 'consultation',
+    entityId: consultationId,
+    ip: clientIp(req),
+    payload: {
+      pathwayCode,
+      outcome: triageResult.outcome,
+      pharmacyEligible: triageResult.pharmacyEligible,
+      redFlagTriggered: triageResult.redFlagTriggered,
+      governanceUncertainty: triageResult.governanceUncertainty || [],
+    },
+  });
 
   return res.status(201).json({
     consultationId,
     ...triageResult,
+    regulatoryContext,
   });
 });
 
@@ -204,9 +232,18 @@ router.post('/question/next', (req, res) => {
  * List all consultations (for admin/pharmacist dashboard).
  * Supports pagination via ?page=1&limit=10
  */
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   const page = parseInt(req.query.page, 10) || 1;
   const limit = parseInt(req.query.limit, 10) || 10;
+
+  await logAuditEvent({
+    eventType: 'consultation_list_accessed',
+    requestId: req.requestId,
+    entityType: 'consultation',
+    entityId: null,
+    ip: clientIp(req),
+    payload: { page, limit },
+  });
 
   const all = Array.from(consultationStore.values())
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -228,13 +265,22 @@ router.get('/', (req, res) => {
  *
  * Retrieve a stored consultation by its ID.
  */
-router.get('/:id', (req, res) => {
+router.get('/:id', async (req, res) => {
   const { id } = req.params;
   const record = consultationStore.get(id);
 
   if (!record) {
     return res.status(404).json({ error: `Consultation not found: ${id}` });
   }
+
+  await logAuditEvent({
+    eventType: 'consultation_record_accessed',
+    requestId: req.requestId,
+    entityType: 'consultation',
+    entityId: id,
+    ip: clientIp(req),
+    payload: { pathwayCode: record.pathwayCode },
+  });
 
   return res.json(record);
 });

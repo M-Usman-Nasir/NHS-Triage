@@ -3,6 +3,9 @@
 -- Version: V0.1
 -- Description: Core tables for patient consultations, triage
 --              outcomes, clinical rules, and audit logging.
+--
+-- Incremental DDL for new environments: database/migrations/*.sql
+-- Apply with: cd backend && npm run migrate  (requires DATABASE_URL)
 -- ============================================================
 
 -- Enable UUID generation
@@ -137,6 +140,7 @@ CREATE TABLE audit_logs (
     user_id         UUID,
     ip_address      INET,
     payload         JSONB,                              -- event-specific data
+    request_id      VARCHAR(128),                       -- HTTP / correlation id (see backend middleware)
     created_at      TIMESTAMP DEFAULT NOW()
 );
 
@@ -168,4 +172,5 @@ CREATE INDEX idx_consultations_outcome ON consultations(outcome);
 CREATE INDEX idx_consultations_created_at ON consultations(created_at);
 CREATE INDEX idx_audit_logs_entity_id ON audit_logs(entity_id);
 CREATE INDEX idx_audit_logs_event_type ON audit_logs(event_type);
+CREATE INDEX idx_audit_logs_created_at ON audit_logs(created_at DESC);
 CREATE INDEX idx_clinical_rules_pathway ON clinical_rules(pathway_code);

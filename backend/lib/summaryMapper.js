@@ -5,6 +5,8 @@
 
 'use strict';
 
+const { buildRegulatoryContext } = require('./regulatoryContext');
+
 const PATHWAY_LABELS = {
   uti: 'Uncomplicated UTI',
   sore_throat: 'Sore Throat',
@@ -34,6 +36,15 @@ function recordToSummaryResponse(rec) {
   const pathwayLabel = rec.pathwayLabel || PATHWAY_LABELS[pathway] || pathway;
   const redFlagReasons = normalizeRedFlags(rec.redFlagReasons || rec.redFlags);
 
+  const regulatoryContext =
+    rec.regulatoryContext ||
+    buildRegulatoryContext({
+      pathwayCode: pathway,
+      outcome: rec.outcome,
+      pharmacyEligible: !!rec.pharmacyEligible,
+      redFlagTriggered: !!rec.redFlagTriggered,
+    });
+
   return {
     id: rec.id,
     createdAt: rec.createdAt || rec.completedAt,
@@ -56,6 +67,7 @@ function recordToSummaryResponse(rec) {
     patientExplanation: rec.patientExplanation || '',
     comorbidityModifiersApplied: rec.comorbidityModifiersApplied || [],
     governanceUncertainty: rec.governanceUncertainty || [],
+    regulatoryContext,
   };
 }
 

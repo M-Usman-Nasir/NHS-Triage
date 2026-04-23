@@ -11,14 +11,30 @@
 const express = require('express');
 const { consultationStore } = require('../store/consultationStore');
 const { recordToSummaryResponse } = require('../lib/summaryMapper');
+const { logAuditEvent } = require('../lib/auditLog');
 
 const router = express.Router();
+
+function clientIp(req) {
+  const x = req.headers['x-forwarded-for'];
+  if (typeof x === 'string' && x.length) return x.split(',')[0].trim();
+  return req.socket?.remoteAddress || null;
+}
 
 /**
  * GET /api/summary
  * List summaries for pharmacist / admin demo (register before /:id).
  */
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
+  await logAuditEvent({
+    eventType: 'summary_list_accessed',
+    requestId: req.requestId,
+    entityType: 'consultation',
+    entityId: null,
+    ip: clientIp(req),
+    payload: { count: consultationStore.size },
+  });
+
   const summaries = Array.from(consultationStore.values())
     .sort((a, b) => new Date(b.createdAt || b.completedAt || 0) - new Date(a.createdAt || a.completedAt || 0))
     .map((c) => {
@@ -59,7 +75,7 @@ router.get('/:id/pdf', (req, res) => {
 /**
  * GET /api/summary/:id
  */
-router.get('/:id', (req, res) => {
+router.get('/:id', async (req, res) => {
   const { id } = req.params;
 
   const record = consultationStore.get(id);
@@ -72,7 +88,14 @@ router.get('/:id', (req, res) => {
 
   const summary = recordToSummaryResponse(record);
 
-  console.log(`[AUDIT] summary_accessed | consultation_id=${id}`);
+  await logAuditEvent({
+    eventType: 'summary_accessed',
+    requestId: req.requestId,
+    entityType: 'consultation',
+    entityId: id,
+    ip: clientIp(req),
+    payload: { outcome: record.outcome, pathwayCode: record.pathwayCode },
+  });
 
   return res.json(summary);
 });

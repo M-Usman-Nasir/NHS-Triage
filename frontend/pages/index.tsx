@@ -39,9 +39,9 @@ const STEPS: Array<{ step: string; title: string; Icon: LucideIcon }> = [
 ];
 
 const FOOTER_LINKS: Array<{ label: string; href: string; external?: boolean }> = [
-  { label: 'Privacy Policy', href: '#' },
-  { label: 'Terms of Use', href: '#' },
-  { label: 'Accessibility', href: '#' },
+  { label: 'Privacy Policy', href: '/privacy' },
+  { label: 'Terms of Use', href: '/terms' },
+  { label: 'Accessibility', href: '/accessibility' },
   { label: 'NHS 111 Online', href: 'https://111.nhs.uk/', external: true },
 ];
 
@@ -281,22 +281,29 @@ export default function LandingPage() {
 
         <footer className="mt-7 border-t border-border/60 pb-8 pt-6 sm:mt-9 sm:pb-10">
           <nav className="flex flex-wrap justify-center gap-x-6 gap-y-2" aria-label="Footer links">
-            {FOOTER_LINKS.map((item) => (
-              <a
-                key={item.label}
-                href={item.href}
-                {...(item.external ? { rel: 'noopener noreferrer', target: '_blank' } : {})}
-                className="inline-flex items-center gap-1 text-xs text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:rounded"
-              >
-                {item.label}
-                {item.external ? (
-                  <>
-                    <ExternalLink className="h-3 w-3 shrink-0 opacity-70" strokeWidth={2} aria-hidden />
-                    <span className="sr-only">(opens in new tab)</span>
-                  </>
-                ) : null}
-              </a>
-            ))}
+            {FOOTER_LINKS.map((item) =>
+              item.external ? (
+                <a
+                  key={item.label}
+                  href={item.href}
+                  rel="noopener noreferrer"
+                  target="_blank"
+                  className="inline-flex items-center gap-1 text-xs text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:rounded"
+                >
+                  {item.label}
+                  <ExternalLink className="h-3 w-3 shrink-0 opacity-70" strokeWidth={2} aria-hidden />
+                  <span className="sr-only">(opens in new tab)</span>
+                </a>
+              ) : (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  className="inline-flex items-center gap-1 text-xs text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:rounded"
+                >
+                  {item.label}
+                </Link>
+              ),
+            )}
           </nav>
         </footer>
       </main>
