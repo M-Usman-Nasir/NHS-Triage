@@ -15,6 +15,7 @@
  */
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { LayoutDashboard, Map, TriangleAlert } from 'lucide-react';
 
 // ─── Mock analytics data ──────────────────────────────────────────────────────
@@ -74,14 +75,22 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-sidebar-border bg-sidebar py-4 px-6 text-sidebar-foreground shadow-sm">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
           <div>
             <h1 className="font-bold text-lg text-foreground">Aegis Health AI</h1>
             <p className="text-xs text-sidebar-muted">Admin Dashboard — Dr. Admin User</p>
           </div>
-          <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-800">
-            System Online
-          </span>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/admin/profile"
+              className="inline-flex items-center rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              Profile
+            </Link>
+            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-800">
+              System Online
+            </span>
+          </div>
         </div>
       </header>
 
