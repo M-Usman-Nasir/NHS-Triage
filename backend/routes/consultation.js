@@ -174,7 +174,8 @@ router.get('/definitions/:pathwayCode', (req, res) => {
   }
   try {
     const pathway = loadPathwayForGraph(pathwayCode);
-    const initial = getNextQuestionState(pathwayCode, null, {}, {});
+    const gender = typeof req.query.gender === 'string' ? req.query.gender : '';
+    const initial = getNextQuestionState(pathwayCode, null, {}, { gender });
     return res.json({
       pathwayCode,
       label: pathway.label || pathway.pathway,

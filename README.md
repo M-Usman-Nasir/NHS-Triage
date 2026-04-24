@@ -133,6 +133,8 @@ npm install
 npm run dev
 ```
 
+With `npm run dev`, consultation and result pages use **in-browser API mocks by default** (no Express server required). Set `NEXT_PUBLIC_USE_API_MOCKS=false` in `frontend/.env.local` when the real API on `NEXT_PUBLIC_API_URL` should be used. Set `NEXT_PUBLIC_USE_API_MOCKS=true` to force mocks even in production builds (e.g. static demos).
+
 Optional database bootstrap:
 
 ```bash

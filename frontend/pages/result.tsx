@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { ArrowLeft, Mail, Phone, Pill, Printer, TriangleAlert, User } from 'lucide-react';
-import { apiUrl } from '../lib/api';
+import { apiFetch, apiUrl } from '../lib/api';
 import { mapSummaryToResult } from '../lib/mapSummaryToResult';
 import { TriageOutcomeIcon } from '../lib/triageOutcomeIcons';
 import type { SummaryApiResponse, TriageResultView } from '../types/consultation';
@@ -119,7 +119,7 @@ export default function ResultPage() {
 
     (async () => {
       try {
-        const r = await fetch(apiUrl(`/api/summary/${encodeURIComponent(consultationId)}`));
+        const r = await apiFetch(apiUrl(`/api/summary/${encodeURIComponent(consultationId)}`));
         let data: SummaryApiResponse | { error?: string } = {} as SummaryApiResponse;
         try {
           data = await r.json();

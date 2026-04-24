@@ -274,7 +274,7 @@ export default function LandingPage() {
               Life-threatening emergency?
             </h3>
             <p className="mt-0.5 text-xs leading-relaxed text-red-700 sm:text-sm">
-              Do not use this tool. Call <strong className="font-extrabold">999</strong> immediately or go to your nearest A&amp;E.
+              Do not use this tool. Call <strong className="font-extrabold">999</strong> immediately or go to your nearest Accident & Emergency.
             </p>
           </div>
         </section>

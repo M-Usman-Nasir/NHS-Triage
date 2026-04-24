@@ -95,3 +95,22 @@ export const PATHWAY_QUESTIONS: Record<string, PathwayQuestion[]> = {
 export function isKnownPathwayQuestions(pathway: string): boolean {
   return Object.prototype.hasOwnProperty.call(PATHWAY_QUESTIONS, pathway);
 }
+
+/** Pathway question ids that ask about pregnancy — omitted in UI when gender is Male (binary list only). */
+const PREGNANCY_QUESTION_ID_BY_PATHWAY: Record<string, string> = {
+  uti: 'q5',
+  impetigo: 'q8',
+  shingles: 'q8',
+};
+
+/** Mirrors server questionGraph skip so offline/fallback flow matches API behaviour. */
+export function pathwayClinicalQuestionsForPatient(
+  pathwayCode: string,
+  questions: PathwayQuestion[],
+  gender: string,
+): PathwayQuestion[] {
+  if (gender !== 'Male') return questions;
+  const skipId = PREGNANCY_QUESTION_ID_BY_PATHWAY[pathwayCode];
+  if (!skipId) return questions;
+  return questions.filter((q) => q.id !== skipId);
+}

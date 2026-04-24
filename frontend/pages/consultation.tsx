@@ -14,7 +14,7 @@ import {
   TriangleAlert,
   X,
 } from 'lucide-react';
-import { apiUrl } from '../lib/api';
+import { apiFetch, apiUrl } from '../lib/api';
 import { augmentAnswersForPathway } from '../lib/augmentConsultationAnswers';
 import {
   CONSULTATION_PREFACE_QUESTIONS,
@@ -22,7 +22,12 @@ import {
   stripContextAnswers,
 } from '../lib/consultationPrefaceQuestions';
 import { PATHWAY_LABELS } from '../lib/patientPathways';
-import { isKnownPathwayQuestions, PATHWAY_QUESTIONS, type PathwayQuestion } from '../lib/pathwayQuestions';
+import {
+  isKnownPathwayQuestions,
+  PATHWAY_QUESTIONS,
+  pathwayClinicalQuestionsForPatient,
+  type PathwayQuestion,
+} from '../lib/pathwayQuestions';
 import type { AnswerValue, ConsultationSubmitPayload } from '../types/consultation';
 
 interface PatientInfo {
@@ -94,7 +99,10 @@ export default function ConsultationPage() {
     setClinicalSchemaLoading(true);
     (async () => {
       try {
-        const r = await fetch(apiUrl(`/api/consultation/definitions/${encodeURIComponent(pathwayCode)}`));
+        const genderParam = patient.gender ? `?gender=${encodeURIComponent(patient.gender)}` : '';
+        const r = await apiFetch(
+          apiUrl(`/api/consultation/definitions/${encodeURIComponent(pathwayCode)}${genderParam}`),
+        );
         if (!r.ok) throw new Error('definitions');
         const data = (await r.json()) as {
           questions: PathwayQuestion[];
@@ -113,7 +121,7 @@ export default function ConsultationPage() {
         setClinicalHistory([]);
       } catch {
         if (cancelled) return;
-        const qs = PATHWAY_QUESTIONS[pathwayCode];
+        const qs = pathwayClinicalQuestionsForPatient(pathwayCode, PATHWAY_QUESTIONS[pathwayCode], patient.gender);
         const byId = Object.fromEntries(qs.map((q) => [q.id, q]));
         setQuestionsById(byId);
         setClinicalProgressMax(Math.max(qs.length, 1));
@@ -127,7 +135,7 @@ export default function ConsultationPage() {
     return () => {
       cancelled = true;
     };
-  }, [wizardStep, pathwayCode]);
+  }, [wizardStep, pathwayCode, patient.gender]);
 
   const handleDemographicsSubmit = () => {
     if (!patient.fullName || !patient.age || !patient.gender) {
@@ -177,7 +185,7 @@ export default function ConsultationPage() {
 
     try {
       if (useServerFlow) {
-        const res = await fetch(apiUrl('/api/consultation/question/next'), {
+        const res = await apiFetch(apiUrl('/api/consultation/question/next'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -202,7 +210,7 @@ export default function ConsultationPage() {
           setAnswers(merged);
         }
       } else {
-        const list = PATHWAY_QUESTIONS[pathwayCode];
+        const list = pathwayClinicalQuestionsForPatient(pathwayCode, PATHWAY_QUESTIONS[pathwayCode], patient.gender);
         const nextId = resolveNextLinear(clinicalCurrentId, list);
         if (!nextId) {
           setAnswers(merged);
@@ -328,7 +336,7 @@ export default function ConsultationPage() {
       symptoms: [...baseSymptoms, ...contextHints],
     };
     try {
-      const res = await fetch(apiUrl('/api/consultation'), {
+      const res = await apiFetch(apiUrl('/api/consultation'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

@@ -12,6 +12,13 @@ const fs = require('fs');
 const path = require('path');
 const { evaluateCondition } = require('./redFlagDetector');
 
+/** Question ids that ask about pregnancy; not shown when patient reports Male (simplified gender capture). */
+const PREGNANCY_QUESTION_ID_BY_PATHWAY = {
+  uti: 'q5',
+  impetigo: 'q8',
+  shingles: 'q8',
+};
+
 function loadPathway(pathwayCode) {
   const filePath = path.join(__dirname, '../data/pathways', `${pathwayCode}.json`);
   if (!fs.existsSync(filePath)) {
@@ -40,6 +47,43 @@ function getEffectiveGraph(pathway) {
 }
 
 /**
+ * When the next step is a pregnancy question and the patient is Male, follow that node's outgoing
+ * edge without collecting an answer (clinical rules treat pregnancy as not applicable).
+ * @param {object} pathway
+ * @param {string} pathwayCode
+ * @param {string|null} nextId
+ * @param {Record<string, object>} nodes
+ * @param {object} patient
+ * @returns {string|null}
+ */
+function advancePastSkippedPregnancy(pathway, pathwayCode, nextId, nodes, patient) {
+  const skipId = PREGNANCY_QUESTION_ID_BY_PATHWAY[pathwayCode];
+  if (!skipId || patient.gender !== 'Male' || !nextId) {
+    return nextId;
+  }
+  let cur = nextId;
+  let guard = 0;
+  while (cur === skipId && guard < 32) {
+    guard += 1;
+    const node = nodes[cur];
+    if (!node) {
+      return null;
+    }
+    let after = null;
+    if (Array.isArray(node.branches) && node.branches.length > 0) {
+      const fallback = node.branches.find((br) => br && (br.condition === 'true' || br.condition === true));
+      if (fallback) {
+        after = fallback.next === undefined ? null : fallback.next;
+      }
+    } else if (Object.prototype.hasOwnProperty.call(node, 'next')) {
+      after = node.next;
+    }
+    cur = after;
+  }
+  return cur;
+}
+
+/**
  * @param {object} pathway
  * @param {string|null} currentId  null = before first question
  * @param {object} answers
@@ -47,6 +91,7 @@ function getEffectiveGraph(pathway) {
  * @returns {{ nextId: string|null, isComplete: boolean }}
  */
 function resolveNextQuestionId(pathway, currentId, answers, patient = {}) {
+  const pathwayCode = pathway.pathway || pathway.code || '';
   const { startId, nodes } = getEffectiveGraph(pathway);
 
   if (!startId || !nodes || Object.keys(nodes).length === 0) {
@@ -54,7 +99,11 @@ function resolveNextQuestionId(pathway, currentId, answers, patient = {}) {
   }
 
   if (currentId == null) {
-    return { nextId: startId, isComplete: false };
+    const first = advancePastSkippedPregnancy(pathway, pathwayCode, startId, nodes, patient);
+    if (first == null) {
+      return { nextId: null, isComplete: true };
+    }
+    return { nextId: first, isComplete: false };
   }
 
   const node = nodes[currentId];
@@ -79,12 +128,22 @@ function resolveNextQuestionId(pathway, currentId, answers, patient = {}) {
     return { nextId: null, isComplete: true };
   }
 
+  nextId = advancePastSkippedPregnancy(pathway, pathwayCode, nextId, nodes, patient);
+  if (nextId == null) {
+    return { nextId: null, isComplete: true };
+  }
+
   return { nextId, isComplete: false };
 }
 
 /** Upper bound for progress UI (branching may finish earlier). */
-function estimateMaxLinearSteps(pathway) {
-  return Math.max((pathway.questions || []).length, 1);
+function estimateMaxLinearSteps(pathway, patient = {}) {
+  const code = pathway.pathway || pathway.code || '';
+  const n = Math.max((pathway.questions || []).length, 1);
+  if (patient.gender === 'Male' && PREGNANCY_QUESTION_ID_BY_PATHWAY[code]) {
+    return Math.max(n - 1, 1);
+  }
+  return n;
 }
 
 /**
@@ -96,7 +155,7 @@ function estimateMaxLinearSteps(pathway) {
 function getNextQuestionState(pathwayCode, currentId, answers, patient = {}) {
   const pathway = loadPathway(pathwayCode);
   const { nextId, isComplete } = resolveNextQuestionId(pathway, currentId, answers, patient);
-  const maxSteps = estimateMaxLinearSteps(pathway);
+  const maxSteps = estimateMaxLinearSteps(pathway, patient);
   const byId = Object.fromEntries((pathway.questions || []).map((q) => [q.id, q]));
 
   return {
