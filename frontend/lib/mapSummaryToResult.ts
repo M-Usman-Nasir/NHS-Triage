@@ -13,6 +13,7 @@ export function mapSummaryToResult(data: SummaryApiResponse): TriageResultView {
     redFlags: data.redFlagReasons,
     pharmacyEligible: data.pharmacyEligible,
     summaryText: data.summaryText,
+    pathwayPatientDisclaimer: data.pathwayPatientDisclaimer ?? undefined,
     safetyNetAdvice: data.safetyNetAdvice ?? undefined,
     pharmacyTreatmentOptions: data.pharmacyTreatmentOptions ?? undefined,
     selfCareAdvice: data.selfCareAdvice ?? undefined,

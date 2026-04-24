@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import CRMLayout from '../../components/CRMLayout';
 import Link from 'next/link';
-import { apiUrl } from '../../lib/api';
+import { apiUrl, safeFetchJson } from '../../lib/api';
 import { TriageOutcomeIcon } from '../../lib/triageOutcomeIcons';
 
 interface DashboardData {
@@ -95,10 +95,10 @@ export default function CRMDashboard() {
   const [data, setData] = useState<DashboardData>(MOCK);
 
   useEffect(() => {
-    fetch(apiUrl('/api/crm/dashboard'))
-      .then((r) => r.json())
-      .then(setData)
-      .catch(() => setData(MOCK));
+    void (async () => {
+      const d = await safeFetchJson<DashboardData>(apiUrl('/api/crm/dashboard'), MOCK);
+      setData(d);
+    })();
   }, []);
 
   const { kpis, casesByStage, outcomeBreakdown, recentActivity } = data;

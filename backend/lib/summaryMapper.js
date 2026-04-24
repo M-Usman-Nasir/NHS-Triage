@@ -60,6 +60,7 @@ function recordToSummaryResponse(rec) {
     outcomeLabel: rec.outcomeLabel,
     outcomeReason: rec.outcomeReason || '',
     summaryText: rec.summaryText || '',
+    pathwayPatientDisclaimer: rec.pathwayPatientDisclaimer ?? null,
     safetyNetAdvice: rec.safetyNetAdvice ?? null,
     pharmacyTreatmentOptions: rec.pharmacyTreatmentOptions ?? null,
     selfCareAdvice: rec.selfCareAdvice ?? null,

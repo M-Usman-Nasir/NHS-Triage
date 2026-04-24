@@ -16,7 +16,7 @@ import { Check, ListChecks, MessageSquare } from 'lucide-react';
 import { useRouter } from 'next/router';
 import CRMLayout from '../../../components/CRMLayout';
 import Link from 'next/link';
-import { apiUrl } from '../../../lib/api';
+import { apiUrl, safeFetchJson } from '../../../lib/api';
 import { ChannelIcon } from '../../../lib/channelIcons';
 
 const MOCK_PROFILES: Record<string, any> = {
@@ -47,6 +47,34 @@ const MOCK_PROFILES: Record<string, any> = {
   },
 };
 
+function offlinePlaceholderPatient(pid: string) {
+  return {
+    id: pid,
+    fullName: 'Patient profile (offline)',
+    dateOfBirth: '',
+    age: 0,
+    gender: '',
+    postcode: '',
+    phone: '',
+    email: '',
+    gpName: '',
+    gpSurgery: '',
+    nhsNumber: '—',
+    preferredContact: 'email',
+    tags: [] as string[],
+    riskFlag: null,
+    status: 'unknown',
+    totalConsultations: 0,
+    lastContactDate: null,
+    createdAt: '',
+    notes:
+      'The CRM API is not reachable from this browser session. Demo profiles use PAT-001 … PAT-002 from the Patients list; connect the backend later for live data.',
+    cases: [] as { id: string; title: string; stage: string; priority: string; openedAt: string; outcome: string }[],
+    communications: [] as { id: string; channel: string; direction: string; subject: string | null; sentAt: string; status: string }[],
+    tasks: [] as { id: string; title: string; dueDate: string; status: string; priority: string }[],
+  };
+}
+
 const OUTCOME_CONFIG: Record<string, { label: string; colour: string }> = {
   pharmacy:      { label: 'Pharmacy',  colour: 'bg-primary/10 text-primary' },
   gp:            { label: 'GP',        colour: 'bg-yellow-100 text-yellow-700' },
@@ -75,12 +103,25 @@ export default function PatientProfile() {
   useEffect(() => {
     if (!id) return;
     const mock = MOCK_PROFILES[id];
-    if (mock) { setPatient(mock); setNotes(mock.notes); return; }
+    if (mock) {
+      setPatient(mock);
+      setNotes(mock.notes);
+      return;
+    }
 
-    fetch(apiUrl(`/api/crm/patients/${id}`))
-      .then((r) => r.json())
-      .then((d) => { setPatient(d); setNotes(d.notes || ''); })
-      .catch(() => {});
+    void (async () => {
+      const d = await safeFetchJson<Record<string, unknown> | null>(
+        apiUrl(`/api/crm/patients/${encodeURIComponent(id)}`),
+        null,
+      );
+      if (d && typeof d === 'object' && typeof (d as { fullName?: string }).fullName === 'string') {
+        setPatient(d);
+        setNotes(typeof (d as { notes?: string }).notes === 'string' ? (d as { notes: string }).notes : '');
+      } else {
+        setPatient(offlinePlaceholderPatient(id));
+        setNotes('');
+      }
+    })();
   }, [id]);
 
   const handleSaveNotes = async () => {

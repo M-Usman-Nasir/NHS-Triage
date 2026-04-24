@@ -3,7 +3,7 @@
 **Aegis Health AI — NHS-aligned digital triage**  
 **Canonical:** Use this document to align scope, trace what is built, and record what is still required. When behaviour or scope changes, update the relevant section here (and reference the PR / ticket).
 
-**Companion (clinical & compliance depth):** [CLINICAL-GOVERNANCE.md](./CLINICAL-GOVERNANCE.md) — includes **[§5.1–5.3 regulatory & market positioning](./CLINICAL-GOVERNANCE.md#51-regulatory--compliance-positioning-product-statement)**, **[§8 — Planned NHS integration tiers (later)](./CLINICAL-GOVERNANCE.md#8-planned-nhs-integration-strategy-later)**, and **[§9 — Future ML augmentation (backlog)](./CLINICAL-GOVERNANCE.md#9-future-ml-augmentation-backlog)** (not phase 1).
+**Companion (clinical & compliance depth):** [CLINICAL-GOVERNANCE.md](./CLINICAL-GOVERNANCE.md) — includes **[§2 — patient app journey vs engine order](./CLINICAL-GOVERNANCE.md#patient-consultation-workflow-as-implemented)**, **[§3 — pathway matrix, branching vs linear, layered disclaimers](./CLINICAL-GOVERNANCE.md#clinical-scope-matrix)**, **[§5 — Security & data protection](./CLINICAL-GOVERNANCE.md#security-and-data-protection)**, **[§5.1–5.3 regulatory & market positioning](./CLINICAL-GOVERNANCE.md#51-regulatory--compliance-positioning-product-statement)**, **[§8 — Planned NHS integration tiers (later)](./CLINICAL-GOVERNANCE.md#8-planned-nhs-integration-strategy-later)**, and **[§9 — Future ML augmentation (backlog)](./CLINICAL-GOVERNANCE.md#9-future-ml-augmentation-backlog)** (not phase 1).
 
 ---
 
@@ -177,8 +177,8 @@ PostgreSQL (schema in repo; not all flows persist to DB in demo)
 
 ## 8. User flows (summary)
 
-1. **Patient:** Landing → choose pathway → consent → consultation questions → submit → result (outcome + summary + safety-net).  
-2. **Red flag:** If answers trigger RF → emergency/urgent outcome; routine pharmacy line must not apply.  
+1. **Patient:** Landing (**pathway choice + consent + page copy**) → **consultation** (demographics + optional symptom text + **preface** context questions + **clinical** pathway questions via `definitions` / `question/next`) → **POST** `/api/consultation` → **result** (outcome + summary + pathway disclaimer + safety-net + `GET /api/summary/:id`). Pathway is **not** inferred from free text in phase 1 — see [CLINICAL-GOVERNANCE §2 — patient consultation workflow](./CLINICAL-GOVERNANCE.md#patient-consultation-workflow-as-implemented).  
+2. **Red flag:** Evaluated **first** inside `runTriage`; if answers trigger RF → emergency/urgent outcome; routine pharmacy line must not apply.  
 3. **Pharmacist:** Dashboard list → case detail → status / print (demo).  
 4. **Admin:** Tabs for overview / pathways / rules (demo).  
 5. **CRM:** Patients, cases, tasks, comms, providers, reports (demo APIs + UI).
@@ -205,12 +205,19 @@ Use this table in **planning meetings** and tick rows in git issues when scope c
 | Patient landing + consent | **Done** | `pages/index.tsx` | Links to `/privacy`, `/terms`, `/accessibility` |
 | Consultation UI | **Done** | `pages/consultation.tsx`, `GET/POST` consultation definitions + `question/next`, `lib/pathwayQuestions.ts` (fallback) | **Server-driven branching** (E-03): `questionGraph` in pathway JSON (e.g. sinusitis, shingles); offline fallback uses linear `PATHWAY_QUESTIONS` |
 | Result UI | **Done** | `pages/result.tsx`, `lib/mapSummaryToResult.ts` | Live summary vs `?demo=true`; errors do not fall back to mock silently |
+| Pharmacist dashboard → live summaries | **Partial** | `GET /api/summary`, `GET /api/summary/` list exist | `pages/pharmacist/dashboard.tsx` uses **mock rows**; wire to API + auth |
+| Admin dashboard → admin APIs | **Partial** | `GET /api/admin/pathways`, `/rules`, `/analytics` | `pages/admin/dashboard.tsx` uses **local mock data** only (no `fetch` to backend) |
+| Admin analytics from live consultations | **Partial** | `GET /api/consultation` list + store | `routes/admin.js` `/analytics` returns **static demo** series; not aggregated from `consultationStore` |
+| Consultation PDF export | **Partial** | `GET /api/summary/:id/pdf` | Returns **501** until implemented |
+| In-app pathway / rule configuration | **Not in UI** | Pathways are `backend/data/pathways/*.json` | Editor + publish / RBAC (E-04, E-07) |
+| Live CRM from triage DB | **Partial** | `routes/crm.js` + pages | Mock JSON / in-memory mutations; not PostgreSQL consultations |
 | API contracts (schemas) | **Partial** | `frontend/schemas/*.json`, `types/consultation.ts` | Wire CI validation / OpenAPI when backend stabilises |
 | JWT + RBAC on APIs | **Not done** | Admin comments note no middleware | E-07 security |
 | Structured audit events (application) | **Done** | `lib/auditLog.js` → `lib/auditPersistence.js`, `GET /api/admin/audit` | In-memory when no `DATABASE_URL`; else INSERT `audit_logs` |
 | SQL migrations | **Done** | `database/migrations/*.sql`, `npm run migrate` | Add `000004_*.sql` for future DDL |
 | Immutable DB audit trail | **Done** (opt-in) | `DATABASE_URL` + migrate + `pg` pool in `lib/db.js` | Retention / legal-hold policy still programme-owned |
 | GDPR demo API (access + erasure log) | **Done** | `routes/gdpr.js` | Identity verification + DPO process for production |
+| Frontend HTTP security headers | **Done** | `frontend/next.config.js` (frame/options/referrer/permissions; HSTS in production) | CSP / edge rate limits — see [CLINICAL-GOVERNANCE §5](./CLINICAL-GOVERNANCE.md#security-and-data-protection) backlog |
 | Regulatory / PGD context on API | **Done** | `lib/regulatoryContext.js`, `lib/pharmacyFirstGovernance.js` | Returned on consultation POST + summary GET |
 | WCAG evidence pack | **In progress** | Landing/consultation + `/accessibility` | Formal audit (E-12) |
 | DPIA / DTAC pack | **Not done** | See governance doc | IG programme |
@@ -251,5 +258,9 @@ Use this table in **planning meetings** and tick rows in git issues when scope c
 |---------|------|--------|
 | 1.0 | 2026-04-23 | Consolidated alignment, milestones, MVP build, patient-flow, architecture, user flows, TASKS into this handbook |
 | 1.1 | 2026-04-23 | PostgreSQL migrations + optional `audit_logs` persistence (`DATABASE_URL`, `npm run migrate`); handbook §9 status table updated |
+| 1.2 | 2026-04-23 | §9 — explicit partial / not-in-ui rows (pharmacist, admin, analytics, PDF, rule editor) aligned with [CLINICAL-GOVERNANCE.md](./CLINICAL-GOVERNANCE.md#core-platform-components--honest-build-status) |
+| 1.3 | 2026-04-23 | Companion intro — link to CLINICAL-GOVERNANCE §3 (pathway matrix, branching, layered disclaimers) |
+| 1.4 | 2026-04-23 | §8 patient flow — demographics + preface + clinical; red-flag first; link to CLINICAL-GOVERNANCE §2 workflow table |
+| 1.5 | 2026-04-23 | §9 row — frontend security headers; companion link to CLINICAL-GOVERNANCE §5 security & data protection |
 
 **Superseded files (removed from repo):** `alignment-and-planning.md`, `milestone-plan.md`, `patient-flow-ui-finalization.md`, `architecture.md`, `user_flows.md`, `TASKS.md`, `MVP_Build.md` (under docs), `ClientQ&A.md` — content merged here or into CLINICAL-GOVERNANCE.

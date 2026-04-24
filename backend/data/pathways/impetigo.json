@@ -133,5 +133,6 @@
     "Flucloxacillin 500mg four times daily for 5 days (widespread)",
     "Clarithromycin 250mg twice daily for 5 days (penicillin allergy)"
   ],
-  "safetyNetAdvice": "Return if: sores spread significantly, fever develops, you feel generally unwell, or there is no improvement after 7 days of treatment."
+  "safetyNetAdvice": "Return if: sores spread significantly, fever develops, you feel generally unwell, or there is no improvement after 7 days of treatment.",
+  "pathwayPatientDisclaimer": "This pathway supports routing for typical impetigo-style skin infection; widespread cellulitis, systemic upset, or non-healing lesions need prompt clinician review and may not match this narrow rule set."
 }

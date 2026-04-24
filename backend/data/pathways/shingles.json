@@ -180,5 +180,6 @@
     "Aciclovir 800mg five times daily for 7 days",
     "Valaciclovir 1g three times daily for 7 days (preferred where available)"
   ],
-  "safetyNetAdvice": "Return immediately if: eye pain or visual changes develop, ear symptoms worsen, or you feel very unwell. Postherpetic neuralgia (nerve pain after rash resolves) is common — GP follow-up advised."
+  "safetyNetAdvice": "Return immediately if: eye pain or visual changes develop, ear symptoms worsen, or you feel very unwell. Postherpetic neuralgia (nerve pain after rash resolves) is common — GP follow-up advised.",
+  "pathwayPatientDisclaimer": "This pathway encodes timing and risk features for herpes zoster; antiviral eligibility, ophthalmic zoster, and Ramsay Hunt features require timely professional assessment — do not delay eye or ear symptoms."
 }

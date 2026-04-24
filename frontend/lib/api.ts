@@ -16,16 +16,44 @@ export function apiUrl(path: string): string {
   return `${getApiBaseUrl()}${p}`;
 }
 
+/**
+ * Plain fetch with JSON parse; on network/HTTP/parse errors returns `fallback` (keeps CRM mock-first UX when API is down).
+ */
+export async function safeFetchJson<T>(url: string, fallback: T, init?: RequestInit): Promise<T> {
+  try {
+    const res = await fetch(url, init);
+    if (!res.ok) return fallback;
+    const text = await res.text();
+    if (!text.trim()) return fallback;
+    const data = JSON.parse(text) as T;
+    return data ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 /** True when consultation/summary mocks are active (see `lib/apiMocks.ts`). */
 export { isApiMocksEnabled };
 
 /**
- * Same as `fetch`, but when mocks are enabled returns local responses for consultation/summary routes.
+ * Consultation/summary fetch: when mocks are allowed (default), tries in-browser mocks first, then the network.
+ * If the network fails (e.g. backend not running), tries mocks again so offline demos still work.
  */
 export async function apiFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-  if (isApiMocksEnabled()) {
-    const mock = await tryMockApiResponse(input, init);
-    if (mock) return mock;
+  const allowMock = isApiMocksEnabled();
+  if (allowMock) {
+    const mockFirst = await tryMockApiResponse(input, init);
+    if (mockFirst) return mockFirst;
   }
-  return fetch(input, init);
+  try {
+    return await fetch(input, init);
+  } catch {
+    if (allowMock) {
+      const mockRetry = await tryMockApiResponse(input, init);
+      if (mockRetry) return mockRetry;
+    }
+    throw new Error(
+      'Failed to fetch. Start the backend or leave NEXT_PUBLIC_USE_API_MOCKS unset so offline mocks handle consultation APIs.',
+    );
+  }
 }

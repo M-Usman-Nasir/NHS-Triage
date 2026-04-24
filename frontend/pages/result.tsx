@@ -69,6 +69,8 @@ const MOCK_RESULT: TriageResultView = {
   redFlags: [],
   pharmacyEligible: true,
   summaryText: 'Patient Sarah Mitchell (Female, 33) presents with a 3-day history of painful urination, increased urinary frequency, and lower abdominal discomfort. No fever, no loin/back pain, not pregnant. OUTCOME: Pharmacy referral under Pharmacy First.',
+  pathwayPatientDisclaimer:
+    "This tool suggests an appropriate level of care for uncomplicated urinary symptoms; it is not a diagnosis and does not replace dipstick testing, examination, or a clinician's prescribing decision.",
   safetyNetAdvice: 'Return if symptoms worsen, fever develops, or no improvement within 48 hours of treatment.',
   pharmacyTreatmentOptions: [
     'Trimethoprim 200mg twice daily for 7 days',
@@ -140,8 +142,10 @@ export default function ResultPage() {
         setLoading(false);
       } catch {
         if (cancelled) return;
-        setFetchError('Network error while loading your summary.');
-        setResult(null);
+        setFetchError(
+          'Could not reach the API. Showing the built-in demo result below. When you connect the backend, set NEXT_PUBLIC_USE_API_MOCKS=false and use a real consultation id.',
+        );
+        setResult(MOCK_RESULT);
         setLoading(false);
       }
     })();
@@ -220,6 +224,12 @@ export default function ResultPage() {
       </header>
 
       <main className="max-w-lg mx-auto px-4 py-5 space-y-4 pb-10">
+
+        {fetchError ? (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900" role="status">
+            {fetchError}
+          </div>
+        ) : null}
 
         {/* Outcome hero card */}
         <div className="rounded-2xl overflow-hidden shadow-card-md">
@@ -315,6 +325,14 @@ export default function ResultPage() {
           <div className="bg-green-50 border border-green-200 rounded-2xl p-4">
             <p className="text-xs font-bold text-green-700 uppercase tracking-wide mb-2">Self-Care Advice</p>
             <p className="text-green-800 text-sm leading-relaxed">{result.selfCareAdvice}</p>
+          </div>
+        )}
+
+        {/* Pathway CDS disclaimer (layered model — see CLINICAL-GOVERNANCE §3) */}
+        {result.pathwayPatientDisclaimer && (
+          <div className="bg-muted/50 border border-border rounded-2xl p-4">
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2">Pathway information</p>
+            <p className="text-muted-foreground text-sm leading-relaxed">{result.pathwayPatientDisclaimer}</p>
           </div>
         )}
 

@@ -143,5 +143,6 @@
     "Trimethoprim 200mg twice daily for 7 days",
     "Nitrofurantoin MR 100mg twice daily for 5 days"
   ],
-  "safetyNetAdvice": "Return or seek further help if: fever develops, symptoms worsen, or no improvement within 48 hours of treatment."
+  "safetyNetAdvice": "Return or seek further help if: fever develops, symptoms worsen, or no improvement within 48 hours of treatment.",
+  "pathwayPatientDisclaimer": "This tool suggests an appropriate level of care for uncomplicated urinary symptoms; it is not a diagnosis and does not replace dipstick testing, examination, or a clinician's prescribing decision."
 }

@@ -40,6 +40,7 @@
     "outcomeLabel": { "type": "string" },
     "outcomeReason": { "type": "string" },
     "summaryText": { "type": "string" },
+    "pathwayPatientDisclaimer": { "type": ["string", "null"] },
     "safetyNetAdvice": { "type": ["string", "null"] },
     "pharmacyTreatmentOptions": {
       "type": ["array", "null"],

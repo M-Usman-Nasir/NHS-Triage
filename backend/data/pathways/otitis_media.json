@@ -126,5 +126,6 @@
     "Amoxicillin 500mg three times daily for 5 days",
     "Clarithromycin 500mg twice daily for 5 days (penicillin allergy)"
   ],
-  "safetyNetAdvice": "Return urgently if: swelling behind the ear, facial weakness, dizziness, or if a child becomes very unwell."
+  "safetyNetAdvice": "Return urgently if: swelling behind the ear, facial weakness, dizziness, or if a child becomes very unwell.",
+  "pathwayPatientDisclaimer": "This pathway addresses ear pain and suspected acute otitis media within encoded age rules; otoscopy findings and hearing cannot be confirmed remotely — a clinician or pharmacist must examine when indicated."
 }

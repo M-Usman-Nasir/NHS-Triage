@@ -160,5 +160,6 @@
     "Amoxicillin 500mg three times daily for 5 days",
     "Doxycycline 200mg day 1 then 100mg daily for 4 days (if penicillin allergy)"
   ],
-  "safetyNetAdvice": "Return if symptoms worsen rapidly, you develop eye swelling, severe headache, neck stiffness, or symptoms persist beyond 3 weeks."
+  "safetyNetAdvice": "Return if symptoms worsen rapidly, you develop eye swelling, severe headache, neck stiffness, or symptoms persist beyond 3 weeks.",
+  "pathwayPatientDisclaimer": "This pathway supports disposition for acute sinus-type symptoms; features suggesting orbital involvement, severe headache, meningism, or sepsis need urgent in-person assessment."
 }

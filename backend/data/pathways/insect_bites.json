@@ -133,5 +133,6 @@
     "Flucloxacillin 500mg four times daily for 5–7 days",
     "Clarithromycin 500mg twice daily for 5 days (penicillin allergy)"
   ],
-  "safetyNetAdvice": "Return urgently if: redness spreads significantly, a red line appears, fever develops, or you feel very unwell."
+  "safetyNetAdvice": "Return urgently if: redness spreads significantly, a red line appears, fever develops, or you feel very unwell.",
+  "pathwayPatientDisclaimer": "This pathway distinguishes local irritation from spreading infection; severe allergic reaction, necrotising infection, or rapid deterioration require emergency care — call 999 if in doubt."
 }

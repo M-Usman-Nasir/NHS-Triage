@@ -47,6 +47,7 @@ export interface SummaryApiResponse {
   outcomeLabel: string;
   outcomeReason: string;
   summaryText: string;
+  pathwayPatientDisclaimer?: string | null;
   safetyNetAdvice?: string | null;
   pharmacyTreatmentOptions?: string[] | null;
   selfCareAdvice?: string | null;
@@ -69,6 +70,7 @@ export interface TriageResultView {
   redFlags?: Array<{ code: string; description: string; message: string }>;
   pharmacyEligible: boolean;
   summaryText: string;
+  pathwayPatientDisclaimer?: string;
   safetyNetAdvice?: string;
   pharmacyTreatmentOptions?: string[];
   selfCareAdvice?: string;

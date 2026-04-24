@@ -2,9 +2,9 @@
  * In-browser API mocks for consultation + summary when enabled.
  * Mirrors consultation + summary contract enough for full UI flow without the Express backend.
  *
- * - `NEXT_PUBLIC_USE_API_MOCKS=true` — always use mocks for handled routes.
- * - `NEXT_PUBLIC_USE_API_MOCKS=false` — never use mocks (real API only).
- * - Unset — in `next dev` (NODE_ENV=development) mocks default on so the UI works without the backend.
+ * - `NEXT_PUBLIC_USE_API_MOCKS=true` — always use mocks for handled routes first (and after network failure when applicable).
+ * - `NEXT_PUBLIC_USE_API_MOCKS=false` — real API only (requires a running backend for consultation/summary).
+ * - **Unset (recommended for local UI without backend)** — mocks **default on** in dev and production builds so the patient flow works offline. Set `false` when you connect a real API.
  */
 
 import type { SummaryApiResponse } from '../types/consultation';
@@ -12,9 +12,7 @@ import { PATIENT_PATHWAYS } from './patientPathways';
 import { PATHWAY_QUESTIONS, pathwayClinicalQuestionsForPatient, type PathwayQuestion } from './pathwayQuestions';
 
 export function isApiMocksEnabled(): boolean {
-  if (process.env.NEXT_PUBLIC_USE_API_MOCKS === 'false') return false;
-  if (process.env.NEXT_PUBLIC_USE_API_MOCKS === 'true') return true;
-  return process.env.NODE_ENV === 'development';
+  return process.env.NEXT_PUBLIC_USE_API_MOCKS !== 'false';
 }
 
 const mockSummaryById = new Map<string, SummaryApiResponse>();
@@ -131,6 +129,8 @@ function buildMockSummary(
     outcomeReason:
       'Mock API: fixed demo outcome for UI testing. Run the real backend for NHS-aligned triage results.',
     summaryText: `${patient.fullName} (${patient.gender}, ${patient.age}) — ${pathwayLabel}. Mock consultation (API mocks).`,
+    pathwayPatientDisclaimer:
+      'Mock mode: generic care-navigation disclaimer — run the backend for pathway-specific CDS lines from clinical JSON.',
     safetyNetAdvice:
       'Mock mode only: if you feel worse or develop new symptoms, use NHS 111 or seek appropriate care.',
     pharmacyTreatmentOptions: ['(Mock) Discuss treatment options with a pharmacist.', '(Mock) Not a real prescription.'],
@@ -221,6 +221,7 @@ export async function tryMockApiResponse(input: RequestInfo | URL, init?: Reques
         redFlags: [],
         pharmacyEligible: summary.pharmacyEligible,
         summaryText: summary.summaryText,
+        pathwayPatientDisclaimer: summary.pathwayPatientDisclaimer,
         safetyNetAdvice: summary.safetyNetAdvice,
         pharmacyTreatmentOptions: summary.pharmacyTreatmentOptions,
         selfCareAdvice: summary.selfCareAdvice,

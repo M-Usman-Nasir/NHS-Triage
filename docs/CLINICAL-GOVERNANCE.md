@@ -8,12 +8,12 @@
 ## Table of contents
 
 1. [How decisions are made](#1-how-decisions-are-made)  
-2. [Three-stage decision process](#2-three-stage-decision-process)  
-3. [Conditions covered (phase 1)](#3-conditions-covered-phase-1)  
+2. [Three-stage decision process](#2-three-stage-decision-process) — [patient app journey (implemented)](#patient-consultation-workflow-as-implemented)  
+3. [Conditions covered (phase 1)](#3-conditions-covered-phase-1) — [clinical scope matrix](#clinical-scope-matrix) · [questionnaire branching](#questionnaire-structure-branching) · [layered disclaimers](#layered-patient-disclaimers)  
 4. [Safety features & boundaries](#4-safety-features--boundaries)  
-5. [Compliance checklist](#5-compliance-checklist) — [5.1 Regulatory positioning](#51-regulatory--compliance-positioning-product-statement) · [5.2 Market alignment](#52-market-timing--nhs-policy-alignment) · [5.3 Technical controls map](#53-programme-artefacts--technical-implementation-map)  
+5. [Compliance checklist](#5-compliance-checklist) — [Security & data protection](#security-and-data-protection) · [5.1 Regulatory positioning](#51-regulatory--compliance-positioning-product-statement) · [5.2 Market alignment](#52-market-timing--nhs-policy-alignment) · [5.3 Technical controls map](#53-programme-artefacts--technical-implementation-map)  
 6. [Priority actions before NHS pilot](#6-priority-actions-before-nhs-pilot)  
-7. [Stakeholder scope (MVP)](#7-stakeholder-scope-mvp)  
+7. [Stakeholder scope (MVP)](#7-stakeholder-scope-mvp) — [core platform build status](#core-platform-components--honest-build-status)  
 8. [Planned NHS integration strategy (later)](#8-planned-nhs-integration-strategy-later)  
 9. [Future: ML augmentation (backlog)](#9-future-ml-augmentation-backlog)  
 10. [Document control](#10-document-control)
@@ -86,6 +86,37 @@ Considers age, sex where clinically indicated, pregnancy, immunosuppression, pri
 | Urgent care | Same-day urgent service (not routine GP) |
 | Emergency (999) | Life-threatening — call 999 |
 
+### Patient consultation workflow (as implemented)
+
+Stakeholder specs often list steps **6–8** in the wrong **order** (decision engine, then red flags, then eligibility). In this codebase **`runTriage`** always evaluates **Stage 1 red flags first**, then **Stage 2 pharmacy eligibility** (when no red flag), then **Stage 3 outcome rules** — plus comorbidity / governance upgrades inside the same call (`decisionEngine.js`).
+
+**Corrected journey vs a generic “10-step” narrative**
+
+| Step (generic spec) | Implemented behaviour | Match? |
+|---------------------|-------------------------|--------|
+| 1. Patient opens consultation interface | Patient opens **`/`** (landing), then **`/consultation?pathway=…`** after starting | Partial wording — entry is **landing**, not only consultation |
+| 2. Consent and disclaimer | **Landing:** intended-use copy, links to privacy/terms/accessibility, **explicit consent checkbox** before Start. **Result:** pathway CDS line, safety-net, regulatory details | Yes (layered — see §3 layered disclaimers) |
+| 3. Demographics | **Consultation** step collects name, age, gender | Yes |
+| 4. Symptom questionnaire | **Demographics** includes optional free-text “describe symptoms” (comma-separated hints). Then **preface** (3 quick context questions → merged into `symptoms` for the summary). Then **clinical** pathway questionnaire (`definitions` + `question/next` or offline fallback) | Partial — not only one “symptom questionnaire”; **clinical** items are pathway-specific |
+| 5. System classifies symptoms into clinical pathway | **Pathway is chosen on the landing page** before demographics. Free text does **not** drive routing in phase 1 | **No** — replace with *patient selects pathway; engine evaluates within that pathway* |
+| 6. Decision engine evaluates clinical rules | **Yes** — single `POST /api/consultation` invokes `runTriage` | Yes |
+| 7. Red-flag detection | **Runs inside the engine before eligibility** — not after a separate “rules pass” | Order wrong in many specs; **implementation is Stage 1 first** |
+| 8. Eligibility logic | **Pharmacy eligibility** (and related gates) after clear red-flag layer | Yes, but **only after** no red flag |
+| 9. Advice and next steps | Outcome labels, patient explanation, self-care / pharmacy options, safety-net, pathway disclaimer on **result** | Yes |
+| 10. Consultation summary | Structured summary text + **`GET /api/summary/:id`** for the same record | Yes |
+
+**Disposition codes** (API / UI) align to stakeholder language as follows:
+
+| Code | Patient-facing meaning |
+|------|-------------------------|
+| `self_care` | Self-care advice |
+| `pharmacy` | Pharmacy assessment / Pharmacy First–style navigation (not supply) |
+| `gp` | GP consultation |
+| `urgent_care` | Same-day urgent care / NHS 111 when appropriate |
+| `emergency_999` | Emergency services — call 999 |
+
+**Stakeholder / sales deck wording:** If materials still use a generic “step 5 — system classifies into pathway” line, add a footnote that **that step describes a possible future symptom-first router**; **the current MVP is pathway-first** (patient selects the condition on the landing page; the engine evaluates **within** that pathway only).
+
 ---
 
 ## 3. Conditions covered (phase 1)
@@ -124,6 +155,39 @@ Considers age, sex where clinically indicated, pregnancy, immunosuppression, pri
 
 - **72-hour** antiviral window where encoded  
 - Red flags: eye or ear involvement (ophthalmic zoster / Ramsay Hunt)  
+
+### Clinical scope matrix
+
+| Pathway (code) | Phase-1 content | Questionnaire structure |
+|----------------|-----------------|-------------------------|
+| UTI (`uti`) | Uncomplicated adult female cohort per JSON + exclusions | **Linear** `questions` (ordered list; server-driven `question/next`) |
+| Sore throat (`sore_throat`) | FeverPAIN-style scoring + exclusions | **Linear** |
+| Sinusitis (`sinusitis`) | NG107-aligned rules + red flags | **`questionGraph`** (branching) + `questions` for metadata |
+| Acute otitis media (`otitis_media`) | Age/pharmacy rules + mastoid / facial weakness flags | **Linear** |
+| Infected insect bite (`insect_bites`) | Local vs spreading + anaphylaxis / lymphangitis | **Linear** |
+| Impetigo (`impetigo`) | Bullous / immunosuppression / pregnancy gates | **Linear** |
+| Shingles (`shingles`) | 72-hour window + ophthalmic / Ramsay Hunt | **`questionGraph`** + `questions` |
+
+**Honest product line:** all pathways are **server-driven** and **fully specified in JSON**; “partial” only means **not every pathway uses a full branching graph** — five use a **linear** question list with the same completion and safety ordering as graph pathways.
+
+### Questionnaire structure (branching)
+
+- **`questionGraph`:** conditional next-step edges (implemented for **sinusitis** and **shingles** in repo data).  
+- **Linear `questions`:** fixed order; branching is expressed through **answer values** inside rules (e.g. scores, booleans), not through graph edges.  
+- **Safety:** red-flag and emergency-override logic runs **before** eligibility and outcome rules regardless of graph vs linear (see §2).
+
+### Layered patient disclaimers
+
+Disclaimers are **deliberately layered** so no single string has to carry the entire CDS boundary:
+
+| Layer | Where it lives | Role |
+|-------|----------------|------|
+| **Pathway CDS line** | `pathwayPatientDisclaimer` in each `backend/data/pathways/*.json`; copied onto the consultation record and returned on `GET /api/summary/:id` | Short, pathway-specific “navigation not diagnosis” framing |
+| **Safety net** | `safetyNetAdvice` per pathway + outcome | When to seek **further** or **urgent** help |
+| **Journey copy** | Landing, consultation, and result UI (and mock/offline banners) | Consent, mock mode, and general intended-use |
+| **Governance** | This document §1, §4, §5 | Regulatory narrative, DTAC/DCB positioning, boundaries |
+
+Together these layers form a **complete** disclaimer model for phase 1; the pathway field closes the gap where stakeholders asked for an explicit **per-condition** CDS line rather than only generic UI text.
 
 ---
 
@@ -193,6 +257,34 @@ Considers age, sex where clinically indicated, pregnancy, immunosuppression, pri
 | 4.8 | Encryption in transit / at rest | ✅ / verify prod | |
 | 4.9 | Audit logging | ✅ | Append-only in-memory log + `GET /api/admin/audit` (mirrors `audit_logs`; wire INSERT for production) |
 | 4.10 | Privacy notice page | ✅ | `/privacy` (+ `/terms`, `/accessibility`) |
+
+### Security and data protection
+
+Healthcare systems require strong data protection standards. The list below maps **stakeholder expectations** to **this repository** (honest status — not self-certification against DSPT or a production pen test).
+
+| Expectation | Status in repo | Evidence / gap |
+|-------------|----------------|----------------|
+| **Encryption in transit** | 🔄 Environment-dependent | Production must terminate **TLS** at the ingress / API gateway (`FRONTEND_URL` + HTTPS). Local dev commonly uses plain HTTP. |
+| **Encryption at rest** | 🔄 / ⏳ Hosting-owned | When `DATABASE_URL` is enabled, disk/volume encryption and key custody are **cloud / organisation** responsibilities. In-memory demo has no durable clinical database by default. |
+| **Secure authentication & access control** | ⏳ Not on APIs | `routes/admin.js` notes **no auth middleware** for demo. Patient `POST` / `GET` consultation and summary routes are **unauthenticated** — acceptable only in closed demos; **must** be gated before any real patient data. |
+| **Role-based access management** | ⏳ | Pharmacist/admin/CRM UIs are not wired to an IdP; **RBAC** is programme work (see [PLATFORM-HANDBOOK.md](./PLATFORM-HANDBOOK.md) §9). |
+| **Consultation audit logs** | ✅ Engineering pattern | `backend/lib/auditLog.js` — structured events, payload sanitisation (e.g. patient name redacted in audit payload), optional **PostgreSQL** persistence when `DATABASE_URL` is set. |
+| **GDPR-aligned design** | 🔄 Hooks + transparency | Landing consent, `/privacy`, `routes/gdpr.js` — **DPIA, lawful basis Article 9, retention, and verified identity** for SAR/erasure remain controller-owned. |
+
+**Frontend (implemented)**
+
+- Baseline **HTTP security headers** on all routes via `frontend/next.config.js` (`X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`; **HSTS** when `NODE_ENV=production` — deploy only behind HTTPS).  
+- **`lang="en-GB"`** on the HTML document (`frontend/pages/_document.tsx`).  
+- Consultation answers are held in **React state** and sent to the API; the triage UI does **not** persist consultation payloads to `localStorage` / `sessionStorage` (re-check if analytics or session plugins are added).
+
+**Frontend / platform (later implementation)**
+
+- **Content-Security-Policy** with nonces or platform-specific tuning after threat modelling (strict default CSP can conflict with Next.js hydration unless carefully configured).  
+- **Authenticated staff sessions** (`Secure`, `HttpOnly`, `SameSite` cookies or equivalent) when JWT/session auth ships for `/api/admin/*` and pharmacist summary access.  
+- **Rate limiting** and **bot protection** on public `POST` endpoints at the edge.  
+- **Security.txt** and coordinated disclosure contact at the organisation level.
+
+The clinical governance and safety narrative remains in **§2–§4**; this subsection is the **IG / security programme map** aligned to common procurement language.
 
 ### DSPT, WCAG, MHRA/SaMD
 
@@ -289,6 +381,20 @@ These bullets describe **why** the product direction matches current NHS system 
 - Very broad condition catalogue  
 - Population-level advanced analytics  
 
+### Core platform components — honest build status
+
+This aligns marketing language (“modules”) with **what is implemented vs partial vs not in the UI**.
+
+| Area | Fully in product | Partial | Not in UI / not wired |
+|------|------------------|---------|------------------------|
+| **Patient consultation** | Mobile-friendly flow, guided questions, server-driven branching (`questionGraph` + `/question/next`), consent, result + safety-net copy | Some pathways still use linear client fallback when graph incomplete | — |
+| **Clinical decision engine** | Rule-based `runTriage`, deterministic JSON pathways, safety-first ordering | — | — |
+| **Red-flag system** | Detection + escalation; governance defaults on eval failure | — | — |
+| **Pharmacy eligibility** | Rules engine + API outcomes | **Case handoff:** `GET /api/summary/:id` is production-shaped; **pharmacist dashboard** (`/pharmacist/dashboard`) still uses **in-page mock cases**, not live API | — |
+| **Consultation summary** | Structured `summaryText` + API + result view + print | **PDF** export endpoint returns **501** (not implemented) | — |
+| **Administration** | **Read** APIs: pathways, rules, analytics route exist | **Admin UI** uses **static mock** overview/pathways/rules — **no `fetch`** to `/api/admin/*`; analytics route returns **fixed demo series**, not computed from live `consultationStore` | **Rule/pathway configuration:** no in-app editor, publish workflow, or “configure logic” UI — changes are **JSON files + deploy** (see [PLATFORM-HANDBOOK.md](./PLATFORM-HANDBOOK.md) E-04 / E-07) |
+| **Analytics & reporting** | CRM/admin **screens** show charts/KPI patterns; `GET /api/consultation` can list completed rows | Volume/outcome/red-flag **reporting is not** driven from persisted consultation fact tables in this demo; CRM APIs are **mock-backed** | Dedicated “escalation analysis” product beyond red-flag rate mock |
+
 **Deferred roadmap (not phase 1):** [§8 — NHS integration tiers](#8-planned-nhs-integration-strategy-later); [§9 — ML augmentation](#9-future-ml-augmentation-backlog).
 
 **Deployment intent:** Controlled **pilot**, not demo-only — subject to §5–6 completion.
@@ -358,5 +464,10 @@ This supports **regulatory defensibility** (DCB0129-style: explainable baseline 
 | 1.2 | 2026-04-23 | §8 added — planned NHS integration tiers (T1–T4); ML backlog renumbered §9 |
 | 1.3 | 2026-04-23 | §5.1–5.3 — regulatory/market positioning; GDPR/audit/PGD API hooks; checklist rows 4.5/4.9/4.10 updated |
 | 1.4 | 2026-04-23 | §5.3 — PostgreSQL audit persistence (`DATABASE_URL`), `database/migrations/`, `npm run migrate`; `audit_logs.request_id` in schema |
+| 1.5 | 2026-04-23 | §7 — core platform “partial / not in UI” matrix (pharmacist mock, admin mock, analytics, PDF) |
+| 1.6 | 2026-04-23 | §3 — clinical scope matrix; graph vs linear branching; layered disclaimers + `pathwayPatientDisclaimer` data/API |
+| 1.7 | 2026-04-23 | §2 — patient consultation workflow (implementation truth vs generic 10-step spec; outcome code table) |
+| 1.8 | 2026-04-23 | §2 — stakeholder/sales footnote (symptom-first router vs pathway-first MVP) |
+| 1.9 | 2026-04-23 | §5 — Security and data protection (expectation vs repo; frontend implemented vs backlog) |
 
 **Clinical questions:** Clinical Safety Officer. **Technical:** engineering per [PLATFORM-HANDBOOK.md](./PLATFORM-HANDBOOK.md).

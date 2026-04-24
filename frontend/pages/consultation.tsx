@@ -357,8 +357,12 @@ export default function ConsultationPage() {
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Submission failed';
       setWizardStep('clinical');
+      const apiHint =
+        message.includes('Failed to fetch') || message.includes('backend')
+          ? ' For a real backend, set NEXT_PUBLIC_API_URL and NEXT_PUBLIC_USE_API_MOCKS=false in frontend/.env.local.'
+          : '';
       setError(
-        `${message} You can try again, or go back and check your answers. If the problem persists, confirm the API is running (see README).`,
+        `${message} You can try again or go back and check your answers.${apiHint}`,
       );
     }
   };

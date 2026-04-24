@@ -140,5 +140,6 @@
     "Phenoxymethylpenicillin (if bacterial cause confirmed by pharmacist)",
     "Amoxicillin (alternative)"
   ],
-  "safetyNetAdvice": "Seek urgent help if: you have difficulty breathing, cannot swallow fluids, or symptoms rapidly worsen."
+  "safetyNetAdvice": "Seek urgent help if: you have difficulty breathing, cannot swallow fluids, or symptoms rapidly worsen.",
+  "pathwayPatientDisclaimer": "This pathway guides care navigation for acute throat symptoms; bacterial cause and need for antibiotics require assessment by a clinician or pharmacist — not remote scoring alone."
 }

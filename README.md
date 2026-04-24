@@ -133,7 +133,7 @@ npm install
 npm run dev
 ```
 
-With `npm run dev`, consultation and result pages use **in-browser API mocks by default** (no Express server required). Set `NEXT_PUBLIC_USE_API_MOCKS=false` in `frontend/.env.local` when the real API on `NEXT_PUBLIC_API_URL` should be used. Set `NEXT_PUBLIC_USE_API_MOCKS=true` to force mocks even in production builds (e.g. static demos).
+Consultation and result pages use **in-browser API mocks by default** (`apiFetch` in `frontend/lib/api.ts`): mocks run first, and if the real `fetch` fails (backend down), mocks are retried so you are not blocked. Set **`NEXT_PUBLIC_USE_API_MOCKS=false`** in `frontend/.env.local` only when the Express API is running and you want live triage. CRM pages keep their **existing mock lists** and use **`safeFetchJson`** so a down API still shows mock data.
 
 Optional database bootstrap:
 

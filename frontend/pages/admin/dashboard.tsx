@@ -16,7 +16,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { LayoutDashboard, Map, TriangleAlert } from 'lucide-react';
+import { ArrowLeft, LayoutDashboard, Map, TriangleAlert } from 'lucide-react';
 
 // ─── Mock analytics data ──────────────────────────────────────────────────────
 
@@ -76,11 +76,21 @@ export default function AdminDashboard() {
     <div className="min-h-screen bg-background">
       <header className="border-b border-sidebar-border bg-sidebar py-4 px-6 text-sidebar-foreground shadow-sm">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
-          <div>
-            <h1 className="font-bold text-lg text-foreground">Aegis Health AI</h1>
-            <p className="text-xs text-sidebar-muted">Admin Dashboard — Dr. Admin User</p>
+          <div className="flex min-w-0 items-center gap-3">
+            <Link
+              href="/"
+              aria-label="Back to home"
+              className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
+              Back
+            </Link>
+            <div className="min-w-0">
+              <h1 className="font-bold text-lg text-foreground">Aegis Health AI</h1>
+              <p className="text-xs text-sidebar-muted">Admin Dashboard — Dr. Admin User</p>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             <Link
               href="/admin/profile"
               className="inline-flex items-center rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"

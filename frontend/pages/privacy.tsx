@@ -75,6 +75,25 @@ export default function PrivacyPage() {
             subprocessors per organisational policy.
           </p>
 
+          <h2 className="mt-8 text-base">Security measures (this site)</h2>
+          <ul className="list-disc space-y-1 pl-4">
+            <li>
+              <strong className="text-foreground">In transit:</strong> use HTTPS in any environment where real patient
+              data are processed. The browser talks to your configured API origin (<code className="text-xs">NEXT_PUBLIC_API_URL</code>); TLS
+              is typically provided by your hosting provider or reverse proxy.
+            </li>
+            <li>
+              <strong className="text-foreground">In the browser:</strong> this app does not store completed consultation
+              answers in local or session storage by default; answers exist in memory until you submit or leave the page.
+            </li>
+            <li>
+              <strong className="text-foreground">Baseline headers:</strong> the deployed Next.js app sends standard browser
+              security headers (for example frame and MIME-type protection, referrer policy). A full penetration test,
+              Content-Security-Policy tuning, and authenticated staff access are still required for production healthcare
+              deployments — see the repository governance document for the programme checklist.
+            </li>
+          </ul>
+
           <h2 className="mt-8 text-base">Clinical safety &amp; regulatory boundaries</h2>
           <p>
             This software does not diagnose disease, does not prescribe, and does not replace a regulated clinician or

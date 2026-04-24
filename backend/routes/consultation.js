@@ -104,6 +104,9 @@ router.post('/', async (req, res) => {
     return res.status(500).json({ error: 'Triage engine encountered an error.', detail: err.message });
   }
 
+  const pathwayDoc = loadPathwayForGraph(pathwayCode);
+  const pathwayPatientDisclaimer = pathwayDoc.pathwayPatientDisclaimer || null;
+
   // Store consultation record
   const consultationId = uuidv4();
   const record = {
@@ -113,6 +116,7 @@ router.post('/', async (req, res) => {
     patient: patient || {},
     symptoms: symptoms || [],
     ...triageResult,
+    pathwayPatientDisclaimer,
     createdAt: new Date().toISOString(),
     status: 'completed',
   };
@@ -144,6 +148,7 @@ router.post('/', async (req, res) => {
     consultationId,
     ...triageResult,
     regulatoryContext,
+    pathwayPatientDisclaimer,
   });
 });
 
