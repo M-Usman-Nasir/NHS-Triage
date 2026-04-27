@@ -7,6 +7,7 @@
 
 const { buildRegulatoryContext } = require('./regulatoryContext');
 const { buildStructuredReport } = require('./structuredReport');
+const { buildDecisionExplanation } = require('./explanationEngine');
 
 const PATHWAY_LABELS = {
   uti: 'Uncomplicated UTI',
@@ -50,6 +51,14 @@ function recordToSummaryResponse(rec) {
     typeof rec.outcomeReason === 'string' && rec.outcomeReason.trim()
       ? rec.outcomeReason.trim()
       : 'Outcome determined by rule-based triage after safety and eligibility evaluation.';
+  const explanation =
+    rec.explanation && typeof rec.explanation === 'object'
+      ? rec.explanation
+      : buildDecisionExplanation({
+          decision: rec.outcome,
+          reason: outcomeReason,
+          source: 'rule_engine',
+        });
 
   return {
     id: rec.id,
@@ -65,6 +74,7 @@ function recordToSummaryResponse(rec) {
     outcome: rec.outcome,
     outcomeLabel: rec.outcomeLabel,
     outcomeReason,
+    explanation,
     summaryText: rec.summaryText || '',
     pathwayPatientDisclaimer: rec.pathwayPatientDisclaimer ?? null,
     safetyNetAdvice: rec.safetyNetAdvice ?? null,
@@ -76,6 +86,7 @@ function recordToSummaryResponse(rec) {
     governanceUncertainty: rec.governanceUncertainty || [],
     regulatoryContext,
     structuredReport: rec.structuredReport || buildStructuredReport({ ...rec, outcomeReason }),
+    pharmacistOverride: rec.pharmacistOverride || null,
   };
 }
 

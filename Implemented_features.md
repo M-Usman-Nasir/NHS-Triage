@@ -140,3 +140,131 @@
 - Extracted consultation header/progress section from `frontend/pages/consultation.tsx` into:
   - `frontend/components/consultation/ConsultationHeader.tsx`
 - Updated consultation page to use these modular components while preserving existing flow logic and outcomes.
+
+### 19) Pharmacist Dashboard (Detailed Workflow) Implemented
+- Upgraded `frontend/pages/pharmacist/dashboard.tsx` from basic routing/status view to a detailed pharmacist review workflow.
+- Dashboard now shows full consultation context for selected referral:
+  - patient info
+  - symptoms
+  - answers (question-level response map)
+  - system decision
+  - system reasoning
+  - consultation summary
+- Added live API loading from `GET /api/summary` and case-level detail loading from `GET /api/summary/:id`.
+- Kept frontend resilient for mock-first operation by falling back to built-in demo referrals when API is unavailable.
+
+### 20) Pharmacist Override System Added (Decision Override + Logging)
+- Added backend endpoint `POST /api/summary/:id/override` in `backend/routes/summary.js`.
+- Pharmacist can override system outcome (for example, `pharmacy` -> `gp`) with required fields:
+  - `pharmacist_id`
+  - `overridden_decision`
+  - `reason`
+- Override payload is persisted against the consultation record as `pharmacistOverride` with:
+  - `original_decision`
+  - `overridden_decision`
+  - `pharmacist_id`
+  - `reason`
+  - `timestamp`
+- System emits a dedicated audit event `pharmacist_override_applied` including override metadata.
+
+### 21) Summary Contract Extended for Override Visibility
+- Updated `backend/lib/summaryMapper.js` so summary responses include `pharmacistOverride` when present.
+- Pharmacist UI now renders latest override context directly in the case detail panel after save.
+
+### 22) Stability Test Coverage Expanded for Override Path
+- Extended `backend/__tests__/consultation.stability.test.js` with:
+  - `POST /api/summary/:id/override` contract test
+- Test verifies:
+  - successful override response
+  - required metadata persistence (`original_decision`, `overridden_decision`, `pharmacist_id`, `reason`)
+  - override visibility in returned summary payload.
+
+### 23) Explainable Decision System (Backend) Added
+- Added a dedicated explanation engine in `backend/lib/explanationEngine.js`.
+- Decision output now uses a canonical explainable structure:
+  - `decision`
+  - `reason`
+  - `source`
+- Updated triage engine in `backend/engine/decisionEngine.js` so every decision now includes `explanation` in addition to legacy `outcome`/`outcomeReason` fields.
+- Applied source-aware explanation generation for:
+  - rule outcome flow (`rule_engine`)
+  - red-flag escalation flow (`red_flag_engine`)
+  - pharmacist override flow (`pharmacist_override`)
+
+### 24) Explainability Contract Integrated Across APIs and Structured Report
+- Updated `backend/routes/consultation.js` to normalize and persist `explanation` on consultation records.
+- Updated `backend/lib/summaryMapper.js` so summary responses now include `explanation`.
+- Updated `backend/lib/structuredReport.js` so `structuredReport.reasoning` includes the explanation object.
+- Updated override endpoint logic in `backend/routes/summary.js` to regenerate explanation after pharmacist override.
+
+### 25) Frontend Explainability UI Added
+- Updated result and pharmacist frontend contracts to include explanation metadata:
+  - `frontend/types/consultation.ts`
+  - `frontend/lib/mapSummaryToResult.ts`
+- Updated `frontend/pages/result.tsx`:
+  - reasoning section now prioritizes `explanation.reason` (fallback: `outcomeReason`)
+  - added source badge for engine provenance (`Rule engine`, `Safety engine`, `Pharmacist override`)
+- Updated `frontend/pages/pharmacist/dashboard.tsx`:
+  - system reasoning panel now prioritizes `explanation.reason`
+  - displays explanation source badge for decision provenance.
+
+### 26) Strict MVP Architecture Constraint Documented
+- Defined MVP architecture as a **standalone system** in `docs/PLATFORM-HANDBOOK.md`.
+- Explicitly locked out external integrations for MVP scope.
+- Captured mandatory MVP system modules:
+  - Patient UI
+  - Backend API
+  - Rule engine
+  - Database
+  - Admin panel
+  - Pharmacist panel
+  - Audit system
+- Marked external integration proposals as post-MVP capabilities only.
+
+### 27) Admin Question Coverage View Added (Questions with/without Red Flags)
+- Added a new **Question Coverage** tab in `frontend/pages/admin/dashboard.tsx`.
+- The new view lists pathway questions with:
+  - pathway
+  - question ID
+  - question text
+  - question type
+  - required flag
+  - red-flag coverage status
+- Added filter controls:
+  - all questions
+  - with red-flag mapping
+  - without red-flag mapping
+- Added search for pathway/question ID/question text/type.
+
+### 28) Admin Question Entry Form Added (Red Flag Yes/No Option)
+- Added an admin form in `frontend/pages/admin/dashboard.tsx` to create question coverage entries with:
+  - pathway code + pathway label
+  - question ID + text + type
+  - required yes/no
+  - red-flag yes/no
+  - red-flag code (when red-flag is enabled)
+- Added duplicate checks for pathway + question ID collisions.
+- Added local browser persistence key `admin-question-coverage-v1` for fallback/custom mode.
+
+### 29) Admin Question Edit/Delete Actions Enabled
+- Added edit/delete actions for custom question entries in `frontend/pages/admin/dashboard.tsx`.
+- Added edit mode with:
+  - prefilled form values
+  - update action
+  - cancel action
+- Added delete confirmation and local state cleanup for removed custom entries.
+
+### 30) Live Pathway Question Management APIs Implemented (Backend)
+- Added live question management endpoints in `backend/routes/admin.js`:
+  - `POST /api/admin/pathways/:pathway/questions`
+  - `PUT /api/admin/pathways/:pathway/questions/:questionId`
+  - `DELETE /api/admin/pathways/:pathway/questions/:questionId`
+- Endpoints update real pathway JSON files in `backend/data/pathways/*.json`.
+- Question write operations also handle linked red-flag rules (create/update/remove where applicable).
+- Added audit events for admin question add/update/delete operations.
+
+### 31) Admin UI Wired to Live Question CRUD End-to-End
+- Updated `frontend/pages/admin/dashboard.tsx` so question actions now call backend live APIs for pathway question add/edit/delete.
+- Live rows are now editable/deletable through API-backed actions (not display-only anymore).
+- Added API reload after successful writes so table reflects current persisted pathway definitions.
+- Kept graceful local fallback behavior when live write is unavailable.

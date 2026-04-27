@@ -12,6 +12,7 @@ const express = require('express');
 const { consultationStore } = require('../store/consultationStore');
 const { recordToSummaryResponse } = require('../lib/summaryMapper');
 const { logAuditEvent } = require('../lib/auditLog');
+const { buildDecisionExplanation } = require('../lib/explanationEngine');
 
 const router = express.Router();
 
@@ -69,6 +70,82 @@ router.get('/:id/pdf', (req, res) => {
     message: 'PDF generation is not yet implemented.',
     consultationId: id,
     hint: 'This endpoint will return a downloadable PDF of the consultation summary in a future release.',
+  });
+});
+
+/**
+ * POST /api/summary/:id/override
+ * Pharmacist can override system decision with explicit rationale.
+ * Body:
+ * {
+ *   pharmacist_id: "pharm-123",
+ *   overridden_decision: "gp",
+ *   reason: "Patient appears systemically unwell"
+ * }
+ */
+router.post('/:id/override', async (req, res) => {
+  const { id } = req.params;
+  const { pharmacist_id, overridden_decision, reason } = req.body || {};
+
+  if (!pharmacist_id || !overridden_decision || !reason) {
+    return res.status(400).json({
+      error: 'pharmacist_id, overridden_decision and reason are required.',
+    });
+  }
+
+  const validOutcomes = ['self_care', 'pharmacy', 'gp', 'urgent_care', 'emergency_999'];
+  if (!validOutcomes.includes(overridden_decision)) {
+    return res.status(400).json({ error: `Invalid overridden_decision. Valid: ${validOutcomes.join(', ')}` });
+  }
+
+  const record = consultationStore.get(id);
+  if (!record) {
+    return res.status(404).json({
+      error: `No consultation summary found for ID: ${id}`,
+    });
+  }
+
+  const originalDecision = record.outcome;
+  const appliedAt = new Date().toISOString();
+
+  record.pharmacistOverride = {
+    original_decision: originalDecision,
+    overridden_decision,
+    pharmacist_id,
+    reason,
+    timestamp: appliedAt,
+  };
+  record.outcome = overridden_decision;
+  record.outcomeLabel = overridden_decision;
+  record.outcomeReason = `Overridden by pharmacist (${pharmacist_id}): ${reason}`;
+  record.explanation = buildDecisionExplanation({
+    decision: overridden_decision,
+    reason: record.outcomeReason,
+    source: 'pharmacist_override',
+  });
+  record.status = 'reviewed';
+  consultationStore.set(id, record);
+
+  await logAuditEvent({
+    eventType: 'pharmacist_override_applied',
+    requestId: req.requestId,
+    entityType: 'consultation',
+    entityId: id,
+    userId: pharmacist_id,
+    ip: clientIp(req),
+    payload: {
+      original_decision: originalDecision,
+      overridden_decision,
+      pharmacist_id,
+      reason,
+      timestamp: appliedAt,
+    },
+  });
+
+  return res.json({
+    success: true,
+    override: record.pharmacistOverride,
+    summary: recordToSummaryResponse(record),
   });
 });
 

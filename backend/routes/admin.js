@@ -51,6 +51,25 @@ function loadAllPathways() {
   });
 }
 
+function getPathwayFilePath(pathwayCode) {
+  return path.join(PATHWAYS_DIR, `${pathwayCode}.json`);
+}
+
+function loadPathwayByCode(pathwayCode) {
+  const filePath = getPathwayFilePath(pathwayCode);
+  if (!fs.existsSync(filePath)) {
+    return null;
+  }
+  return {
+    filePath,
+    data: JSON.parse(fs.readFileSync(filePath, 'utf8')),
+  };
+}
+
+function savePathwayFile(filePath, data) {
+  fs.writeFileSync(filePath, `${JSON.stringify(data, null, 2)}\n`, 'utf8');
+}
+
 /**
  * GET /api/admin/pathways
  *
@@ -170,6 +189,170 @@ router.get('/rules/:pathway', (req, res) => {
     pharmacyTreatmentOptions: pathwayData.pharmacyTreatmentOptions,
     safetyNetAdvice: pathwayData.safetyNetAdvice,
   });
+});
+
+/**
+ * POST /api/admin/pathways/:pathway/questions
+ * Adds a new question to a pathway definition JSON.
+ */
+router.post('/pathways/:pathway/questions', async (req, res) => {
+  const pathwayCode = req.params.pathway;
+  const { id, text, type = 'boolean', required = true, redFlag = null } = req.body || {};
+
+  if (!id || !text) {
+    return res.status(400).json({ error: 'id and text are required.' });
+  }
+
+  const loaded = loadPathwayByCode(pathwayCode);
+  if (!loaded) {
+    return res.status(404).json({ error: `Pathway not found: ${pathwayCode}` });
+  }
+
+  const pathwayData = loaded.data;
+  const existingQuestions = Array.isArray(pathwayData.questions) ? pathwayData.questions : [];
+  if (existingQuestions.some((q) => q.id === id)) {
+    return res.status(409).json({ error: `Question id "${id}" already exists in pathway ${pathwayCode}.` });
+  }
+
+  const question = { id, text, type, required: !!required };
+  pathwayData.questions = [...existingQuestions, question];
+
+  if (redFlag && redFlag.code && redFlag.condition && redFlag.outcome) {
+    const redFlags = Array.isArray(pathwayData.redFlags) ? pathwayData.redFlags : [];
+    if (redFlags.some((f) => f.code === redFlag.code)) {
+      return res.status(409).json({ error: `Red-flag code "${redFlag.code}" already exists in pathway ${pathwayCode}.` });
+    }
+    pathwayData.redFlags = [
+      ...redFlags,
+      {
+        code: redFlag.code,
+        condition: redFlag.condition,
+        description: redFlag.description || `Rule linked to ${id}`,
+        outcome: redFlag.outcome,
+        message: redFlag.message || 'Please seek medical advice.',
+      },
+    ];
+  }
+
+  savePathwayFile(loaded.filePath, pathwayData);
+
+  await logAuditEvent({
+    eventType: 'admin_pathway_question_added',
+    requestId: req.requestId,
+    entityType: 'pathway_question',
+    entityId: id,
+    ip: clientIp(req),
+    payload: { pathwayCode, questionId: id, redFlagCode: redFlag?.code || null },
+  });
+
+  return res.status(201).json({ success: true, question });
+});
+
+/**
+ * PUT /api/admin/pathways/:pathway/questions/:questionId
+ * Updates an existing pathway question and optional linked red flag.
+ */
+router.put('/pathways/:pathway/questions/:questionId', async (req, res) => {
+  const pathwayCode = req.params.pathway;
+  const currentQuestionId = req.params.questionId;
+  const { id, text, type = 'boolean', required = true, redFlag = null } = req.body || {};
+
+  if (!id || !text) {
+    return res.status(400).json({ error: 'id and text are required.' });
+  }
+
+  const loaded = loadPathwayByCode(pathwayCode);
+  if (!loaded) {
+    return res.status(404).json({ error: `Pathway not found: ${pathwayCode}` });
+  }
+
+  const pathwayData = loaded.data;
+  const questions = Array.isArray(pathwayData.questions) ? pathwayData.questions : [];
+  const idx = questions.findIndex((q) => q.id === currentQuestionId);
+  if (idx < 0) {
+    return res.status(404).json({ error: `Question not found: ${currentQuestionId}` });
+  }
+
+  if (id !== currentQuestionId && questions.some((q) => q.id === id)) {
+    return res.status(409).json({ error: `Question id "${id}" already exists in pathway ${pathwayCode}.` });
+  }
+
+  questions[idx] = { id, text, type, required: !!required };
+  pathwayData.questions = questions;
+
+  const redFlags = Array.isArray(pathwayData.redFlags) ? pathwayData.redFlags : [];
+  const byCode = redFlag?.code ? redFlags.findIndex((f) => f.code === redFlag.code) : -1;
+  const byQuestionRef = redFlags.findIndex((f) => typeof f.condition === 'string' && f.condition.includes(currentQuestionId));
+  const redFlagIdx = byCode >= 0 ? byCode : byQuestionRef;
+
+  if (redFlag && redFlag.code && redFlag.condition && redFlag.outcome) {
+    const nextRule = {
+      code: redFlag.code,
+      condition: redFlag.condition,
+      description: redFlag.description || `Rule linked to ${id}`,
+      outcome: redFlag.outcome,
+      message: redFlag.message || 'Please seek medical advice.',
+    };
+    if (redFlagIdx >= 0) {
+      redFlags[redFlagIdx] = nextRule;
+    } else {
+      redFlags.push(nextRule);
+    }
+  } else if (redFlagIdx >= 0) {
+    redFlags.splice(redFlagIdx, 1);
+  }
+
+  pathwayData.redFlags = redFlags;
+  savePathwayFile(loaded.filePath, pathwayData);
+
+  await logAuditEvent({
+    eventType: 'admin_pathway_question_updated',
+    requestId: req.requestId,
+    entityType: 'pathway_question',
+    entityId: currentQuestionId,
+    ip: clientIp(req),
+    payload: { pathwayCode, previousQuestionId: currentQuestionId, nextQuestionId: id, redFlagCode: redFlag?.code || null },
+  });
+
+  return res.json({ success: true });
+});
+
+/**
+ * DELETE /api/admin/pathways/:pathway/questions/:questionId
+ * Removes a pathway question and any linked red flag condition.
+ */
+router.delete('/pathways/:pathway/questions/:questionId', async (req, res) => {
+  const pathwayCode = req.params.pathway;
+  const questionId = req.params.questionId;
+
+  const loaded = loadPathwayByCode(pathwayCode);
+  if (!loaded) {
+    return res.status(404).json({ error: `Pathway not found: ${pathwayCode}` });
+  }
+
+  const pathwayData = loaded.data;
+  const questions = Array.isArray(pathwayData.questions) ? pathwayData.questions : [];
+  const existingQuestion = questions.find((q) => q.id === questionId);
+  if (!existingQuestion) {
+    return res.status(404).json({ error: `Question not found: ${questionId}` });
+  }
+  pathwayData.questions = questions.filter((q) => q.id !== questionId);
+
+  const redFlags = Array.isArray(pathwayData.redFlags) ? pathwayData.redFlags : [];
+  pathwayData.redFlags = redFlags.filter((f) => !(typeof f.condition === 'string' && f.condition.includes(questionId)));
+
+  savePathwayFile(loaded.filePath, pathwayData);
+
+  await logAuditEvent({
+    eventType: 'admin_pathway_question_deleted',
+    requestId: req.requestId,
+    entityType: 'pathway_question',
+    entityId: questionId,
+    ip: clientIp(req),
+    payload: { pathwayCode, questionId },
+  });
+
+  return res.json({ success: true });
 });
 
 /**

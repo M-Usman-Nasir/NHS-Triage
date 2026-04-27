@@ -16,11 +16,12 @@
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, LayoutDashboard, Map, TriangleAlert } from 'lucide-react';
+import { ArrowLeft, LayoutDashboard, ListChecks, Map, TriangleAlert } from 'lucide-react';
 import InlineNotice from '../../components/InlineNotice';
 import { MOCK_DATA_DISCLOSURE } from '../../lib/complianceContent';
 import StatusBadge from '../../components/StatusBadge';
 import type { AdminRule } from '../../types/admin';
+import { apiFetch, apiUrl } from '../../lib/api';
 
 // ─── Mock analytics data ──────────────────────────────────────────────────────
 
@@ -68,6 +69,43 @@ type RuleFormState = {
   active: boolean;
 };
 
+type PathwayMeta = {
+  code: string;
+  label: string;
+};
+
+type PathwayQuestion = {
+  id?: string;
+  text?: string;
+  type?: string;
+  required?: boolean;
+};
+
+type PathwayRedFlag = {
+  code?: string;
+  condition?: string;
+  outcome?: string;
+};
+
+type PathwayDetailResponse = {
+  pathway?: string;
+  label?: string;
+  questions?: PathwayQuestion[];
+  redFlags?: PathwayRedFlag[];
+};
+
+type QuestionRow = {
+  pathwayCode: string;
+  pathwayLabel: string;
+  questionId: string;
+  questionText: string;
+  questionType: string;
+  required: boolean;
+  hasRedFlag: boolean;
+  matchedRedFlags: string[];
+  source?: 'live' | 'custom';
+};
+
 const RED_FLAG_SAMPLES: AdminRule[] = [
   { id: 'RF_ST_001', pathway: 'Sore Throat', code: 'RF_ST_001', condition: 'Difficulty breathing', outcome: '999', active: true },
   { id: 'RF_UTI_001', pathway: 'UTI', code: 'RF_UTI_001', condition: 'Fever + loin pain', outcome: 'Urgent Care', active: true },
@@ -77,6 +115,7 @@ const RED_FLAG_SAMPLES: AdminRule[] = [
 ];
 
 const RULE_STORAGE_KEY = 'admin-dashboard-rules-v1';
+const QUESTION_COVERAGE_STORAGE_KEY = 'admin-question-coverage-v1';
 const EMPTY_RULE_FORM: RuleFormState = {
   pathway: '',
   code: '',
@@ -84,17 +123,36 @@ const EMPTY_RULE_FORM: RuleFormState = {
   outcome: '',
   active: true,
 };
+const EMPTY_QUESTION_FORM = {
+  pathwayCode: '',
+  pathwayLabel: '',
+  questionId: '',
+  questionText: '',
+  questionType: 'boolean',
+  required: true,
+  hasRedFlag: false,
+  redFlagCode: '',
+};
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function AdminDashboard() {
-  const [activeTab, setActiveTab] = useState<'overview' | 'pathways' | 'rules'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'pathways' | 'rules' | 'questions'>('overview');
   const [rules, setRules] = useState<AdminRule[]>(RED_FLAG_SAMPLES);
   const [ruleForm, setRuleForm] = useState<RuleFormState>(EMPTY_RULE_FORM);
   const [editingRuleId, setEditingRuleId] = useState<string | null>(null);
   const [ruleSearch, setRuleSearch] = useState('');
   const [rulesError, setRulesError] = useState('');
   const [rulesSuccess, setRulesSuccess] = useState('');
+  const [questionRows, setQuestionRows] = useState<QuestionRow[]>([]);
+  const [questionFilter, setQuestionFilter] = useState<'all' | 'with_red_flag' | 'without_red_flag'>('all');
+  const [questionSearch, setQuestionSearch] = useState('');
+  const [questionLoadError, setQuestionLoadError] = useState('');
+  const [questionForm, setQuestionForm] = useState(EMPTY_QUESTION_FORM);
+  const [questionFormError, setQuestionFormError] = useState('');
+  const [questionFormSuccess, setQuestionFormSuccess] = useState('');
+  const [editingQuestionKey, setEditingQuestionKey] = useState<string | null>(null);
+  const [questionSaving, setQuestionSaving] = useState(false);
 
   const { summary, dailyTrend } = ANALYTICS;
   const maxDaily = Math.max(...dailyTrend.map((d) => d.total));
@@ -127,6 +185,138 @@ export default function AdminDashboard() {
     window.localStorage.setItem(RULE_STORAGE_KEY, JSON.stringify(rules));
   }, [rules]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadQuestionCoverage = async () => {
+      try {
+        const pathwaysRes = await apiFetch(apiUrl('/api/admin/pathways'));
+        if (!pathwaysRes.ok) {
+          throw new Error('pathways');
+        }
+        const pathwaysData = (await pathwaysRes.json()) as { pathways?: PathwayMeta[] };
+        const pathways = Array.isArray(pathwaysData.pathways) ? pathwaysData.pathways : [];
+        const details = await Promise.all(
+          pathways.map(async (pathway) => {
+            const detailRes = await apiFetch(apiUrl(`/api/admin/rules/${encodeURIComponent(pathway.code)}`));
+            if (!detailRes.ok) {
+              throw new Error(`pathway:${pathway.code}`);
+            }
+            return (await detailRes.json()) as PathwayDetailResponse;
+          }),
+        );
+
+        const rows: QuestionRow[] = details.flatMap((detail) => {
+          const pathwayCode = detail.pathway || 'unknown';
+          const pathwayLabel = detail.label || pathwayCode;
+          const redFlags = Array.isArray(detail.redFlags) ? detail.redFlags : [];
+          const questions = Array.isArray(detail.questions) ? detail.questions : [];
+
+          return questions.map((question, index) => {
+            const questionId = question.id || `question_${index + 1}`;
+            const matchedRedFlags = redFlags
+              .filter((flag) => (flag.condition || '').includes(questionId))
+              .map((flag) => flag.code || 'RF_UNKNOWN');
+
+            return {
+              pathwayCode,
+              pathwayLabel,
+              questionId,
+              questionText: question.text || 'Untitled question',
+              questionType: question.type || 'unknown',
+              required: !!question.required,
+              hasRedFlag: matchedRedFlags.length > 0,
+              matchedRedFlags,
+              source: 'live',
+            };
+          });
+        });
+
+        if (!cancelled) {
+          setQuestionRows(rows);
+          setQuestionLoadError('');
+        }
+      } catch {
+        if (cancelled) return;
+        if (typeof window !== 'undefined') {
+          const stored = window.localStorage.getItem(QUESTION_COVERAGE_STORAGE_KEY);
+          if (stored) {
+            try {
+              const parsed = JSON.parse(stored) as QuestionRow[];
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                setQuestionRows(parsed.map((row) => ({ ...row, source: row.source || 'custom' })));
+                setQuestionLoadError('Could not load live question coverage from admin APIs. Showing saved local question coverage.');
+                return;
+              }
+            } catch {
+              // Fall through to empty state.
+            }
+          }
+        }
+        setQuestionRows([]);
+        setQuestionLoadError('Could not load live question coverage from admin APIs.');
+      }
+    };
+
+    void loadQuestionCoverage();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(QUESTION_COVERAGE_STORAGE_KEY, JSON.stringify(questionRows));
+  }, [questionRows]);
+
+  const reloadQuestionCoverageFromApi = async () => {
+    const pathwaysRes = await apiFetch(apiUrl('/api/admin/pathways'));
+    if (!pathwaysRes.ok) {
+      throw new Error('pathways');
+    }
+    const pathwaysData = (await pathwaysRes.json()) as { pathways?: PathwayMeta[] };
+    const pathways = Array.isArray(pathwaysData.pathways) ? pathwaysData.pathways : [];
+    const details = await Promise.all(
+      pathways.map(async (pathway) => {
+        const detailRes = await apiFetch(apiUrl(`/api/admin/rules/${encodeURIComponent(pathway.code)}`));
+        if (!detailRes.ok) {
+          throw new Error(`pathway:${pathway.code}`);
+        }
+        return (await detailRes.json()) as PathwayDetailResponse;
+      }),
+    );
+
+    const rows: QuestionRow[] = details.flatMap((detail) => {
+      const pathwayCode = detail.pathway || 'unknown';
+      const pathwayLabel = detail.label || pathwayCode;
+      const redFlags = Array.isArray(detail.redFlags) ? detail.redFlags : [];
+      const questions = Array.isArray(detail.questions) ? detail.questions : [];
+
+      return questions.map((question, index) => {
+        const questionId = question.id || `question_${index + 1}`;
+        const matchedRedFlags = redFlags
+          .filter((flag) => (flag.condition || '').includes(questionId))
+          .map((flag) => flag.code || 'RF_UNKNOWN');
+
+        return {
+          pathwayCode,
+          pathwayLabel,
+          questionId,
+          questionText: question.text || 'Untitled question',
+          questionType: question.type || 'unknown',
+          required: !!question.required,
+          hasRedFlag: matchedRedFlags.length > 0,
+          matchedRedFlags,
+          source: 'live',
+        };
+      });
+    });
+
+    setQuestionRows(rows);
+    setQuestionLoadError('');
+  };
+
   const filteredRules = useMemo(() => {
     const query = ruleSearch.trim().toLowerCase();
     if (!query) {
@@ -137,6 +327,188 @@ export default function AdminDashboard() {
       [rule.pathway, rule.code, rule.condition, rule.outcome].some((value) => value.toLowerCase().includes(query))
     );
   }, [ruleSearch, rules]);
+
+  const filteredQuestionRows = useMemo(() => {
+    const query = questionSearch.trim().toLowerCase();
+    return questionRows.filter((row) => {
+      if (questionFilter === 'with_red_flag' && !row.hasRedFlag) return false;
+      if (questionFilter === 'without_red_flag' && row.hasRedFlag) return false;
+      if (!query) return true;
+      return [row.pathwayLabel, row.pathwayCode, row.questionId, row.questionText, row.questionType]
+        .some((value) => value.toLowerCase().includes(query));
+    });
+  }, [questionFilter, questionRows, questionSearch]);
+
+  const saveQuestion = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setQuestionFormError('');
+    setQuestionFormSuccess('');
+    setQuestionSaving(true);
+
+    const pathwayCode = questionForm.pathwayCode.trim().toLowerCase();
+    const pathwayLabel = questionForm.pathwayLabel.trim();
+    const questionId = questionForm.questionId.trim();
+    const questionText = questionForm.questionText.trim();
+    const questionType = questionForm.questionType.trim();
+    const redFlagCode = questionForm.redFlagCode.trim().toUpperCase();
+
+    if (!pathwayCode || !pathwayLabel || !questionId || !questionText || !questionType) {
+      setQuestionFormError('Pathway code, pathway label, question ID, question text, and question type are required.');
+      setQuestionSaving(false);
+      return;
+    }
+    if (questionForm.hasRedFlag && !redFlagCode) {
+      setQuestionFormError('Please enter a red-flag code when "Has red flag" is selected.');
+      setQuestionSaving(false);
+      return;
+    }
+
+    const duplicate = questionRows.find((row) => {
+      const currentKey = `${pathwayCode}:${questionId}`.toLowerCase();
+      const rowKey = `${row.pathwayCode}:${row.questionId}`.toLowerCase();
+      if (editingQuestionKey && rowKey === editingQuestionKey.toLowerCase()) return false;
+      return rowKey === currentKey;
+    });
+    if (duplicate) {
+      setQuestionFormError(`Question "${questionId}" already exists for pathway "${pathwayCode}".`);
+      setQuestionSaving(false);
+      return;
+    }
+
+    const payload = {
+      id: questionId,
+      text: questionText,
+      type: questionType,
+      required: questionForm.required,
+      redFlag: questionForm.hasRedFlag
+        ? {
+            code: redFlagCode,
+            condition: `${questionId} === true`,
+            outcome: 'urgent_care',
+            description: `Rule linked to ${questionId}`,
+            message: 'Please seek medical advice.',
+          }
+        : null,
+    };
+
+    try {
+      const existing = editingQuestionKey
+        ? questionRows.find((row) => `${row.pathwayCode}:${row.questionId}`.toLowerCase() === editingQuestionKey.toLowerCase())
+        : null;
+
+      if (editingQuestionKey && existing?.source === 'live') {
+        const response = await apiFetch(
+          apiUrl(`/api/admin/pathways/${encodeURIComponent(existing.pathwayCode)}/questions/${encodeURIComponent(existing.questionId)}`),
+          {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          },
+        );
+        if (!response.ok) {
+          throw new Error('update-live-question');
+        }
+        await reloadQuestionCoverageFromApi();
+      } else {
+        const createResponse = await apiFetch(
+          apiUrl(`/api/admin/pathways/${encodeURIComponent(pathwayCode)}/questions`),
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          },
+        );
+
+        if (createResponse.ok) {
+          await reloadQuestionCoverageFromApi();
+        } else {
+          const newRow: QuestionRow = {
+            pathwayCode,
+            pathwayLabel,
+            questionId,
+            questionText,
+            questionType,
+            required: questionForm.required,
+            hasRedFlag: questionForm.hasRedFlag,
+            matchedRedFlags: questionForm.hasRedFlag ? [redFlagCode] : [],
+            source: 'custom',
+          };
+          if (editingQuestionKey) {
+            setQuestionRows((current) =>
+              current.map((row) =>
+                `${row.pathwayCode}:${row.questionId}`.toLowerCase() === editingQuestionKey.toLowerCase()
+                  ? newRow
+                  : row,
+              ),
+            );
+          } else {
+            setQuestionRows((current) => [newRow, ...current]);
+          }
+        }
+      }
+
+      setQuestionForm(EMPTY_QUESTION_FORM);
+      setEditingQuestionKey(null);
+      setQuestionFormSuccess(editingQuestionKey ? `Question "${questionId}" updated.` : `Question "${questionId}" added to coverage list.`);
+    } catch {
+      setQuestionFormError('Could not save question entry.');
+    } finally {
+      setQuestionSaving(false);
+    }
+  };
+
+  const editQuestion = (row: QuestionRow) => {
+    setQuestionForm({
+      pathwayCode: row.pathwayCode,
+      pathwayLabel: row.pathwayLabel,
+      questionId: row.questionId,
+      questionText: row.questionText,
+      questionType: row.questionType,
+      required: row.required,
+      hasRedFlag: row.hasRedFlag,
+      redFlagCode: row.hasRedFlag ? row.matchedRedFlags[0] || '' : '',
+    });
+    setEditingQuestionKey(`${row.pathwayCode}:${row.questionId}`);
+    setQuestionFormError('');
+    setQuestionFormSuccess('');
+  };
+
+  const deleteQuestion = async (row: QuestionRow) => {
+    if (typeof window !== 'undefined' && !window.confirm(`Delete question "${row.questionId}" from "${row.pathwayCode}"?`)) {
+      return;
+    }
+
+    try {
+      if (row.source === 'live') {
+        const response = await apiFetch(
+          apiUrl(`/api/admin/pathways/${encodeURIComponent(row.pathwayCode)}/questions/${encodeURIComponent(row.questionId)}`),
+          { method: 'DELETE' },
+        );
+        if (!response.ok) {
+          throw new Error('delete-live-question');
+        }
+        await reloadQuestionCoverageFromApi();
+      } else {
+        setQuestionRows((current) =>
+          current.filter(
+            (item) => !(
+              item.source === 'custom' &&
+              item.pathwayCode === row.pathwayCode &&
+              item.questionId === row.questionId
+            ),
+          ),
+        );
+      }
+      if (editingQuestionKey && editingQuestionKey.toLowerCase() === `${row.pathwayCode}:${row.questionId}`.toLowerCase()) {
+        setQuestionForm(EMPTY_QUESTION_FORM);
+        setEditingQuestionKey(null);
+      }
+      setQuestionFormError('');
+      setQuestionFormSuccess(`Question "${row.questionId}" deleted.`);
+    } catch {
+      setQuestionFormError(`Could not delete question "${row.questionId}".`);
+    }
+  };
 
   const resetRuleForm = () => {
     setRuleForm(EMPTY_RULE_FORM);
@@ -287,6 +659,7 @@ export default function AdminDashboard() {
               { id: 'overview' as const, label: 'Overview', Icon: LayoutDashboard },
               { id: 'pathways' as const, label: 'Pathways', Icon: Map },
               { id: 'rules' as const, label: 'Rules', Icon: TriangleAlert },
+              { id: 'questions' as const, label: 'Question Coverage', Icon: ListChecks },
             ] as const
           ).map(({ id, label, Icon }) => (
             <button
@@ -557,6 +930,229 @@ export default function AdminDashboard() {
                     <tr>
                       <td colSpan={6} className="px-5 py-6 text-sm text-muted-foreground text-center">
                         No rules found for the current search.
+                      </td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* ── Questions Tab ─────────────────────────────────────────────────── */}
+        {activeTab === 'questions' && (
+          <div className="space-y-4">
+            <form onSubmit={saveQuestion} className="bg-card rounded-2xl shadow-card border border-border p-4 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-foreground">{editingQuestionKey ? 'Edit Custom Question Entry' : 'Add Question Coverage Entry'}</h3>
+                <StatusBadge label="Local only" tone="warning" />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <label className="text-sm text-foreground">
+                  Pathway code
+                  <input
+                    type="text"
+                    value={questionForm.pathwayCode}
+                    onChange={(event) => setQuestionForm((current) => ({ ...current, pathwayCode: event.target.value }))}
+                    placeholder="e.g. uti"
+                    className="mt-1.5 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
+                  />
+                </label>
+                <label className="text-sm text-foreground">
+                  Pathway label
+                  <input
+                    type="text"
+                    value={questionForm.pathwayLabel}
+                    onChange={(event) => setQuestionForm((current) => ({ ...current, pathwayLabel: event.target.value }))}
+                    placeholder="e.g. Uncomplicated UTI"
+                    className="mt-1.5 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
+                  />
+                </label>
+                <label className="text-sm text-foreground">
+                  Question ID
+                  <input
+                    type="text"
+                    value={questionForm.questionId}
+                    onChange={(event) => setQuestionForm((current) => ({ ...current, questionId: event.target.value }))}
+                    placeholder="e.g. q10"
+                    className="mt-1.5 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
+                  />
+                </label>
+                <label className="text-sm text-foreground md:col-span-2">
+                  Question text
+                  <input
+                    type="text"
+                    value={questionForm.questionText}
+                    onChange={(event) => setQuestionForm((current) => ({ ...current, questionText: event.target.value }))}
+                    placeholder="e.g. Are symptoms worsening rapidly?"
+                    className="mt-1.5 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
+                  />
+                </label>
+                <label className="text-sm text-foreground">
+                  Question type
+                  <select
+                    value={questionForm.questionType}
+                    onChange={(event) => setQuestionForm((current) => ({ ...current, questionType: event.target.value }))}
+                    className="mt-1.5 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
+                  >
+                    <option value="boolean">boolean</option>
+                    <option value="select">select</option>
+                    <option value="multiselect">multiselect</option>
+                    <option value="text">text</option>
+                    <option value="number">number</option>
+                  </select>
+                </label>
+                <label className="flex items-center gap-2 text-sm text-foreground">
+                  <input
+                    type="checkbox"
+                    checked={questionForm.required}
+                    onChange={(event) => setQuestionForm((current) => ({ ...current, required: event.target.checked }))}
+                    className="h-4 w-4 rounded border-border"
+                  />
+                  Required question
+                </label>
+                <label className="flex items-center gap-2 text-sm text-foreground">
+                  <input
+                    type="checkbox"
+                    checked={questionForm.hasRedFlag}
+                    onChange={(event) => setQuestionForm((current) => ({ ...current, hasRedFlag: event.target.checked }))}
+                    className="h-4 w-4 rounded border-border"
+                  />
+                  Has red flag
+                </label>
+                {questionForm.hasRedFlag ? (
+                  <label className="text-sm text-foreground">
+                    Red-flag code
+                    <input
+                      type="text"
+                      value={questionForm.redFlagCode}
+                      onChange={(event) => setQuestionForm((current) => ({ ...current, redFlagCode: event.target.value }))}
+                      placeholder="e.g. RF_UTI_010"
+                      className="mt-1.5 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
+                    />
+                  </label>
+                ) : null}
+              </div>
+              {questionFormError ? <p className="text-sm text-red-600">{questionFormError}</p> : null}
+              {questionFormSuccess ? <p className="text-sm text-green-700">{questionFormSuccess}</p> : null}
+              <div className="flex justify-end">
+                <div className="flex items-center gap-2">
+                  {editingQuestionKey ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setQuestionForm(EMPTY_QUESTION_FORM);
+                        setEditingQuestionKey(null);
+                        setQuestionFormError('');
+                        setQuestionFormSuccess('');
+                      }}
+                      className="rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+                    >
+                      Cancel
+                    </button>
+                  ) : null}
+                  <button
+                    type="submit"
+                    disabled={questionSaving}
+                    className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+                  >
+                    {questionSaving ? 'Saving...' : editingQuestionKey ? 'Update question' : 'Add question'}
+                  </button>
+                </div>
+              </div>
+            </form>
+
+            <div className="bg-card rounded-2xl shadow-card border border-border p-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <label className="text-sm text-foreground">
+                  Red-flag coverage
+                  <select
+                    value={questionFilter}
+                    onChange={(event) => setQuestionFilter(event.target.value as 'all' | 'with_red_flag' | 'without_red_flag')}
+                    className="mt-1.5 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <option value="all">All questions</option>
+                    <option value="with_red_flag">With red-flag mapping</option>
+                    <option value="without_red_flag">Without red-flag mapping</option>
+                  </select>
+                </label>
+                <label className="text-sm text-foreground md:col-span-2">
+                  Search questions
+                  <input
+                    type="text"
+                    value={questionSearch}
+                    onChange={(event) => setQuestionSearch(event.target.value)}
+                    placeholder="Search by pathway, question id, question text, or type"
+                    className="mt-1.5 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  />
+                </label>
+              </div>
+            </div>
+
+            {questionLoadError ? (
+              <InlineNotice title="Question coverage unavailable" tone="warning">
+                {questionLoadError}
+              </InlineNotice>
+            ) : null}
+
+            <div className="bg-card rounded-2xl shadow-card border border-border overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-muted border-b border-border">
+                  <tr>
+                    {['Pathway', 'Question ID', 'Question', 'Type', 'Required', 'Red Flag Coverage', 'Actions'].map((h) => (
+                      <th key={h} className="text-left text-xs font-semibold text-muted-foreground uppercase px-5 py-3">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/60">
+                  {filteredQuestionRows.map((row) => (
+                    <tr key={`${row.pathwayCode}-${row.questionId}`} className="hover:bg-muted/50">
+                      <td className="px-5 py-4 text-foreground text-sm">
+                        <p className="font-medium">{row.pathwayLabel}</p>
+                        <p className="text-xs text-muted-foreground font-mono mt-0.5">{row.pathwayCode}</p>
+                      </td>
+                      <td className="px-5 py-4 text-xs text-muted-foreground font-mono">{row.questionId}</td>
+                      <td className="px-5 py-4 text-sm text-muted-foreground">{row.questionText}</td>
+                      <td className="px-5 py-4">
+                        <StatusBadge label={row.questionType} tone="info" />
+                      </td>
+                      <td className="px-5 py-4">
+                        <StatusBadge label={row.required ? 'Yes' : 'No'} tone={row.required ? 'success' : 'neutral'} />
+                      </td>
+                      <td className="px-5 py-4">
+                        {row.hasRedFlag ? (
+                          <div className="space-y-1">
+                            <StatusBadge label="Mapped" tone="danger" />
+                            <p className="text-[11px] text-muted-foreground">{row.matchedRedFlags.join(', ')}</p>
+                          </div>
+                        ) : (
+                          <StatusBadge label="No red flag" tone="neutral" />
+                        )}
+                      </td>
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => editQuestion(row)}
+                            className="rounded border border-border px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void deleteQuestion(row)}
+                            className="rounded border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 hover:bg-red-100"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {filteredQuestionRows.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="px-5 py-6 text-sm text-muted-foreground text-center">
+                        No questions match the selected filter.
                       </td>
                     </tr>
                   ) : null}

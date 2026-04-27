@@ -11,6 +11,15 @@
  * - timestamp
  */
 function buildStructuredReport(record) {
+  const explanation =
+    record.explanation && typeof record.explanation === 'object'
+      ? record.explanation
+      : {
+          decision: record.outcome || 'unknown',
+          reason: typeof record.outcomeReason === 'string' ? record.outcomeReason : '',
+          source: 'rule_engine',
+        };
+
   const decision = {
     code: record.outcome || 'unknown',
     label: record.outcomeLabel || record.outcome || 'Unknown',
@@ -20,6 +29,7 @@ function buildStructuredReport(record) {
     redFlagTriggered: !!record.redFlagTriggered,
     redFlags: Array.isArray(record.redFlags) ? record.redFlags : [],
     pharmacyEligible: !!record.pharmacyEligible,
+    explanation,
   };
 
   return {

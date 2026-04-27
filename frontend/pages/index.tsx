@@ -167,6 +167,15 @@ export default function LandingPage() {
               </span>
               Admin
             </Link>
+            <Link
+              href="/pharmacist/dashboard"
+              className="inline-flex items-center gap-1.5 rounded-full border-2 border-primary/25 bg-white/90 px-3.5 py-2 text-xs font-semibold text-primary shadow-sm transition hover:border-primary/40 hover:bg-sky-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 sm:px-4 sm:text-sm"
+            >
+              <span className="flex h-5 w-5 items-center justify-center rounded-full border border-primary/30 bg-primary/5" aria-hidden>
+                <Stethoscope className="h-3 w-3 text-primary" strokeWidth={2} />
+              </span>
+              Pharmacist
+            </Link>
           </div>
         </div>
       </header>

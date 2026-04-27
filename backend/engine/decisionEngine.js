@@ -46,6 +46,7 @@ const { detectRedFlags, getRedFlagMessage, evaluateCondition, tryEvaluateConditi
 const { checkPharmacyEligibility } = require('./pharmacyEligibility');
 const { evaluateComorbidityModifiers } = require('./comorbidityModifiers');
 const { buildPatientExplanation } = require('./patientExplanation');
+const { buildDecisionExplanation } = require('../lib/explanationEngine');
 
 // Human-readable labels for each outcome code
 const OUTCOME_LABELS = {
@@ -207,6 +208,11 @@ function runTriage({ pathwayCode, answers, patient, symptoms = [] }) {
       outcomeLabel: OUTCOME_LABELS[outcome],
       outcomeColour: OUTCOME_COLOURS[outcome],
       outcomeReason: flagMessage,
+      explanation: buildDecisionExplanation({
+        decision: outcome,
+        reason: flagMessage,
+        source: 'red_flag_engine',
+      }),
       redFlagTriggered: true,
       redFlags: redFlagResult.flags,
       pharmacyEligible: false,
@@ -292,6 +298,11 @@ function runTriage({ pathwayCode, answers, patient, symptoms = [] }) {
     outcomeLabel: OUTCOME_LABELS[outcome] || outcome,
     outcomeColour: OUTCOME_COLOURS[outcome] || 'grey',
     outcomeReason: finalReason,
+    explanation: buildDecisionExplanation({
+      decision: outcome,
+      reason: finalReason,
+      source: 'rule_engine',
+    }),
     redFlagTriggered: false,
     redFlags: [],
     pharmacyEligible,

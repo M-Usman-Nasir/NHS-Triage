@@ -9,6 +9,7 @@ export function mapSummaryToResult(data: SummaryApiResponse): TriageResultView {
     outcome: data.outcome,
     outcomeLabel: data.outcomeLabel,
     outcomeReason: data.outcomeReason,
+    explanation: data.explanation ?? undefined,
     redFlagTriggered: data.redFlagTriggered,
     redFlags: data.redFlagReasons,
     pharmacyEligible: data.pharmacyEligible,

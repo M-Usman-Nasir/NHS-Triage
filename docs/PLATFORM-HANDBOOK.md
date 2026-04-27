@@ -87,6 +87,25 @@ These are mandatory quality constraints for release readiness.
   - Timestamp
 - This structured report must be persisted and retrievable for summary/handoff/audit.
 
+### 2.5 Strict architecture constraint (MVP boundary)
+
+The MVP architecture is explicitly constrained to a **standalone system**.
+
+#### Scope lock for MVP
+- **No external integrations** are in MVP scope (e.g., NHS Login, Spine, GP Connect, third-party telehealth, external ML services).
+- All core workflow capability must be delivered using internal app modules and local platform data stores.
+
+#### Mandatory MVP modules
+- Patient UI
+- Backend API
+- Rule engine
+- Database
+- Admin panel
+- Pharmacist panel
+- Audit system
+
+Any proposal that introduces dependency on external platforms must be tracked as a **post-MVP capability** and must not block MVP delivery or acceptance.
+
 ---
 
 ## 3. Seven core modules
@@ -402,5 +421,6 @@ The following items are intentionally tracked for later phases and are **not imp
 | 1.7 | 2026-04-27 | Added §9.3 security implementation checklist template + priority-group quick checklist |
 | 1.8 | 2026-04-27 | Added §9.4 future capability backlog (AI diagnosis, ML, NHS integrations, telehealth, advanced analytics) |
 | 1.9 | 2026-04-27 | Added mandatory system requirements for stability, explainability, and structured output; added status rows in §9 |
+| 2.0 | 2026-04-27 | Added strict MVP architecture constraint: standalone-only, no external integrations, and mandatory module list in §2.5 |
 
 **Superseded files (removed from repo):** `alignment-and-planning.md`, `milestone-plan.md`, `patient-flow-ui-finalization.md`, `architecture.md`, `user_flows.md`, `TASKS.md`, `MVP_Build.md` (under docs), `ClientQ&A.md` — content merged here or into CLINICAL-GOVERNANCE.

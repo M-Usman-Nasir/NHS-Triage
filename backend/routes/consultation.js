@@ -26,6 +26,7 @@ const { consultationStore } = require('../store/consultationStore');
 const { logAuditEvent } = require('../lib/auditLog');
 const { buildRegulatoryContext } = require('../lib/regulatoryContext');
 const { buildStructuredReport } = require('../lib/structuredReport');
+const { buildDecisionExplanation } = require('../lib/explanationEngine');
 
 const router = express.Router();
 
@@ -124,6 +125,11 @@ router.post('/', async (req, res) => {
       ? triageResult.outcomeReason.trim()
       : 'Outcome determined by rule-based triage after safety and eligibility evaluation.';
   triageResult.outcomeReason = normalizedOutcomeReason;
+  triageResult.explanation = buildDecisionExplanation({
+    decision: triageResult.outcome,
+    reason: normalizedOutcomeReason,
+    source: triageResult.redFlagTriggered ? 'red_flag_engine' : 'rule_engine',
+  });
 
   // Store consultation record
   const consultationId = uuidv4();

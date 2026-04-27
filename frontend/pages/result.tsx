@@ -59,6 +59,12 @@ const OUTCOME_CONFIG: Record<string, {
   },
 };
 
+const EXPLANATION_SOURCE_LABEL: Record<string, string> = {
+  rule_engine: 'Rule engine',
+  red_flag_engine: 'Safety engine',
+  pharmacist_override: 'Pharmacist override',
+};
+
 const MOCK_RESULT: TriageResultView = {
   consultationId: 'c0000001-0000-0000-0000-000000000001',
   patient: { fullName: 'Sarah Mitchell', age: 33, gender: 'Female' },
@@ -67,6 +73,11 @@ const MOCK_RESULT: TriageResultView = {
   outcome: 'pharmacy',
   outcomeLabel: 'Pharmacy Referral',
   outcomeReason: 'Symptoms consistent with uncomplicated UTI. Patient meets all pharmacy eligibility criteria. No red flags identified.',
+  explanation: {
+    decision: 'pharmacy',
+    reason: 'Symptoms consistent with uncomplicated UTI. Patient meets all pharmacy eligibility criteria. No red flags identified.',
+    source: 'rule_engine',
+  },
   redFlagTriggered: false,
   redFlags: [],
   pharmacyEligible: true,
@@ -152,6 +163,8 @@ export default function ResultPage() {
   if (!result) return null;
 
   const config = OUTCOME_CONFIG[result.outcome] || OUTCOME_CONFIG.gp;
+  const reasoningText = result.explanation?.reason || result.outcomeReason;
+  const explanationSource = result.explanation?.source || '';
 
   return (
     <div className="min-h-screen bg-background">
@@ -258,8 +271,15 @@ export default function ResultPage() {
 
         {/* Clinical reasoning */}
         <div className="bg-card rounded-2xl shadow-card border border-border p-5">
-          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2">Clinical Reasoning</p>
-          <p className="text-card-foreground text-sm leading-relaxed">{result.outcomeReason}</p>
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Clinical Reasoning</p>
+            {explanationSource ? (
+              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
+                {EXPLANATION_SOURCE_LABEL[explanationSource] || explanationSource}
+              </span>
+            ) : null}
+          </div>
+          <p className="text-card-foreground text-sm leading-relaxed">{reasoningText}</p>
         </div>
 
         {/* Pharmacy treatment options */}
