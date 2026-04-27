@@ -1,11 +1,13 @@
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { ArrowLeft, Mail, Phone, Pill, Printer, TriangleAlert, User } from 'lucide-react';
-import { apiFetch, apiUrl } from '../lib/api';
-import { mapSummaryToResult } from '../lib/mapSummaryToResult';
+import { ArrowLeft, Mail, Phone, Pill, Printer, User } from 'lucide-react';
 import { TriageOutcomeIcon } from '../lib/triageOutcomeIcons';
-import type { SummaryApiResponse, TriageResultView } from '../types/consultation';
+import type { TriageResultView } from '../types/consultation';
+import { useSummaryFetch } from '../hooks/useSummaryFetch';
+import { CDS_DISCLAIMER, TERMS_LINK_LABEL, PRIVACY_LINK_LABEL } from '../lib/complianceContent';
+import SafetyPanel from '../components/SafetyPanel';
+import InlineNotice from '../components/InlineNotice';
+import { PageLoadingState } from '../components/PageState';
 
 const OUTCOME_CONFIG: Record<string, {
   gradient: string;
@@ -96,74 +98,17 @@ const MOCK_RESULT: TriageResultView = {
 
 export default function ResultPage() {
   const router = useRouter();
-  const { id, demo } = router.query;
-
-  const [result, setResult] = useState<TriageResultView | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [fetchError, setFetchError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!router.isReady) return;
-
-    const idParam = id;
-    const consultationId =
-      typeof idParam === 'string' ? idParam : Array.isArray(idParam) ? idParam[0] : undefined;
-
-    if (demo === 'true' || !consultationId) {
-      setResult(MOCK_RESULT);
-      setFetchError(null);
-      setLoading(false);
-      return;
-    }
-
-    let cancelled = false;
-    setFetchError(null);
-
-    (async () => {
-      try {
-        const r = await apiFetch(apiUrl(`/api/summary/${encodeURIComponent(consultationId)}`));
-        let data: SummaryApiResponse | { error?: string } = {} as SummaryApiResponse;
-        try {
-          data = await r.json();
-        } catch {
-          data = {};
-        }
-        if (cancelled) return;
-        if (!r.ok) {
-          const msg = typeof (data as { error?: string }).error === 'string'
-            ? (data as { error: string }).error
-            : `Could not load summary (HTTP ${r.status}).`;
-          setFetchError(msg);
-          setResult(null);
-          setLoading(false);
-          return;
-        }
-        setResult(mapSummaryToResult(data as SummaryApiResponse));
-        setLoading(false);
-      } catch {
-        if (cancelled) return;
-        setFetchError(
-          'Could not reach the API. Showing the built-in demo result below. When you connect the backend, set NEXT_PUBLIC_USE_API_MOCKS=false and use a real consultation id.',
-        );
-        setResult(MOCK_RESULT);
-        setLoading(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [router.isReady, id, demo]);
+  const { id, ids, demo } = router.query;
+  const { result, multiResults, loading, fetchError } = useSummaryFetch({
+    isReady: router.isReady,
+    idParam: id,
+    idsParam: ids,
+    demoParam: demo,
+    mockResult: MOCK_RESULT,
+  });
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" aria-hidden />
-          <p className="text-muted-foreground text-sm">Loading your results…</p>
-        </div>
-      </div>
-    );
+    return <PageLoadingState title="Loading your results" message="Fetching consultation summary data." />;
   }
 
   if (fetchError && !result) {
@@ -224,6 +169,24 @@ export default function ResultPage() {
       </header>
 
       <main className="max-w-lg mx-auto px-4 py-5 space-y-4 pb-10">
+        {multiResults.length > 1 && (
+          <div className="rounded-2xl border border-border bg-card p-4 shadow-card">
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-3">Multiple Conditions Reviewed</p>
+            <div className="space-y-2">
+              {multiResults.map((item) => {
+                const outcomeMeta = OUTCOME_CONFIG[item.outcome] || OUTCOME_CONFIG.gp;
+                return (
+                  <div key={item.consultationId} className="rounded-xl border border-border bg-muted/30 px-3 py-2">
+                    <p className="text-sm font-semibold text-foreground">
+                      {item.pathwayLabel || item.pathway || 'Condition'}
+                    </p>
+                    <p className={`text-xs font-medium ${outcomeMeta.text}`}>{item.outcomeLabel}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {fetchError ? (
           <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900" role="status">
@@ -271,23 +234,18 @@ export default function ResultPage() {
 
         {/* Red flag warning */}
         {result.redFlagTriggered && (
-          <div className="bg-red-50 border-2 border-red-300 rounded-2xl p-4">
-            <h3 className="font-bold text-red-800 text-sm mb-2 flex items-center gap-2">
-              <TriangleAlert className="h-4 w-4 shrink-0 text-red-600" strokeWidth={2} aria-hidden />
-              Safety Alert Triggered
-            </h3>
+          <SafetyPanel title="Safety alert triggered" level="danger">
             {result.redFlags?.map((flag) => (
               <p key={flag.code} className="text-red-700 text-xs leading-relaxed">{flag.message}</p>
             ))}
-          </div>
+          </SafetyPanel>
         )}
 
         {result.governanceUncertainty && result.governanceUncertainty.length > 0 && (
-          <div className="rounded-2xl border border-border bg-muted/40 px-4 py-3 text-xs text-muted-foreground">
-            <span className="font-semibold text-foreground">Governance note: </span>
+          <InlineNotice title="Governance note" tone="warning">
             Conservative escalation was applied because the automated pathway could not confirm every check (
             {result.governanceUncertainty.join(', ')}).
-          </div>
+          </InlineNotice>
         )}
 
         {/* Patient-facing explanation */}
@@ -398,11 +356,11 @@ export default function ResultPage() {
               ) : null}
               <p className="pt-1">
                 <Link href="/privacy" className="font-medium text-primary underline-offset-4 hover:underline">
-                  Privacy notice
+                  {PRIVACY_LINK_LABEL}
                 </Link>
                 {' · '}
                 <Link href="/terms" className="font-medium text-primary underline-offset-4 hover:underline">
-                  Terms
+                  {TERMS_LINK_LABEL}
                 </Link>
               </p>
             </div>
@@ -418,9 +376,7 @@ export default function ResultPage() {
           Start a New Consultation
         </button>
 
-        <p className="text-xs text-muted-foreground text-center pb-4">
-          Clinical decision support only. Always follow advice from a qualified healthcare professional.
-        </p>
+        <p className="text-xs text-muted-foreground text-center pb-4">{CDS_DISCLAIMER}</p>
       </main>
     </div>
   );

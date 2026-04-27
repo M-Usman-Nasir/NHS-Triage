@@ -122,22 +122,24 @@ app.use((err, req, res, next) => {
 
 // ─── Start Server ─────────────────────────────────────────────────────────────
 
-app.listen(PORT, () => {
-  console.log('');
-  console.log('  ╔══════════════════════════════════════════╗');
-  console.log('  ║     Aegis Health AI — API Server         ║');
-  console.log(`  ║     Running on http://localhost:${PORT}     ║`);
-  console.log('  ║     Environment: ' + (process.env.NODE_ENV || 'development').padEnd(23) + '║');
-  console.log('  ╚══════════════════════════════════════════╝');
-  console.log('');
-  console.log('  Available endpoints:');
-  console.log('    GET  /health');
-  console.log('    POST /api/consultation');
-  console.log('    GET  /api/summary/:id');
-  console.log('    GET  /api/admin/analytics');
-  console.log('    GET  /api/admin/pathways');
-  console.log('    GET  /api/admin/rules');
-  console.log('');
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log('');
+    console.log('  ╔══════════════════════════════════════════╗');
+    console.log('  ║     Aegis Health AI — API Server         ║');
+    console.log(`  ║     Running on http://localhost:${PORT}     ║`);
+    console.log('  ║     Environment: ' + (process.env.NODE_ENV || 'development').padEnd(23) + '║');
+    console.log('  ╚══════════════════════════════════════════╝');
+    console.log('');
+    console.log('  Available endpoints:');
+    console.log('    GET  /health');
+    console.log('    POST /api/consultation');
+    console.log('    GET  /api/summary/:id');
+    console.log('    GET  /api/admin/analytics');
+    console.log('    GET  /api/admin/pathways');
+    console.log('    GET  /api/admin/rules');
+    console.log('');
+  });
+}
 
 module.exports = app;

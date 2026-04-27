@@ -61,6 +61,32 @@ Red-flag **must not** run after routine outcome or pharmacy logic in any code pa
 
 May differ from runtime order: question flow → red-flag module → orchestrator → eligibility → summary → UI/API integration → tests. **Ship** only when runtime order in §2.1 is enforced and tested.
 
+### 2.4 Non-negotiable system requirements (must add / must hold)
+
+These are mandatory quality constraints for release readiness.
+
+#### A) Stability
+- No broken user flow in patient, pharmacist, admin, or CRM critical paths.
+- All primary/alternate/error paths must be tested before release.
+- Any path that can submit, escalate, or handoff must have automated regression coverage.
+
+#### B) Explainability
+- Every triage decision must carry a clear, user-readable and audit-readable reason.
+- Minimum decision explanation contract:
+  - **Outcome** (e.g., `pharmacy`)
+  - **Reason** (e.g., `No red flags + eligible symptoms`)
+- Decision responses that do not include a reason are considered non-compliant.
+
+#### C) Structured output
+- Triage output must not be a bare result code; it must be a structured report payload.
+- Minimum required report fields:
+  - Symptoms
+  - Answers
+  - Decision
+  - Reasoning
+  - Timestamp
+- This structured report must be persisted and retrievable for summary/handoff/audit.
+
 ---
 
 ## 3. Seven core modules
@@ -205,6 +231,9 @@ Use this table in **planning meetings** and tick rows in git issues when scope c
 | Patient landing + consent | **Done** | `pages/index.tsx` | Links to `/privacy`, `/terms`, `/accessibility` |
 | Consultation UI | **Done** | `pages/consultation.tsx`, `GET/POST` consultation definitions + `question/next`, `lib/pathwayQuestions.ts` (fallback) | **Server-driven branching** (E-03): `questionGraph` in pathway JSON (e.g. sinusitis, shingles); offline fallback uses linear `PATHWAY_QUESTIONS` |
 | Result UI | **Done** | `pages/result.tsx`, `lib/mapSummaryToResult.ts` | Live summary vs `?demo=true`; errors do not fall back to mock silently |
+| Stability: no broken flows + all paths tested | **Partial** | Core patient flow implemented; selective tests | Define full path matrix (happy/alternate/error), add CI regression suite, enforce release gate |
+| Explainability: every decision has reason | **Done (core)** | `decisionEngine` response includes `outcomeReason`; rendered in `pages/result.tsx` | Add automated contract check that reason is always present (including fallback/error branches) |
+| Structured output report (symptoms/answers/decision/reasoning/timestamp) | **Partial** | Consultation + summary payloads include most fields (`routes/consultation.js`, `routes/summary.js`, `summaryMapper`) | Formalize versioned report schema and enforce required fields in contract validation |
 | Pharmacist dashboard → live summaries | **Partial** | `GET /api/summary`, `GET /api/summary/` list exist | `pages/pharmacist/dashboard.tsx` uses **mock rows**; wire to API + auth |
 | Admin dashboard → admin APIs | **Partial** | `GET /api/admin/pathways`, `/rules`, `/analytics` | `pages/admin/dashboard.tsx` uses **local mock data** only (no `fetch` to backend) |
 | Admin analytics from live consultations | **Partial** | `GET /api/consultation` list + store | `routes/admin.js` `/analytics` returns **static demo** series; not aggregated from `consultationStore` |
@@ -221,6 +250,113 @@ Use this table in **planning meetings** and tick rows in git issues when scope c
 | Regulatory / PGD context on API | **Done** | `lib/regulatoryContext.js`, `lib/pharmacyFirstGovernance.js` | Returned on consultation POST + summary GET |
 | WCAG evidence pack | **In progress** | Landing/consultation + `/accessibility` | Formal audit (E-12) |
 | DPIA / DTAC pack | **Not done** | See governance doc | IG programme |
+
+### 9.1 Secure backend readiness gaps (implementation backlog)
+
+This subsection captures **security hardening gaps** identified in the current backend for planned implementation.
+
+| Priority | Gap | Current evidence | Implementation target |
+|----------|-----|------------------|-----------------------|
+| **P0** | Missing authentication and authorization on sensitive APIs | `backend/routes/admin.js` comment explicitly notes demo/no auth; CRM/admin/GDPR routes mounted in `backend/server.js` without auth middleware | Add authN + role-based authZ middleware (admin/clinician/ops scopes), protect `/api/admin/*`, `/api/crm/*`, GDPR endpoints, and consultation-list endpoints |
+| **P0** | No API rate limiting / abuse protection | `backend/package.json` has no limiter package; `backend/server.js` has no rate-limit middleware | Add route-class-based rate limits (strict for auth/GDPR/admin writes, moderate for consultation flow, broader for read-only dashboards) |
+| **P0** | GDPR identity model is demo-level (UUID possession) | `backend/routes/gdpr.js` header notes weak identifier + production verification requirement | Implement identity verification, request workflow status, and DPO-reviewed approval for export/erasure actions |
+| **P1** | Input validation is inconsistent and manual | `backend/routes/consultation.js`, `backend/routes/crm.js` perform field checks only; no Joi/Zod in dependencies | Introduce schema validation middleware for all write endpoints; return consistent 4xx error shapes |
+| **P1** | Missing CSRF strategy for state-changing routes | Multiple `POST`/`PUT` handlers; no CSRF middleware/tokens present | For cookie/session auth: add CSRF middleware + token strategy; for bearer tokens: lock CORS + same-site posture and document model |
+| **P1** | Missing hardened HTTP security headers middleware | No `helmet` equivalent in `backend/server.js` | Add baseline security headers middleware and align with frontend header/CSP strategy |
+| **P1** | Security event coverage incomplete for all write actions | Audit logging exists (`backend/lib/auditLog.js`) but not uniformly attached to every mutating route | Extend audit hooks to all mutating endpoints with actor, request id, entity id, outcome, and failure reason |
+| **P2** | Logging and data minimization policy not fully enforced app-wide | Request logger in `backend/server.js` is basic; sanitization focused on audit payload helper | Standardize structured logger, redact sensitive fields globally, and enforce log schema |
+| **P2** | CORS hardening depends on env discipline only | `backend/server.js` uses single origin env var with localhost fallback | Add environment guardrails (fail-fast on unsafe production config), explicit allow-list handling, and deployment checks |
+| **P2** | Security assurance automation not yet defined | No dedicated security checks/scripts surfaced in backend scripts | Add automated security checks (dependency audit policy, endpoint auth tests, rate-limit tests, headers tests) in CI |
+
+### 9.2 Recommended implementation sequence (security)
+
+1. **Gatekeeping first:** authN/authZ + route protection + role model  
+2. **Abuse controls:** rate limiting + request throttling + failure telemetry  
+3. **Data rights hardening:** GDPR identity verification workflow  
+4. **Validation baseline:** schema middleware across all write routes  
+5. **Protocol hardening:** CSRF model + security headers  
+6. **Operational controls:** structured secure logging + CI security checks
+
+### 9.3 Security implementation checklist template (copy/paste)
+
+Use this template for each security workstream ticket/PR.  
+Status key: `[ ]` not started, `[~]` in progress, `[x]` complete.
+
+```
+Security Workstream: <title>
+Owner: <name>
+Target environment: <dev/staging/prod>
+Related gap(s): <P0/P1/P2 ids from §9.1>
+Date started: <yyyy-mm-dd>
+Target completion: <yyyy-mm-dd>
+
+1) Scope and design
+[ ] Document exact routes/surfaces in scope
+[ ] Confirm threat model assumptions
+[ ] Confirm fallback/rollback plan
+[ ] Confirm observability (logs/metrics/alerts) plan
+
+2) Implementation
+[ ] Backend code implemented
+[ ] Configuration/env vars added to .env.example
+[ ] Error responses follow platform API shape
+[ ] Audit logging added for success/failure paths
+
+3) Verification
+[ ] Unit tests added/updated
+[ ] Integration tests added/updated
+[ ] Negative-path tests completed (unauthorized/invalid/abuse)
+[ ] Manual verification in local/dev
+[ ] Manual verification in staging
+
+4) Security and compliance checks
+[ ] Least-privilege access confirmed
+[ ] Sensitive data redaction confirmed in logs
+[ ] CORS/session/CSRF behavior validated (as applicable)
+[ ] Rate-limit behavior validated (as applicable)
+[ ] GDPR workflow impact reviewed (as applicable)
+
+5) Release readiness
+[ ] Documentation updated (PLATFORM-HANDBOOK + related docs)
+[ ] Migration/rollout steps documented (if any)
+[ ] Backward compatibility impact assessed
+[ ] Go/no-go sign-off captured
+
+Completion notes:
+- What changed:
+- Evidence links (PR/tests/logs):
+- Remaining risks:
+```
+
+#### Quick checklist by priority group
+
+**P0 checklist (must-have before production exposure)**
+- [ ] AuthN/AuthZ enforced on admin/CRM/GDPR sensitive routes
+- [ ] Rate limiting enabled on critical endpoints
+- [ ] GDPR identity verification workflow implemented
+
+**P1 checklist (hardening before broader rollout)**
+- [ ] Schema validation middleware across all write routes
+- [ ] CSRF strategy implemented for chosen auth model
+- [ ] Security headers middleware enabled and tested
+- [ ] Audit coverage complete for mutating endpoints
+
+**P2 checklist (operational maturity)**
+- [ ] Structured logging + redaction policy enforced
+- [ ] CORS/env guardrails fail fast on unsafe production config
+- [ ] CI security checks automated and passing
+
+### 9.4 Future capability backlog (not in current build)
+
+The following items are intentionally tracked for later phases and are **not implemented now**:
+
+| Capability | Current status | Future implementation note |
+|------------|----------------|----------------------------|
+| AI diagnosis | **Not implemented** | Keep current product boundary as deterministic triage support; if introduced later, require separate safety/regulatory workstream, model governance, and explicit clinical accountability controls. |
+| Machine learning | **Not implemented** | Candidate use-cases should begin as advisory/risk-assist features behind controls; require model lifecycle process (training data governance, drift monitoring, rollback, auditability). |
+| NHS integrations (NHS Login, Spine, GP Connect) | **Not implemented** | Plan as phased integration programme with environment-specific onboarding, security review, and contractual/assurance gates before production use. |
+| Video / telehealth | **Not implemented** | Treat as a separate clinical workflow module (scheduling, consent, identity, recording policy, escalation and handoff rules). |
+| Advanced analytics | **Partially implemented (demo analytics only)** | Expand from current demo dashboards to governed analytics with production data quality controls, role-based access, and IG-approved reporting definitions. |
 
 ---
 
@@ -262,5 +398,9 @@ Use this table in **planning meetings** and tick rows in git issues when scope c
 | 1.3 | 2026-04-23 | Companion intro — link to CLINICAL-GOVERNANCE §3 (pathway matrix, branching, layered disclaimers) |
 | 1.4 | 2026-04-23 | §8 patient flow — demographics + preface + clinical; red-flag first; link to CLINICAL-GOVERNANCE §2 workflow table |
 | 1.5 | 2026-04-23 | §9 row — frontend security headers; companion link to CLINICAL-GOVERNANCE §5 security & data protection |
+| 1.6 | 2026-04-27 | Added §9.1–9.2 secure backend readiness gaps + prioritized implementation sequence |
+| 1.7 | 2026-04-27 | Added §9.3 security implementation checklist template + priority-group quick checklist |
+| 1.8 | 2026-04-27 | Added §9.4 future capability backlog (AI diagnosis, ML, NHS integrations, telehealth, advanced analytics) |
+| 1.9 | 2026-04-27 | Added mandatory system requirements for stability, explainability, and structured output; added status rows in §9 |
 
 **Superseded files (removed from repo):** `alignment-and-planning.md`, `milestone-plan.md`, `patient-flow-ui-finalization.md`, `architecture.md`, `user_flows.md`, `TASKS.md`, `MVP_Build.md` (under docs), `ClientQ&A.md` — content merged here or into CLINICAL-GOVERNANCE.

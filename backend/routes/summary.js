@@ -96,6 +96,14 @@ router.get('/:id', async (req, res) => {
     ip: clientIp(req),
     payload: { outcome: record.outcome, pathwayCode: record.pathwayCode },
   });
+  await logAuditEvent({
+    eventType: 'user_viewed_result',
+    requestId: req.requestId,
+    entityType: 'consultation',
+    entityId: id,
+    ip: clientIp(req),
+    payload: { route: 'summary_view' },
+  });
 
   return res.json(summary);
 });

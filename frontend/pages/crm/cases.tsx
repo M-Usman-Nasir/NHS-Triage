@@ -18,15 +18,11 @@ import { CheckCircle2, Pill, Search, Siren, Sparkles } from 'lucide-react';
 import CRMLayout from '../../components/CRMLayout';
 import { apiUrl } from '../../lib/api';
 import { TriageOutcomeIcon } from '../../lib/triageOutcomeIcons';
+import InlineNotice from '../../components/InlineNotice';
+import { MOCK_DATA_DISCLOSURE } from '../../lib/complianceContent';
+import type { CrmCase } from '../../types/crm';
 
-interface Case {
-  id: string; patientId: string; patientName: string; title: string;
-  pathway: string; outcome: string; stage: string; priority: string;
-  assignedTo: string | null; openedAt: string; closedAt: string | null;
-  notes: string; followUpDate: string | null;
-}
-
-const MOCK_CASES: Case[] = [
+const MOCK_CASES: CrmCase[] = [
   { id:'CASE-001', patientId:'PAT-001', patientName:'Sarah Mitchell',  title:'UTI — Pharmacy Referral',                        pathway:'UTI',                  outcome:'pharmacy',      stage:'treated',    priority:'medium',   assignedTo:'Priya Sharma',     openedAt:'2026-04-19', closedAt:null,         notes:'Nitrofurantoin dispensed.',                               followUpDate:'2026-04-21' },
   { id:'CASE-002', patientId:'PAT-002', patientName:'James Parker',    title:'Cardiac Emergency — 999 Escalation',             pathway:'Emergency',            outcome:'emergency_999', stage:'escalated',  priority:'critical', assignedTo:'Dr. Admin User',   openedAt:'2026-04-16', closedAt:null,         notes:'999 called. Hospital admission.',                         followUpDate:'2026-04-22' },
   { id:'CASE-003', patientId:'PAT-003', patientName:'Aisha Patel',     title:'Sore Throat — GP Referral (Possible Scarlet Fever)', pathway:'Sore Throat',       outcome:'gp',            stage:'in_review',  priority:'high',     assignedTo:'Dr. Mark Osei',    openedAt:'2026-04-20', closedAt:null,         notes:'GP appointment 22 Apr.',                                  followUpDate:'2026-04-22' },
@@ -57,9 +53,9 @@ const PRIORITY_CONFIG: Record<string, { label: string; colour: string; dot: stri
 };
 
 export default function CasesPage() {
-  const [cases, setCases] = useState<Case[]>(MOCK_CASES);
+  const [cases, setCases] = useState<CrmCase[]>(MOCK_CASES);
   const [priorityFilter, setPriorityFilter] = useState('');
-  const [selectedCase, setSelectedCase] = useState<Case | null>(null);
+  const [selectedCase, setSelectedCase] = useState<CrmCase | null>(null);
 
   const filtered = cases.filter((c) => !priorityFilter || c.priority === priorityFilter);
 
@@ -77,6 +73,9 @@ export default function CasesPage() {
 
   return (
     <CRMLayout title="Cases Pipeline" subtitle="Drag cases across stages to track progress">
+      <InlineNotice title="Demo/offline transparency" tone="warning" className="mb-4">
+        {MOCK_DATA_DISCLOSURE} Stage updates are attempted against the API and kept in UI state if unavailable.
+      </InlineNotice>
 
       {/* Filters */}
       <div className="flex gap-3 mb-5">

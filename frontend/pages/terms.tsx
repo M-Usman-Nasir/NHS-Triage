@@ -1,6 +1,7 @@
 import Head from 'next/head';
 import Link from 'next/link';
 import { LegalLayout } from '../components/LegalLayout';
+import { PRIVACY_LINK_LABEL } from '../lib/complianceContent';
 
 export default function TermsPage() {
   return (
@@ -55,7 +56,7 @@ export default function TermsPage() {
 
           <p className="mt-10 text-sm">
             <Link href="/privacy" className="font-medium text-primary underline-offset-4 hover:underline">
-              Privacy notice
+              {PRIVACY_LINK_LABEL}
             </Link>
           </p>
         </article>

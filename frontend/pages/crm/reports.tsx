@@ -14,6 +14,8 @@
 import { FileDown, Sheet, TrendingDown, TrendingUp } from 'lucide-react';
 import CRMLayout from '../../components/CRMLayout';
 import { TriageOutcomeIcon } from '../../lib/triageOutcomeIcons';
+import InlineNotice from '../../components/InlineNotice';
+import { MOCK_DATA_DISCLOSURE } from '../../lib/complianceContent';
 
 const DAILY_TREND = [
   { date: '14 Apr', total: 42, pharmacy: 18, gp: 8, selfCare: 12, emergency: 2, redFlags: 3 },
@@ -55,6 +57,9 @@ const maxTotal = Math.max(...DAILY_TREND.map((d) => d.total));
 export default function ReportsPage() {
   return (
     <CRMLayout title="Reports & Analytics" subtitle="Last 7 days — 334 total consultations">
+      <InlineNotice title="Demo/offline transparency" tone="warning" className="mb-4">
+        {MOCK_DATA_DISCLOSURE} Report totals shown on this screen currently use seeded sample analytics.
+      </InlineNotice>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         {[

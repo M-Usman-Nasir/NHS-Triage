@@ -25,6 +25,7 @@ const {
 const { consultationStore } = require('../store/consultationStore');
 const { logAuditEvent } = require('../lib/auditLog');
 const { buildRegulatoryContext } = require('../lib/regulatoryContext');
+const { buildStructuredReport } = require('../lib/structuredReport');
 
 const router = express.Router();
 
@@ -65,6 +66,18 @@ function clientIp(req) {
  */
 router.post('/', async (req, res) => {
   const { pathwayCode, answers, patient, symptoms } = req.body;
+  await logAuditEvent({
+    eventType: 'consultation_started',
+    requestId: req.requestId,
+    entityType: 'consultation',
+    entityId: null,
+    ip: clientIp(req),
+    payload: {
+      pathwayCode: pathwayCode || null,
+      hasAnswersPayload: !!answers,
+      hasPatientPayload: !!patient,
+    },
+  });
 
   // Validate required fields
   if (!pathwayCode) {
@@ -106,6 +119,11 @@ router.post('/', async (req, res) => {
 
   const pathwayDoc = loadPathwayForGraph(pathwayCode);
   const pathwayPatientDisclaimer = pathwayDoc.pathwayPatientDisclaimer || null;
+  const normalizedOutcomeReason =
+    typeof triageResult.outcomeReason === 'string' && triageResult.outcomeReason.trim()
+      ? triageResult.outcomeReason.trim()
+      : 'Outcome determined by rule-based triage after safety and eligibility evaluation.';
+  triageResult.outcomeReason = normalizedOutcomeReason;
 
   // Store consultation record
   const consultationId = uuidv4();
@@ -127,7 +145,22 @@ router.post('/', async (req, res) => {
     redFlagTriggered: triageResult.redFlagTriggered,
   });
   record.regulatoryContext = regulatoryContext;
+  record.structuredReport = buildStructuredReport(record);
   consultationStore.set(consultationId, record);
+
+  if (triageResult.redFlagTriggered) {
+    await logAuditEvent({
+      eventType: 'red_flag_triggered',
+      requestId: req.requestId,
+      entityType: 'consultation',
+      entityId: consultationId,
+      ip: clientIp(req),
+      payload: {
+        pathwayCode,
+        redFlags: triageResult.redFlags || [],
+      },
+    });
+  }
 
   await logAuditEvent({
     eventType: 'consultation_completed',
@@ -143,12 +176,25 @@ router.post('/', async (req, res) => {
       governanceUncertainty: triageResult.governanceUncertainty || [],
     },
   });
+  await logAuditEvent({
+    eventType: 'system_decision_emitted',
+    requestId: req.requestId,
+    entityType: 'consultation',
+    entityId: consultationId,
+    ip: clientIp(req),
+    payload: {
+      pathwayCode,
+      outcome: triageResult.outcome,
+      outcomeReason: triageResult.outcomeReason,
+    },
+  });
 
   return res.status(201).json({
     consultationId,
     ...triageResult,
     regulatoryContext,
     pathwayPatientDisclaimer,
+    structuredReport: record.structuredReport,
   });
 });
 
@@ -200,7 +246,7 @@ router.get('/definitions/:pathwayCode', (req, res) => {
  * Body: { pathwayCode, answers, patient?, currentQuestionId?: string | null }
  * Returns the next clinical question id (or isComplete when the pathway is finished).
  */
-router.post('/question/next', (req, res) => {
+router.post('/question/next', async (req, res) => {
   const { pathwayCode, answers = {}, currentQuestionId = null } = req.body;
   const patient = req.body.patient || {};
 
@@ -220,6 +266,19 @@ router.post('/question/next', (req, res) => {
 
   try {
     const state = getNextQuestionState(pathwayCode, currentQuestionId, answers, patient);
+    await logAuditEvent({
+      eventType: 'question_answered',
+      requestId: req.requestId,
+      entityType: 'consultation_question',
+      entityId: null,
+      ip: clientIp(req),
+      payload: {
+        pathwayCode,
+        answeredQuestionId: currentQuestionId,
+        nextQuestionId: state.nextQuestionId,
+        isComplete: state.isComplete,
+      },
+    });
     return res.json({
       nextQuestionId: state.nextQuestionId,
       isComplete: state.isComplete,

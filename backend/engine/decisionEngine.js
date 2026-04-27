@@ -268,6 +268,10 @@ function runTriage({ pathwayCode, answers, patient, symptoms = [] }) {
     finalReason = `${finalReason} A safer default applies: where any automated check is incomplete or uncertain, the system does not finalise self-care or pharmacy supply without GP-level review (NHS clinical governance expectation).`.trim();
   }
 
+  if (!finalReason || !String(finalReason).trim()) {
+    finalReason = 'Outcome determined by rule-based triage after safety and eligibility evaluation.';
+  }
+
   const patientExplanation = buildPatientExplanation({
     outcome,
     outcomeReason: finalReason,

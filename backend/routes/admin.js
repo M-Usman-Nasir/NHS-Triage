@@ -33,6 +33,7 @@ function clientIp(req) {
 }
 
 const PATHWAYS_DIR = path.join(__dirname, '../data/pathways');
+const ruleChangeRequests = [];
 
 /**
  * Load all pathway JSON files.
@@ -42,7 +43,11 @@ function loadAllPathways() {
   const files = fs.readdirSync(PATHWAYS_DIR).filter((f) => f.endsWith('.json'));
   return files.map((file) => {
     const content = fs.readFileSync(path.join(PATHWAYS_DIR, file), 'utf8');
-    return JSON.parse(content);
+    const parsed = JSON.parse(content);
+    return {
+      ...parsed,
+      __fileUpdatedAt: fs.statSync(path.join(PATHWAYS_DIR, file)).mtime.toISOString(),
+    };
   });
 }
 
@@ -97,6 +102,9 @@ router.get('/rules', (req, res) => {
         outcome: rule.outcome,
         description: rule.description,
         patientMessage: rule.message,
+        version: rule.version || pathway.version || '1.0',
+        updated_by: rule.updated_by || 'admin',
+        updated_at: rule.updated_at || pathway.__fileUpdatedAt || new Date().toISOString(),
       });
     });
 
@@ -110,6 +118,9 @@ router.get('/rules', (req, res) => {
         condition: rule.condition,
         eligible: rule.eligible,
         reason: rule.reason,
+        version: rule.version || pathway.version || '1.0',
+        updated_by: rule.updated_by || 'admin',
+        updated_at: rule.updated_at || pathway.__fileUpdatedAt || new Date().toISOString(),
       });
     });
 
@@ -123,6 +134,9 @@ router.get('/rules', (req, res) => {
         condition: rule.condition,
         outcome: rule.outcome,
         reason: rule.reason,
+        version: rule.version || pathway.version || '1.0',
+        updated_by: rule.updated_by || 'admin',
+        updated_at: rule.updated_at || pathway.__fileUpdatedAt || new Date().toISOString(),
       });
     });
   }
@@ -156,6 +170,157 @@ router.get('/rules/:pathway', (req, res) => {
     pharmacyTreatmentOptions: pathwayData.pharmacyTreatmentOptions,
     safetyNetAdvice: pathwayData.safetyNetAdvice,
   });
+});
+
+/**
+ * POST /api/admin/rules/change-requests
+ * Controlled editing workflow entrypoint (draft request).
+ * Body:
+ * {
+ *   ruleId, pathwayCode, proposedCondition, proposedAction, proposedPriority, requestedBy, proposedRuleVersion
+ * }
+ */
+router.post('/rules/change-requests', async (req, res) => {
+  const {
+    ruleId,
+    pathwayCode,
+    proposedCondition,
+    proposedAction,
+    proposedPriority = 1,
+    requestedBy = 'admin',
+    proposedRuleVersion = '1.0',
+  } = req.body || {};
+
+  if (!ruleId || !pathwayCode || !proposedCondition || !proposedAction) {
+    return res.status(400).json({ error: 'ruleId, pathwayCode, proposedCondition, and proposedAction are required.' });
+  }
+
+  const item = {
+    id: ruleChangeRequests.length + 1,
+    ruleId,
+    pathwayCode,
+    proposedCondition,
+    proposedAction,
+    proposedPriority,
+    proposedRuleVersion,
+    requestedBy,
+    requestedAt: new Date().toISOString(),
+    reviewStatus: 'draft',
+    reviewedBy: null,
+    reviewedAt: null,
+    approvedBy: null,
+    approvedAt: null,
+    csoValidated: false,
+    csoValidatedBy: null,
+    csoValidatedAt: null,
+    reviewNotes: null,
+  };
+  ruleChangeRequests.push(item);
+
+  await logAuditEvent({
+    eventType: 'rule_change_requested',
+    requestId: req.requestId,
+    entityType: 'clinical_rule_change_request',
+    entityId: null,
+    userId: requestedBy,
+    ip: clientIp(req),
+    payload: {
+      requestId: item.id,
+      ruleId,
+      pathwayCode,
+      proposedRuleVersion,
+      proposedPriority,
+    },
+  });
+
+  return res.status(201).json({ success: true, changeRequest: item });
+});
+
+/**
+ * POST /api/admin/rules/change-requests/:id/review
+ * Marks request as reviewed and logs reviewer note.
+ */
+router.post('/rules/change-requests/:id/review', async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const idx = ruleChangeRequests.findIndex((x) => x.id === id);
+  if (idx < 0) {
+    return res.status(404).json({ error: 'Change request not found.' });
+  }
+  const reviewedBy = req.body?.reviewedBy || 'admin';
+  const reviewNotes = req.body?.reviewNotes || null;
+  ruleChangeRequests[idx] = {
+    ...ruleChangeRequests[idx],
+    reviewStatus: 'reviewed',
+    reviewedBy,
+    reviewedAt: new Date().toISOString(),
+    reviewNotes,
+  };
+
+  await logAuditEvent({
+    eventType: 'rule_change_reviewed',
+    requestId: req.requestId,
+    entityType: 'clinical_rule_change_request',
+    entityId: null,
+    userId: reviewedBy,
+    ip: clientIp(req),
+    payload: {
+      requestId: id,
+      reviewNotes,
+    },
+  });
+
+  return res.json({ success: true, changeRequest: ruleChangeRequests[idx] });
+});
+
+/**
+ * POST /api/admin/rules/change-requests/:id/approve
+ * Requires explicit CSO validation marker before approval.
+ */
+router.post('/rules/change-requests/:id/approve', async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const idx = ruleChangeRequests.findIndex((x) => x.id === id);
+  if (idx < 0) {
+    return res.status(404).json({ error: 'Change request not found.' });
+  }
+  const approvedBy = req.body?.approvedBy || 'admin';
+  const csoValidated = !!req.body?.csoValidated;
+  const csoValidatedBy = req.body?.csoValidatedBy || null;
+  if (!csoValidated || !csoValidatedBy) {
+    return res.status(400).json({ error: 'CSO validation is required before approval (csoValidated=true, csoValidatedBy).' });
+  }
+
+  ruleChangeRequests[idx] = {
+    ...ruleChangeRequests[idx],
+    reviewStatus: 'approved',
+    approvedBy,
+    approvedAt: new Date().toISOString(),
+    csoValidated: true,
+    csoValidatedBy,
+    csoValidatedAt: new Date().toISOString(),
+  };
+
+  await logAuditEvent({
+    eventType: 'rule_change_approved',
+    requestId: req.requestId,
+    entityType: 'clinical_rule_change_request',
+    entityId: null,
+    userId: approvedBy,
+    ip: clientIp(req),
+    payload: {
+      requestId: id,
+      csoValidatedBy,
+      approvedBy,
+    },
+  });
+
+  return res.json({ success: true, changeRequest: ruleChangeRequests[idx] });
+});
+
+/**
+ * GET /api/admin/rules/change-requests
+ */
+router.get('/rules/change-requests', (req, res) => {
+  return res.json({ total: ruleChangeRequests.length, items: ruleChangeRequests });
 });
 
 /**

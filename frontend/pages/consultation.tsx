@@ -3,15 +3,11 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import {
   Activity,
-  ArrowLeft,
   Check,
   ChevronRight,
-  ClipboardList,
   ListChecks,
   Shield,
   Sparkles,
-  Stethoscope,
-  TriangleAlert,
   X,
 } from 'lucide-react';
 import { apiFetch, apiUrl } from '../lib/api';
@@ -29,6 +25,13 @@ import {
   type PathwayQuestion,
 } from '../lib/pathwayQuestions';
 import type { AnswerValue, ConsultationSubmitPayload } from '../types/consultation';
+import { useMultiConditionFlow } from '../hooks/useMultiConditionFlow';
+import InlineNotice from '../components/InlineNotice';
+import { MOCK_DATA_DISCLOSURE } from '../lib/complianceContent';
+import SafetyPanel from '../components/SafetyPanel';
+import { PageLoadingState } from '../components/PageState';
+import ClinicalQuestionCard from '../components/consultation/ClinicalQuestionCard';
+import ConsultationHeader from '../components/consultation/ConsultationHeader';
 
 interface PatientInfo {
   fullName: string;
@@ -55,9 +58,15 @@ function isAnswerEmpty(question: PathwayQuestion, value: AnswerValue | undefined
 
 export default function ConsultationPage() {
   const router = useRouter();
-  const pathwayParam = router.query.pathway;
-  const pathwayCode =
-    typeof pathwayParam === 'string' ? pathwayParam : Array.isArray(pathwayParam) ? pathwayParam[0] : undefined;
+  const {
+    pathwayCodes,
+    pathwayIndex,
+    activePathwayCode,
+    hasMorePathways,
+    moveToNextPathway,
+    completedConsultationIds,
+    setCompletedConsultationIds,
+  } = useMultiConditionFlow(router.query.pathways, router.query.pathway);
 
   const [wizardStep, setWizardStep] = useState<'demographics' | 'preface' | 'clinical' | 'submitting'>('demographics');
   const [prefaceIndex, setPrefaceIndex] = useState(0);
@@ -79,11 +88,12 @@ export default function ConsultationPage() {
   const clinicalQuestion = clinicalCurrentId ? questionsById[clinicalCurrentId] : undefined;
 
   useEffect(() => {
-    if (!pathwayCode) return;
-    setWizardStep('demographics');
-    setPrefaceIndex(0);
-    setAnswers({});
-    setSymptoms('');
+    if (!activePathwayCode) return;
+    setAnswers((existing) => {
+      const prefaceIds = new Set(CONSULTATION_PREFACE_QUESTIONS.map((q) => q.id));
+      const preserved = Object.fromEntries(Object.entries(existing).filter(([key]) => prefaceIds.has(key)));
+      return preserved;
+    });
     setError('');
     setQuestionsById({});
     setClinicalCurrentId(null);
@@ -91,17 +101,17 @@ export default function ConsultationPage() {
     setClinicalProgressMax(1);
     setUseServerFlow(true);
     setClinicalSchemaLoading(false);
-  }, [pathwayCode]);
+  }, [activePathwayCode]);
 
   useEffect(() => {
-    if (wizardStep !== 'clinical' || !pathwayCode) return;
+    if (wizardStep !== 'clinical' || !activePathwayCode) return;
     let cancelled = false;
     setClinicalSchemaLoading(true);
     (async () => {
       try {
         const genderParam = patient.gender ? `?gender=${encodeURIComponent(patient.gender)}` : '';
         const r = await apiFetch(
-          apiUrl(`/api/consultation/definitions/${encodeURIComponent(pathwayCode)}${genderParam}`),
+          apiUrl(`/api/consultation/definitions/${encodeURIComponent(activePathwayCode)}${genderParam}`),
         );
         if (!r.ok) throw new Error('definitions');
         const data = (await r.json()) as {
@@ -121,7 +131,7 @@ export default function ConsultationPage() {
         setClinicalHistory([]);
       } catch {
         if (cancelled) return;
-        const qs = pathwayClinicalQuestionsForPatient(pathwayCode, PATHWAY_QUESTIONS[pathwayCode], patient.gender);
+        const qs = pathwayClinicalQuestionsForPatient(activePathwayCode, PATHWAY_QUESTIONS[activePathwayCode], patient.gender);
         const byId = Object.fromEntries(qs.map((q) => [q.id, q]));
         setQuestionsById(byId);
         setClinicalProgressMax(Math.max(qs.length, 1));
@@ -135,7 +145,7 @@ export default function ConsultationPage() {
     return () => {
       cancelled = true;
     };
-  }, [wizardStep, pathwayCode, patient.gender]);
+  }, [wizardStep, activePathwayCode, patient.gender]);
 
   const handleDemographicsSubmit = () => {
     if (!patient.fullName || !patient.age || !patient.gender) {
@@ -176,9 +186,9 @@ export default function ConsultationPage() {
   };
 
   const proceedClinicalAfterAnswer = async (merged: Record<string, AnswerValue>) => {
-    if (!pathwayCode || !clinicalCurrentId) return;
+    if (!activePathwayCode || !clinicalCurrentId) return;
     const clinicalOnly = stripContextAnswers(merged as Record<string, unknown>) as Record<string, AnswerValue>;
-    const augmented = augmentAnswersForPathway(pathwayCode, clinicalOnly as Record<string, unknown>) as Record<
+    const augmented = augmentAnswersForPathway(activePathwayCode, clinicalOnly as Record<string, unknown>) as Record<
       string,
       AnswerValue
     >;
@@ -189,7 +199,7 @@ export default function ConsultationPage() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            pathwayCode,
+            pathwayCode: activePathwayCode,
             answers: augmented,
             patient: patientPayload(),
             currentQuestionId: clinicalCurrentId,
@@ -210,7 +220,7 @@ export default function ConsultationPage() {
           setAnswers(merged);
         }
       } else {
-        const list = pathwayClinicalQuestionsForPatient(pathwayCode, PATHWAY_QUESTIONS[pathwayCode], patient.gender);
+        const list = pathwayClinicalQuestionsForPatient(activePathwayCode, PATHWAY_QUESTIONS[activePathwayCode], patient.gender);
         const nextId = resolveNextLinear(clinicalCurrentId, list);
         if (!nextId) {
           setAnswers(merged);
@@ -315,18 +325,33 @@ export default function ConsultationPage() {
     router.back();
   };
 
+  const skipCurrentCondition = () => {
+    if (hasMorePathways) {
+      moveToNextPathway();
+      setWizardStep('clinical');
+      setError('');
+      return;
+    }
+    if (completedConsultationIds.length > 0) {
+      const allIds = completedConsultationIds.join(',');
+      void router.push(`/result?ids=${encodeURIComponent(allIds)}&id=${encodeURIComponent(completedConsultationIds[0])}`);
+      return;
+    }
+    void router.push('/');
+  };
+
   const submitConsultation = async (finalAnswers: Record<string, AnswerValue>) => {
-    if (!pathwayCode) return;
+    if (!activePathwayCode) return;
     setWizardStep('submitting');
     const clinicalOnly = stripContextAnswers(finalAnswers as Record<string, unknown>) as Record<string, AnswerValue>;
-    const answersForApi = augmentAnswersForPathway(pathwayCode, clinicalOnly as Record<string, unknown>) as Record<
+    const answersForApi = augmentAnswersForPathway(activePathwayCode, clinicalOnly as Record<string, unknown>) as Record<
       string,
       AnswerValue
     >;
     const baseSymptoms = symptoms.split(',').map((s) => s.trim()).filter(Boolean);
     const contextHints = contextAnswersToSymptomHints(finalAnswers as Record<string, unknown>);
     const payload: ConsultationSubmitPayload = {
-      pathwayCode,
+      pathwayCode: activePathwayCode,
       answers: answersForApi,
       patient: {
         fullName: patient.fullName,
@@ -353,7 +378,15 @@ export default function ConsultationPage() {
       if (!data.consultationId) {
         throw new Error('Invalid response from server.');
       }
-      router.push(`/result?id=${data.consultationId}&outcome=${data.outcome ?? ''}`);
+      const nextIds = [...completedConsultationIds, data.consultationId];
+      if (hasMorePathways) {
+        setCompletedConsultationIds(nextIds);
+        moveToNextPathway();
+        setWizardStep('clinical');
+        return;
+      }
+      const allIds = nextIds.join(',');
+      router.push(`/result?ids=${encodeURIComponent(allIds)}&id=${encodeURIComponent(nextIds[0])}&outcome=${data.outcome ?? ''}`);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Submission failed';
       setWizardStep('clinical');
@@ -372,16 +405,14 @@ export default function ConsultationPage() {
     clinicalProgressMax > 0
       ? Math.round((Math.min(clinicalHistory.length + 1, clinicalProgressMax) / clinicalProgressMax) * 100)
       : 0;
+  const clinicalProgressLabel = `${Math.min(clinicalHistory.length + 1, clinicalProgressMax)}/${clinicalProgressMax}`;
+  const headerPathwayText = pathwayCodes.map((code) => PATHWAY_LABELS[code] || code).join(' + ');
 
   if (!router.isReady) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin motion-reduce:animate-none" aria-hidden />
-      </div>
-    );
+    return <PageLoadingState title="Loading consultation" message="Preparing your selected pathways." />;
   }
 
-  if (!pathwayCode) {
+  if (pathwayCodes.length === 0) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background px-4">
         <p className="text-muted-foreground text-sm mb-4 text-center">No clinical pathway was selected.</p>
@@ -392,12 +423,13 @@ export default function ConsultationPage() {
     );
   }
 
-  if (!isKnownPathwayQuestions(pathwayCode)) {
+  if (pathwayCodes.some((code) => !isKnownPathwayQuestions(code))) {
+    const unknownCode = pathwayCodes.find((code) => !isKnownPathwayQuestions(code));
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background px-4">
         <p className="text-foreground font-semibold mb-2">Unknown pathway</p>
         <p className="text-muted-foreground text-sm mb-4 text-center max-w-md">
-          &quot;{pathwayCode}&quot; is not a recognised pathway. Choose a symptom from the home page.
+          &quot;{unknownCode}&quot; is not a recognised pathway. Choose a symptom from the home page.
         </p>
         <Link href="/" className="text-primary font-semibold underline">
           Return to start
@@ -413,83 +445,27 @@ export default function ConsultationPage() {
         aria-hidden
       />
 
-      <header className="relative z-30 border-b border-primary-foreground/10 bg-brand-header/95 text-primary-foreground shadow-card-md backdrop-blur-md supports-[backdrop-filter]:bg-brand-header/90">
-        <div className="mx-auto flex max-w-xl items-center gap-3 px-4 py-3 sm:px-5">
-          <button
-            type="button"
-            onClick={goBack}
-            className="group flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-primary-foreground/20 bg-primary-foreground/10 text-primary-foreground shadow-sm transition-all hover:border-primary-foreground/35 hover:bg-primary-foreground/20 hover:shadow-md active:scale-95 motion-reduce:transition-colors motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground focus-visible:ring-offset-2 focus-visible:ring-offset-brand-header sm:h-11 sm:w-11"
-            aria-label="Go back"
-          >
-            <ArrowLeft
-              className="h-5 w-5 transition-transform group-hover:-translate-x-0.5 motion-reduce:transform-none"
-              strokeWidth={2.25}
-              aria-hidden
-            />
-          </button>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-bold leading-tight">Aegis Health AI</p>
-            <p className="truncate text-xs text-brand-header-subtle">
-              {PATHWAY_LABELS[pathwayCode] || pathwayCode}
-            </p>
-          </div>
-          {wizardStep === 'preface' && (
-            <span className="shrink-0 rounded-full bg-primary-foreground/15 px-2.5 py-1 text-[11px] font-semibold tabular-nums text-primary-foreground/95">
-              {prefaceIndex + 1}/{prefaceCount}
-            </span>
-          )}
-          {wizardStep === 'clinical' && clinicalCurrentId && !clinicalSchemaLoading && (
-            <span className="shrink-0 rounded-full bg-primary-foreground/15 px-2.5 py-1 text-[11px] font-semibold tabular-nums text-primary-foreground/95">
-              {Math.min(clinicalHistory.length + 1, clinicalProgressMax)}/{clinicalProgressMax}
-            </span>
-          )}
-        </div>
-
-        <div className="mx-auto max-w-xl px-4 pb-2.5 sm:px-5">
-          <div className="flex gap-2">
-            <div
-              className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl px-2 py-2 text-[11px] font-semibold transition-colors sm:text-xs ${
-                wizardStep === 'demographics'
-                  ? 'bg-primary-foreground/20 text-primary-foreground'
-                  : 'bg-primary-foreground/10 text-primary-foreground/80'
-              }`}
-            >
-              <ClipboardList className="h-3.5 w-3.5 shrink-0 opacity-90" strokeWidth={2} aria-hidden />
-              <span className="truncate">About you</span>
-            </div>
-            <ChevronRight className="h-4 w-4 shrink-0 self-center text-primary-foreground/50" aria-hidden />
-            <div
-              className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl px-2 py-2 text-[11px] font-semibold transition-colors sm:text-xs ${
-                wizardStep === 'preface' || wizardStep === 'clinical' || wizardStep === 'submitting'
-                  ? 'bg-primary-foreground/20 text-primary-foreground'
-                  : 'bg-primary-foreground/10 text-primary-foreground/70'
-              }`}
-            >
-              <Stethoscope className="h-3.5 w-3.5 shrink-0 opacity-90" strokeWidth={2} aria-hidden />
-              <span className="truncate">Clinical questions</span>
-            </div>
-          </div>
-        </div>
-
-        {wizardStep === 'preface' && (
-          <div className="h-1 bg-primary-foreground/15">
-            <div
-              className="h-1 rounded-r-full bg-primary-foreground transition-[width] duration-500 ease-out motion-reduce:transition-none"
-              style={{ width: `${prefaceProgressPct}%` }}
-            />
-          </div>
-        )}
-        {wizardStep === 'clinical' && clinicalCurrentId && !clinicalSchemaLoading && (
-          <div className="h-1 bg-primary-foreground/15">
-            <div
-              className="h-1 rounded-r-full bg-primary-foreground transition-[width] duration-500 ease-out motion-reduce:transition-none"
-              style={{ width: `${clinicalProgressPct}%` }}
-            />
-          </div>
-        )}
-      </header>
+      <ConsultationHeader
+        titlePathwayText={headerPathwayText}
+        pathwayIndex={pathwayIndex}
+        pathwayCount={pathwayCodes.length}
+        wizardStep={wizardStep}
+        prefaceIndex={prefaceIndex}
+        prefaceCount={prefaceCount}
+        clinicalCurrentId={clinicalCurrentId}
+        clinicalSchemaLoading={clinicalSchemaLoading}
+        clinicalProgressLabel={clinicalProgressLabel}
+        prefaceProgressPct={prefaceProgressPct}
+        clinicalProgressPct={clinicalProgressPct}
+        onGoBack={goBack}
+      />
 
       <main className="relative mx-auto w-full max-w-xl flex-1 px-4 py-6 sm:px-5 sm:py-8">
+        {!useServerFlow && wizardStep === 'clinical' && !clinicalSchemaLoading ? (
+          <InlineNotice title="Offline pathway mode" tone="warning" className="mb-4">
+            {MOCK_DATA_DISCLOSURE}
+          </InlineNotice>
+        ) : null}
         {wizardStep === 'demographics' && (
           <div>
             <div className="mb-6 text-center sm:text-left">
@@ -698,11 +674,21 @@ export default function ConsultationPage() {
 
         {wizardStep === 'clinical' && !clinicalSchemaLoading && clinicalQuestion && (
           <div>
-            {clinicalQuestion.redFlagHint && (
-              <div className="mb-4 flex items-start gap-3 rounded-2xl border border-red-200/90 bg-red-50/95 p-4 shadow-sm">
-                <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-red-600" strokeWidth={2} aria-hidden />
-                <p className="text-sm font-semibold leading-snug text-red-800">Safety question — please answer honestly.</p>
+            {pathwayCodes.length > 1 && (
+              <div className="mb-3 flex justify-end">
+                <button
+                  type="button"
+                  onClick={skipCurrentCondition}
+                  className="rounded-xl border border-input bg-background px-3 py-2 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                >
+                  Skip this condition
+                </button>
               </div>
+            )}
+            {clinicalQuestion.redFlagHint && (
+              <SafetyPanel title="Safety question — please answer honestly." level="danger">
+                These checks detect urgent risk factors and may escalate your outcome immediately when needed.
+              </SafetyPanel>
             )}
 
             <p className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-primary">
@@ -713,136 +699,16 @@ export default function ConsultationPage() {
               ) : null}
             </p>
 
-            <div className="rounded-3xl border border-primary/10 bg-card/95 p-5 shadow-card-md shadow-primary/[0.08] ring-1 ring-border/60 backdrop-blur-sm sm:p-7">
-              <h2 className="text-balance text-lg font-bold leading-snug text-foreground sm:text-xl">
-                {clinicalQuestion.text}
-              </h2>
-
-              <div className="mt-6">
-                {clinicalQuestion.type === 'boolean' && (
-                  <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                    {['Yes', 'No'].map((opt) => (
-                      <button
-                        key={opt}
-                        type="button"
-                        onClick={() => handleClinicalAnswer(opt === 'Yes')}
-                        className={`rounded-2xl border-2 py-4 text-base font-bold transition-all active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100 sm:py-5 ${
-                          answers[clinicalQuestion.id] === (opt === 'Yes')
-                            ? opt === 'Yes'
-                              ? 'border-primary bg-primary/12 text-primary shadow-md shadow-primary/10'
-                              : 'border-muted-foreground/35 bg-muted text-foreground shadow-inner'
-                            : 'border-border text-muted-foreground hover:border-primary/35 hover:bg-muted/40'
-                        }`}
-                      >
-                        {opt === 'Yes' ? (
-                          <span className="inline-flex items-center justify-center gap-2">
-                            <Check className="h-5 w-5 shrink-0" strokeWidth={2.5} aria-hidden />
-                            Yes
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center justify-center gap-2">
-                            <X className="h-5 w-5 shrink-0" strokeWidth={2.5} aria-hidden />
-                            No
-                          </span>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                {clinicalQuestion.type === 'select' && (
-                  <div className="space-y-2.5">
-                    {clinicalQuestion.options?.map((opt) => {
-                      const selected = answers[clinicalQuestion.id] === opt;
-                      return (
-                        <button
-                          key={opt}
-                          type="button"
-                          onClick={() => setAnswers({ ...answers, [clinicalQuestion.id]: opt })}
-                          className={`flex w-full items-center gap-3 rounded-2xl border-2 px-4 py-3.5 text-left text-sm font-medium transition-all active:scale-[0.99] motion-reduce:transition-none motion-reduce:active:scale-100 sm:py-4 ${
-                            selected
-                              ? 'border-primary bg-primary/10 text-primary shadow-sm'
-                              : 'border-border text-card-foreground hover:border-primary/30 hover:bg-muted/50'
-                          }`}
-                        >
-                          <span
-                            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 text-xs font-bold ${
-                              selected ? 'border-primary bg-primary text-primary-foreground' : 'border-muted-foreground/25 text-muted-foreground'
-                            }`}
-                          >
-                            {selected ? '✓' : ''}
-                          </span>
-                          <span className="flex-1 leading-snug">{opt}</span>
-                          <ChevronRight className={`h-4 w-4 shrink-0 ${selected ? 'text-primary' : 'text-muted-foreground/40'}`} strokeWidth={2} aria-hidden />
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {clinicalQuestion.type === 'multiselect' && clinicalQuestion.options && (
-                  <div className="space-y-2.5">
-                    {clinicalQuestion.options.map((opt) => {
-                      const selected =
-                        Array.isArray(answers[clinicalQuestion.id]) && (answers[clinicalQuestion.id] as string[]).includes(opt);
-                      return (
-                        <button
-                          key={opt}
-                          type="button"
-                          onClick={() => toggleClinicalMultiselect(opt)}
-                          className={`flex w-full items-center gap-3 rounded-2xl border-2 px-4 py-3.5 text-left text-sm font-medium transition-all active:scale-[0.99] motion-reduce:transition-none motion-reduce:active:scale-100 sm:py-4 ${
-                            selected
-                              ? 'border-primary bg-primary/10 text-primary shadow-sm'
-                              : 'border-border text-card-foreground hover:border-primary/30 hover:bg-muted/50'
-                          }`}
-                        >
-                          <span
-                            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border-2 text-xs ${
-                              selected ? 'border-primary bg-primary text-primary-foreground' : 'border-muted-foreground/25 text-muted-foreground'
-                            }`}
-                          >
-                            {selected ? '✓' : ''}
-                          </span>
-                          <span className="flex-1 leading-snug">{opt}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {clinicalQuestion.type === 'text' && (
-                  <textarea
-                    placeholder="Type here (or leave blank if not applicable)"
-                    value={typeof answers[clinicalQuestion.id] === 'string' ? (answers[clinicalQuestion.id] as string) : ''}
-                    onChange={(e) => setAnswers({ ...answers, [clinicalQuestion.id]: e.target.value })}
-                    rows={4}
-                    className="w-full resize-none rounded-2xl border border-input bg-background/80 px-4 py-3.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-transparent focus:outline-none focus:ring-2 focus:ring-ring"
-                  />
-                )}
-              </div>
-
-              {error && (
-                <p className="mt-4 text-sm font-medium text-destructive" role="alert">
-                  {error}
-                </p>
-              )}
-
-              {clinicalQuestion.type !== 'boolean' && (
-                <div className="mt-6">
-                  <button
-                    type="button"
-                    onClick={advanceClinicalManual}
-                    className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary py-4 text-base font-bold text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:bg-primary/92 active:scale-[0.99] motion-reduce:transition-none motion-reduce:active:scale-100"
-                  >
-                    Next
-                    <ChevronRight className="h-5 w-5" strokeWidth={2} aria-hidden />
-                  </button>
-                  {!clinicalQuestion.required && (
-                    <p className="mt-2 text-center text-xs text-muted-foreground">Optional — you can tap Next without selecting if you prefer.</p>
-                  )}
-                </div>
-              )}
-            </div>
+            <ClinicalQuestionCard
+              question={clinicalQuestion}
+              answers={answers}
+              error={error}
+              onBooleanAnswer={handleClinicalAnswer}
+              onSelectAnswer={(opt) => setAnswers({ ...answers, [clinicalQuestion.id]: opt })}
+              onMultiselectToggle={toggleClinicalMultiselect}
+              onTextAnswer={(value) => setAnswers({ ...answers, [clinicalQuestion.id]: value })}
+              onNext={advanceClinicalManual}
+            />
           </div>
         )}
 

@@ -6,6 +6,7 @@
 'use strict';
 
 const { buildRegulatoryContext } = require('./regulatoryContext');
+const { buildStructuredReport } = require('./structuredReport');
 
 const PATHWAY_LABELS = {
   uti: 'Uncomplicated UTI',
@@ -45,6 +46,11 @@ function recordToSummaryResponse(rec) {
       redFlagTriggered: !!rec.redFlagTriggered,
     });
 
+  const outcomeReason =
+    typeof rec.outcomeReason === 'string' && rec.outcomeReason.trim()
+      ? rec.outcomeReason.trim()
+      : 'Outcome determined by rule-based triage after safety and eligibility evaluation.';
+
   return {
     id: rec.id,
     createdAt: rec.createdAt || rec.completedAt,
@@ -58,7 +64,7 @@ function recordToSummaryResponse(rec) {
     pharmacyEligible: !!rec.pharmacyEligible,
     outcome: rec.outcome,
     outcomeLabel: rec.outcomeLabel,
-    outcomeReason: rec.outcomeReason || '',
+    outcomeReason,
     summaryText: rec.summaryText || '',
     pathwayPatientDisclaimer: rec.pathwayPatientDisclaimer ?? null,
     safetyNetAdvice: rec.safetyNetAdvice ?? null,
@@ -69,6 +75,7 @@ function recordToSummaryResponse(rec) {
     comorbidityModifiersApplied: rec.comorbidityModifiersApplied || [],
     governanceUncertainty: rec.governanceUncertainty || [],
     regulatoryContext,
+    structuredReport: rec.structuredReport || buildStructuredReport({ ...rec, outcomeReason }),
   };
 }
 

@@ -92,8 +92,40 @@ CREATE TABLE clinical_rules (
     action          VARCHAR(50) NOT NULL,               -- outcome action
     priority        INTEGER DEFAULT 1,                  -- lower = evaluated first
     is_active       BOOLEAN DEFAULT TRUE,
+    rule_version    VARCHAR(20) DEFAULT '1.0',
+    updated_by      VARCHAR(150),
+    updated_at      TIMESTAMPTZ DEFAULT NOW(),
     notes           TEXT,
     created_at      TIMESTAMP DEFAULT NOW()
+);
+
+-- ------------------------------------------------------------
+-- TABLE: clinical_rule_change_requests
+-- Controlled editing workflow for rules:
+-- draft -> reviewed -> approved/rejected
+-- Includes explicit CSO validation fields.
+-- ------------------------------------------------------------
+CREATE TABLE clinical_rule_change_requests (
+    id                      BIGSERIAL PRIMARY KEY,
+    rule_id                 UUID REFERENCES clinical_rules(id) ON DELETE CASCADE,
+    pathway_code            VARCHAR(50) REFERENCES clinical_pathways(code),
+    proposed_rule_version   VARCHAR(20) NOT NULL,
+    proposed_condition      TEXT NOT NULL,
+    proposed_action         VARCHAR(50) NOT NULL,
+    proposed_priority       INTEGER DEFAULT 1,
+    requested_by            VARCHAR(150) NOT NULL,
+    requested_at            TIMESTAMPTZ DEFAULT NOW(),
+    review_status           VARCHAR(20) NOT NULL DEFAULT 'draft' CHECK (
+                                review_status IN ('draft', 'reviewed', 'approved', 'rejected')
+                            ),
+    reviewed_by             VARCHAR(150),
+    reviewed_at             TIMESTAMPTZ,
+    approved_by             VARCHAR(150),
+    approved_at             TIMESTAMPTZ,
+    cso_validated           BOOLEAN DEFAULT FALSE,
+    cso_validated_by        VARCHAR(150),
+    cso_validated_at        TIMESTAMPTZ,
+    review_notes            TEXT
 );
 
 -- ------------------------------------------------------------
@@ -135,13 +167,16 @@ CREATE TABLE users (
 CREATE TABLE audit_logs (
     id              BIGSERIAL PRIMARY KEY,
     event_type      VARCHAR(100) NOT NULL,              -- e.g. 'consultation_started'
+    action          VARCHAR(100),                       -- compatibility alias for event_type
     entity_type     VARCHAR(50),                        -- e.g. 'consultation'
     entity_id       UUID,
     user_id         UUID,
     ip_address      INET,
     payload         JSONB,                              -- event-specific data
+    data            JSONB,                              -- compatibility alias for payload
     request_id      VARCHAR(128),                       -- HTTP / correlation id (see backend middleware)
-    created_at      TIMESTAMP DEFAULT NOW()
+    created_at      TIMESTAMP DEFAULT NOW(),
+    "timestamp"     TIMESTAMPTZ DEFAULT NOW()           -- compatibility alias for created_at
 );
 
 -- ------------------------------------------------------------
@@ -174,3 +209,5 @@ CREATE INDEX idx_audit_logs_entity_id ON audit_logs(entity_id);
 CREATE INDEX idx_audit_logs_event_type ON audit_logs(event_type);
 CREATE INDEX idx_audit_logs_created_at ON audit_logs(created_at DESC);
 CREATE INDEX idx_clinical_rules_pathway ON clinical_rules(pathway_code);
+CREATE INDEX idx_rule_change_requests_rule_id ON clinical_rule_change_requests(rule_id);
+CREATE INDEX idx_rule_change_requests_status ON clinical_rule_change_requests(review_status);

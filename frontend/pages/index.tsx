@@ -20,6 +20,12 @@ import {
   Zap,
 } from 'lucide-react';
 import { PATIENT_PATHWAYS } from '../lib/patientPathways';
+import {
+  CONSENT_CHECKBOX_LABEL,
+  CONSENT_COPY_VERSION,
+  PRIVACY_LINK_LABEL,
+  TERMS_LINK_LABEL,
+} from '../lib/complianceContent';
 
 /** Raster tiles in `public/images/pathways/` (rest use Lucide below). */
 const PATHWAY_RASTER_SRC: Record<string, string> = {
@@ -89,18 +95,22 @@ function StepperWave() {
 export default function LandingPage() {
   const router = useRouter();
   const [consentGiven, setConsentGiven] = useState(false);
-  const [selectedPathway, setSelectedPathway] = useState('');
+  const [selectedPathways, setSelectedPathways] = useState<string[]>([]);
 
   useEffect(() => {
-    setConsentGiven(false);
-  }, [selectedPathway]);
+    if (selectedPathways.length === 0) {
+      setConsentGiven(false);
+    }
+  }, [selectedPathways]);
 
   const handleStart = () => {
-    if (!consentGiven || !selectedPathway) return;
-    router.push(`/consultation?pathway=${selectedPathway}`);
+    if (!consentGiven || selectedPathways.length === 0) return;
+    const encoded = encodeURIComponent(selectedPathways.join(','));
+    router.push(`/consultation?pathways=${encoded}`);
   };
 
-  const selected = PATIENT_PATHWAYS.find((p) => p.code === selectedPathway);
+  const selectedPathwayLabels = PATIENT_PATHWAYS.filter((p) => selectedPathways.includes(p.code))
+    .map((p) => p.fullLabel);
 
   return (
     <div className="relative flex min-h-screen flex-col overflow-x-hidden bg-gradient-to-b from-sky-50 via-[#e8f2ff] to-slate-50">
@@ -225,19 +235,23 @@ export default function LandingPage() {
             <fieldset className="m-0 mb-5 min-w-0 border-0 p-0" aria-describedby="pathway-hint">
               <legend className="mb-1 block px-0 text-sm font-bold text-slate-900 sm:text-base">What are your main symptoms?</legend>
               <p id="pathway-hint" className="mb-3 text-xs leading-relaxed text-slate-500 sm:text-sm">
-                Tap a pathway to select it. Tap the same one again to clear, or choose another before you begin.
+                Tap one or more pathways to select. Tap any selected pathway again to remove it before you begin.
               </p>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4">
                 {PATIENT_PATHWAYS.map((p) => {
                   const PathwayIcon = PATHWAY_ICONS[p.code];
-                  const isSelected = selectedPathway === p.code;
+                  const isSelected = selectedPathways.includes(p.code);
                   return (
                     <button
                       key={p.code}
                       type="button"
                       aria-pressed={isSelected}
                       aria-label={`${p.fullLabel}. ${p.description}${isSelected ? ' Selected. Press to clear selection.' : ''}`}
-                      onClick={() => setSelectedPathway(isSelected ? '' : p.code)}
+                      onClick={() =>
+                        setSelectedPathways((current) =>
+                          isSelected ? current.filter((code) => code !== p.code) : [...current, p.code],
+                        )
+                      }
                       className={`flex min-h-[6.5rem] flex-col items-center rounded-2xl border p-2.5 text-center shadow-md transition-all active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 sm:min-h-[7rem] sm:p-3 ${
                         isSelected
                           ? 'border-primary bg-primary/12 shadow-lg shadow-primary/15 ring-2 ring-primary/30 backdrop-blur-md'
@@ -277,15 +291,15 @@ export default function LandingPage() {
                 })}
               </div>
               <div className="mt-3 min-h-[2rem]" aria-live="polite" aria-atomic="true">
-                {selected ? (
+                {selectedPathwayLabels.length > 0 ? (
                   <p className="rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 text-xs font-medium text-primary sm:text-sm">
-                    <span className="text-slate-600">Selected:</span> {selected.fullLabel}
+                    <span className="text-slate-600">Selected:</span> {selectedPathwayLabels.join(', ')}
                   </p>
                 ) : null}
               </div>
             </fieldset>
 
-            {selectedPathway ? (
+            {selectedPathways.length > 0 ? (
               <div className="mb-5 rounded-2xl border border-amber-200/90 bg-amber-50/95 p-3 shadow-sm backdrop-blur-sm sm:p-4">
                 <div className="mb-2 flex items-start gap-2">
                   <span
@@ -311,36 +325,47 @@ export default function LandingPage() {
                     className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-input accent-primary"
                   />
                   <span className="text-xs font-medium leading-relaxed text-amber-950 sm:text-sm">
-                    I understand and consent to proceeding with this consultation.
+                    {CONSENT_CHECKBOX_LABEL}
                   </span>
                 </label>
+                <p className="mt-2 text-[11px] text-amber-900/90">
+                  By continuing, you agree to our{' '}
+                  <Link href="/privacy" className="font-semibold underline underline-offset-2">
+                    {PRIVACY_LINK_LABEL}
+                  </Link>{' '}
+                  and{' '}
+                  <Link href="/terms" className="font-semibold underline underline-offset-2">
+                    {TERMS_LINK_LABEL}
+                  </Link>
+                  . Consent text version: {CONSENT_COPY_VERSION}.
+                </p>
               </div>
             ) : null}
 
             <button
               type="button"
               onClick={handleStart}
-              disabled={!consentGiven || !selectedPathway}
-              aria-disabled={!consentGiven || !selectedPathway}
+              disabled={!consentGiven || selectedPathways.length === 0}
+              aria-disabled={!consentGiven || selectedPathways.length === 0}
               className={`flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 px-4 text-sm font-bold transition-all active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 sm:py-4 sm:text-base ${
-                consentGiven && selectedPathway
+                consentGiven && selectedPathways.length > 0
                   ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/25 ring-offset-white hover:bg-primary/90 focus-visible:ring-primary'
                   : 'cursor-not-allowed bg-slate-700 text-slate-200 shadow-inner focus-visible:ring-slate-500'
               }`}
             >
-              {selectedPathway ? (
+              {selectedPathways.length > 0 ? (
                 <>
-                  Begin {selected?.label} consultation
+                  Begin consultation ({selectedPathways.length} condition{selectedPathways.length > 1 ? 's' : ''})
                   <ArrowRight className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
                 </>
               ) : (
                 'Select a condition to begin'
               )}
             </button>
-            {!selectedPathway || !consentGiven ? (
+            {selectedPathways.length === 0 || !consentGiven ? (
               <p className="mt-2 text-center text-xs text-slate-500 sm:text-sm">
-                {!selectedPathway
-                  ? 'Choose a pathway above.'
+                {selectedPathways.length === 0
+                  ? 'Choose one or more pathways above.'
                   : 'Please confirm you have read the information and consent to continue.'}
               </p>
             ) : null}

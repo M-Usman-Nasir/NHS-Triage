@@ -57,3 +57,31 @@ export async function apiFetch(input: RequestInfo | URL, init?: RequestInit): Pr
     );
   }
 }
+
+/**
+ * API fetch with timeout so pages can degrade gracefully in poor network conditions.
+ */
+export async function apiFetchWithTimeout(
+  input: RequestInfo | URL,
+  init: RequestInit = {},
+  timeoutMs = 10000,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await apiFetch(input, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+/**
+ * Shared JSON parser for API responses that keeps a consistent return shape.
+ */
+export async function parseJsonSafe<T>(res: Response): Promise<T | null> {
+  try {
+    return (await res.json()) as T;
+  } catch {
+    return null;
+  }
+}

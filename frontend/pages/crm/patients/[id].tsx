@@ -18,6 +18,8 @@ import CRMLayout from '../../../components/CRMLayout';
 import Link from 'next/link';
 import { apiUrl, safeFetchJson } from '../../../lib/api';
 import { ChannelIcon } from '../../../lib/channelIcons';
+import InlineNotice from '../../../components/InlineNotice';
+import StatusBadge from '../../../components/StatusBadge';
 
 const MOCK_PROFILES: Record<string, any> = {
   'PAT-001': {
@@ -137,6 +139,11 @@ export default function PatientProfile() {
 
   return (
     <CRMLayout title={patient.fullName} subtitle={`NHS: ${patient.nhsNumber} · ${patient.gpSurgery}`}>
+      {patient.status === 'unknown' ? (
+        <InlineNotice title="Offline profile mode" tone="warning" className="mb-4">
+          {patient.notes}
+        </InlineNotice>
+      ) : null}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
@@ -155,9 +162,11 @@ export default function PatientProfile() {
                 <h2 className="font-bold text-foreground">{patient.fullName}</h2>
                 <p className="text-muted-foreground text-sm">{patient.age}y · {patient.gender}</p>
                 {patient.riskFlag && (
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-semibold mt-1 inline-block ${
-                    patient.riskFlag === 'HIGH' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'
-                  }`}>{patient.riskFlag} RISK</span>
+                  <StatusBadge
+                    label={`${patient.riskFlag} RISK`}
+                    tone={patient.riskFlag === 'HIGH' ? 'danger' : 'warning'}
+                    className="mt-1"
+                  />
                 )}
               </div>
             </div>
@@ -302,13 +311,9 @@ export default function PatientProfile() {
                       </div>
                       <div className="flex items-center gap-2">
                         {c.outcome && (
-                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${OUTCOME_CONFIG[c.outcome]?.colour || 'bg-muted text-muted-foreground'}`}>
-                            {OUTCOME_CONFIG[c.outcome]?.label || c.outcome}
-                          </span>
+                          <StatusBadge label={OUTCOME_CONFIG[c.outcome]?.label || c.outcome} tone={c.outcome === 'emergency_999' ? 'danger' : 'info'} />
                         )}
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STAGE_COLOURS[c.stage] || 'bg-muted text-muted-foreground'}`}>
-                          {c.stage.replace('_', ' ')}
-                        </span>
+                        <StatusBadge label={c.stage.replace('_', ' ')} tone={c.stage === 'escalated' ? 'danger' : c.stage === 'treated' ? 'success' : 'neutral'} />
                       </div>
                     </div>
                   ))}
@@ -336,11 +341,7 @@ export default function PatientProfile() {
                         {c.subject && <p className="font-medium text-sm text-foreground">{c.subject}</p>}
                         <p className="text-xs text-muted-foreground mt-0.5">{c.direction === 'inbound' ? '← Patient' : '→ Sent'} · {c.channel} · {new Date(c.sentAt).toLocaleDateString()}</p>
                       </div>
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${
-                        c.status === 'delivered' ? 'bg-green-100 text-green-700' :
-                        c.status === 'received'  ? 'bg-primary/10 text-primary' :
-                        'bg-muted text-muted-foreground'
-                      }`}>{c.status}</span>
+                      <StatusBadge label={c.status} tone={c.status === 'delivered' ? 'success' : c.status === 'received' ? 'info' : 'neutral'} />
                     </div>
                   ))}
                 </div>
@@ -368,11 +369,7 @@ export default function PatientProfile() {
                         <span className={`text-xs font-semibold ${TASK_PRIORITY[t.priority] || 'text-muted-foreground'}`}>
                           {t.priority.toUpperCase()}
                         </span>
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                          t.status === 'overdue' ? 'bg-red-100 text-red-700' :
-                          t.status === 'completed' ? 'bg-green-100 text-green-700' :
-                          'bg-yellow-100 text-yellow-700'
-                        }`}>{t.status}</span>
+                        <StatusBadge label={t.status} tone={t.status === 'overdue' ? 'danger' : t.status === 'completed' ? 'success' : 'warning'} />
                       </div>
                     </div>
                   ))}

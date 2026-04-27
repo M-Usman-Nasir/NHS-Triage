@@ -38,15 +38,17 @@ async function persistAuditRow(row) {
           : JSON.stringify(row.payload);
 
     const res = await pool.query(
-      `INSERT INTO audit_logs (event_type, entity_type, entity_id, user_id, ip_address, payload, request_id)
-       VALUES ($1, $2, $3, $4, $5::inet, $6::jsonb, $7)
+      `INSERT INTO audit_logs (event_type, action, entity_type, entity_id, user_id, ip_address, payload, data, request_id)
+       VALUES ($1, $2, $3, $4, $5, $6::inet, $7::jsonb, $8::jsonb, $9)
        RETURNING id, created_at`,
       [
+        row.event_type,
         row.event_type,
         row.entity_type,
         row.entity_id,
         row.user_id,
         sanitiseInet(row.ip_address),
+        payloadJson,
         payloadJson,
         row.request_id || null,
       ],

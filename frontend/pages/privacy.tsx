@@ -1,6 +1,7 @@
 import Head from 'next/head';
 import Link from 'next/link';
 import { LegalLayout } from '../components/LegalLayout';
+import { CONSENT_COPY_VERSION, TERMS_LINK_LABEL } from '../lib/complianceContent';
 
 export default function PrivacyPage() {
   return (
@@ -16,6 +17,7 @@ export default function PrivacyPage() {
           <p className="text-xs text-muted-foreground">
             Last updated: 23 April 2026. Deploying organisations must adopt and sign off their own privacy notice and DPIA
             before production processing of health data.
+            {' '}Consent copy reference in this build: <code className="text-xs">{CONSENT_COPY_VERSION}</code>.
           </p>
 
           <h2 className="mt-8 text-base">Who we are</h2>
@@ -49,7 +51,7 @@ export default function PrivacyPage() {
             the lifetime of the server process. Erasure for a known consultation ID can be requested via the documented API
             in development environments — see{' '}
             <Link href="/terms" className="font-medium text-primary underline-offset-4 hover:underline">
-              Terms of Use
+              {TERMS_LINK_LABEL}
             </Link>
             .
           </p>
