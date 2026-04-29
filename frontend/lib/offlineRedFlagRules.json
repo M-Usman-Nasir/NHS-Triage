@@ -1,0 +1,38 @@
+{
+  "uti": [
+    { "code": "RF_UTI_001", "condition": "q3 === true && q4 === true" },
+    { "code": "RF_UTI_002", "condition": "q5 === true" },
+    { "code": "RF_UTI_003", "condition": "q6 === true" }
+  ],
+  "sore_throat": [
+    { "code": "RF_ST_001", "condition": "q3 === true" },
+    { "code": "RF_ST_002", "condition": "q2 === true && q4 === true && q1 === 'More than 7 days'" },
+    { "code": "RF_ST_003", "condition": "q5 === true && q4 === true" }
+  ],
+  "sinusitis": [
+    { "code": "RF_SIN_001", "condition": "q6 === true" },
+    { "code": "RF_SIN_002", "condition": "q7 === true" },
+    { "code": "RF_SIN_003", "condition": "q5 === true && q4 === true" }
+  ],
+  "otitis_media": [
+    { "code": "RF_OM_001", "condition": "q5 === true" },
+    { "code": "RF_OM_002", "condition": "q6 === true" },
+    { "code": "RF_OM_003", "condition": "q4 === true && q3 === true" }
+  ],
+  "insect_bites": [
+    { "code": "RF_IB_001", "condition": "q6 === true" },
+    { "code": "RF_IB_002", "condition": "q5 === true" },
+    { "code": "RF_IB_003", "condition": "q4 === true && q3 === true" },
+    { "code": "RF_IB_004", "condition": "q7 === true" }
+  ],
+  "impetigo": [
+    { "code": "RF_IMP_001", "condition": "q5 === true && q6 === true" },
+    { "code": "RF_IMP_002", "condition": "q7 === true" }
+  ],
+  "shingles": [
+    { "code": "RF_SHG_001", "condition": "q5 === true || q3 === 'Around one eye'" },
+    { "code": "RF_SHG_002", "condition": "q6 === true" },
+    { "code": "RF_SHG_003", "condition": "q7 === true" },
+    { "code": "RF_SHG_004", "condition": "q8 === true" }
+  ]
+}

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Mail, Phone, Pill, Printer, User } from 'lucide-react';
 import { TriageOutcomeIcon } from '../lib/triageOutcomeIcons';
 import type { TriageResultView } from '../types/consultation';
@@ -8,6 +9,7 @@ import { CDS_DISCLAIMER, TERMS_LINK_LABEL, PRIVACY_LINK_LABEL } from '../lib/com
 import SafetyPanel from '../components/SafetyPanel';
 import InlineNotice from '../components/InlineNotice';
 import { PageLoadingState } from '../components/PageState';
+import { getNearbyOptionsForOutcome } from '../lib/referralDirectory';
 
 const OUTCOME_CONFIG: Record<string, {
   gradient: string;
@@ -78,6 +80,52 @@ const MOCK_RESULT: TriageResultView = {
     reason: 'Symptoms consistent with uncomplicated UTI. Patient meets all pharmacy eligibility criteria. No red flags identified.',
     source: 'rule_engine',
   },
+  decision: {
+    code: 'pharmacy',
+    label: 'Pharmacy Referral',
+    urgency: 'same_day',
+    title: 'Pharmacy consultation recommended',
+  },
+  reasoning: {
+    steps: [
+      'No emergency warning signs were detected from your answers.',
+      'Your symptom profile is suitable for pharmacy-first assessment.',
+      'A pharmacist can assess and advise on treatment today.',
+    ],
+    clinicalBasis: ['Mock demo reasoning for frontend flow.'],
+    engine: { source: 'rule_engine', ruleIdsMatched: ['MOCK_PHARMACY_RULE'], governanceUncertainty: [] },
+  },
+  referralRecommendation: {
+    service: 'pharmacy',
+    instruction: 'You should go to a pharmacy.',
+    actions: [
+      'Visit your nearest pharmacy today.',
+      'Speak with the pharmacist and explain your symptoms.',
+      'Show your consultation summary if needed.',
+    ],
+    escalationSafetyNet: [
+      'If symptoms worsen, contact your GP or NHS 111.',
+      'If severe symptoms develop suddenly, call 999 immediately.',
+    ],
+  },
+  nearbyOptions: [
+    {
+      type: 'pharmacy',
+      name: 'High Street Pharmacy',
+      distanceKm: 0.7,
+      address: '12 High Street',
+      phone: '0207 123 4561',
+      openNow: true,
+    },
+    {
+      type: 'gp',
+      name: 'Central GP Practice',
+      distanceKm: 1.1,
+      address: '9 Market Lane',
+      phone: '0207 123 4570',
+      openNow: true,
+    },
+  ],
   redFlagTriggered: false,
   redFlags: [],
   pharmacyEligible: true,
@@ -109,7 +157,7 @@ const MOCK_RESULT: TriageResultView = {
 
 export default function ResultPage() {
   const router = useRouter();
-  const { id, ids, demo } = router.query;
+  const { id, ids, demo, postcode } = router.query;
   const { result, multiResults, loading, fetchError } = useSummaryFetch({
     isReady: router.isReady,
     idParam: id,
@@ -117,6 +165,28 @@ export default function ResultPage() {
     demoParam: demo,
     mockResult: MOCK_RESULT,
   });
+
+  const queryPostcode =
+    typeof postcode === 'string'
+      ? postcode
+      : Array.isArray(postcode) && postcode.length > 0
+        ? postcode[0]
+        : '';
+  const [postcodeFilter, setPostcodeFilter] = useState(queryPostcode);
+
+  useEffect(() => {
+    if (queryPostcode && queryPostcode !== postcodeFilter) {
+      setPostcodeFilter(queryPostcode);
+    }
+  }, [queryPostcode, postcodeFilter]);
+
+  const nearbyOptions = result?.nearbyOptions ?? [];
+  const outcomeForNearbyFilter = result?.referralRecommendation?.service || result?.outcome || 'pharmacy';
+  const filteredNearbyOptions = useMemo(() => {
+    const entered = postcodeFilter.trim();
+    if (!entered) return nearbyOptions;
+    return getNearbyOptionsForOutcome(outcomeForNearbyFilter, entered, 5);
+  }, [nearbyOptions, outcomeForNearbyFilter, postcodeFilter]);
 
   if (loading) {
     return <PageLoadingState title="Loading your results" message="Fetching consultation summary data." />;
@@ -164,6 +234,13 @@ export default function ResultPage() {
 
   const config = OUTCOME_CONFIG[result.outcome] || OUTCOME_CONFIG.gp;
   const reasoningText = result.explanation?.reason || result.outcomeReason;
+  const reasoningSteps =
+    result.reasoning?.steps && result.reasoning.steps.length > 0
+      ? result.reasoning.steps
+      : [reasoningText];
+  const referralRecommendation = result.referralRecommendation;
+  const decisionTitle = result.decision?.title || config.title;
+  const decisionUrgency = result.decision?.urgency;
   const explanationSource = result.explanation?.source || '';
 
   return (
@@ -216,10 +293,15 @@ export default function ResultPage() {
               </span>
               <div>
                 <p className="text-sm font-medium text-white/80 uppercase tracking-wide">Your Result</p>
-                <h2 className="text-xl font-extrabold leading-tight">{config.title}</h2>
+                <h2 className="text-xl font-extrabold leading-tight">{decisionTitle}</h2>
               </div>
             </div>
             <p className="text-white/90 text-sm leading-relaxed">{config.instructions}</p>
+            {decisionUrgency ? (
+              <p className="mt-2 inline-flex rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide">
+                Urgency: {decisionUrgency}
+              </p>
+            ) : null}
           </div>
           {result.patient && (
             <div className="bg-card px-5 py-3 flex items-center gap-3 border-b border-border">
@@ -279,7 +361,73 @@ export default function ResultPage() {
               </span>
             ) : null}
           </div>
-          <p className="text-card-foreground text-sm leading-relaxed">{reasoningText}</p>
+          <ul className="space-y-2">
+            {reasoningSteps.map((step, idx) => (
+              <li key={`${step}-${idx}`} className="text-card-foreground text-sm leading-relaxed">
+                - {step}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {referralRecommendation ? (
+          <div className="bg-card rounded-2xl shadow-card border border-border p-5 space-y-4">
+            <div>
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2">What you should do now</p>
+              <p className="text-card-foreground text-sm leading-relaxed">{referralRecommendation.instruction}</p>
+            </div>
+            {referralRecommendation.actions?.length ? (
+              <ul className="space-y-2">
+                {referralRecommendation.actions.map((action) => (
+                  <li key={action} className="text-card-foreground text-sm leading-relaxed">- {action}</li>
+                ))}
+              </ul>
+            ) : null}
+            {referralRecommendation.escalationSafetyNet?.length ? (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-3">
+                <p className="text-[11px] font-bold text-amber-700 uppercase tracking-wide mb-1">Safety advice</p>
+                <ul className="space-y-1">
+                  {referralRecommendation.escalationSafetyNet.map((item) => (
+                    <li key={item} className="text-amber-800 text-xs leading-relaxed">- {item}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
+        <div className="bg-card rounded-2xl shadow-card border border-border p-5">
+          <div className="mb-3">
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2">Nearby options</p>
+            <label className="block text-xs text-muted-foreground">
+              Filter by postcode
+              <input
+                type="text"
+                value={postcodeFilter}
+                onChange={(event) => setPostcodeFilter(event.target.value)}
+                placeholder="e.g. SW1A"
+                className="mt-1.5 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
+            </label>
+          </div>
+          {filteredNearbyOptions.length > 0 ? (
+            <ul className="space-y-2">
+              {filteredNearbyOptions.slice(0, 5).map((option) => (
+                <li key={`${option.type}-${option.name}`} className="rounded-xl border border-border/70 bg-muted/30 px-3 py-2">
+                  <p className="text-sm font-semibold text-foreground">{option.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {option.type.replace('_', ' ')} · {option.distanceKm.toFixed(1)} km · {option.openNow ? 'Open now' : 'Closed now'}
+                  </p>
+                  <p className="text-xs text-muted-foreground">{option.address}</p>
+                  <p className="text-xs text-muted-foreground">{option.phone}</p>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              No nearby services matched this postcode filter. Follow the recommendation above and use NHS 111 for local service guidance.
+            </p>
+          )}
         </div>
 
         {/* Pharmacy treatment options */}

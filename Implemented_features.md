@@ -268,3 +268,95 @@
 - Live rows are now editable/deletable through API-backed actions (not display-only anymore).
 - Added API reload after successful writes so table reflects current persisted pathway definitions.
 - Kept graceful local fallback behavior when live write is unavailable.
+
+### 32) Structured Decision Object System Implemented (NHS Explainability + Referral Guidance)
+- Implemented a structured triage decision model across backend and frontend with additive backward compatibility.
+- Added structured decision payload fields:
+  - `decision` (`code`, `label`, `urgency`, `title`)
+  - `reasoning` (`steps`, optional `clinicalBasis`, `engine` metadata)
+  - `referralRecommendation` (`service`, `instruction`, `actions`, `escalationSafetyNet`, optional `contact`)
+
+### 33) Decision Engine Structured Builders Added
+- Updated `backend/engine/decisionEngine.js` with helper builders for deterministic structured output:
+  - `buildDecisionMeta(outcome)`
+  - `buildReasoningSteps(...)`
+  - `buildReferralRecommendation(outcome)`
+- Structured fields are now returned from both:
+  - red-flag escalation flow
+  - normal rule/eligibility flow
+- Outcome rule matching metadata is now captured and exposed through reasoning engine context.
+
+### 34) Consultation Controller Persistence + Audit Extensions Added
+- Updated `backend/routes/consultation.js` to ensure structured fields are always present before persistence (`ensureStructuredDecision` fallback).
+- `POST /api/consultation` now explicitly returns structured fields in the response payload.
+- Extended `system_decision_emitted` audit payload to include:
+  - `decisionCode`
+  - `reasoningStepCount`
+  - `referralService`
+
+### 35) Summary/Report Backfill for Legacy Records Added
+- Updated `backend/lib/structuredReport.js` to normalize and include structured fields in canonical reports.
+- Updated `backend/lib/summaryMapper.js` to map structured fields for new records and backfill from legacy fields when missing.
+- Updated `backend/routes/summary.js` override flow so structured and legacy decision fields remain aligned after pharmacist override.
+
+### 36) Frontend Structured Contract + Result UI Rendering Added
+- Extended frontend consultation contracts in `frontend/types/consultation.ts` with:
+  - `DecisionPayload`
+  - `ReasoningPayload`
+  - `ReferralRecommendationPayload`
+- Updated `frontend/lib/mapSummaryToResult.ts` to map structured fields 1:1 with safe legacy fallback adapters.
+- Updated `frontend/pages/result.tsx` to render structured result sections directly:
+  - decision title + urgency
+  - "Why this decision was made" from `reasoning.steps`
+  - "What you should do now" from `referralRecommendation.actions`
+  - escalation safety advice from `referralRecommendation.escalationSafetyNet`
+
+### 37) Summary Schema + Verification Coverage Updated
+- Updated `frontend/schemas/summary-get.response.json` to include schema definitions for:
+  - `explanation`
+  - `decision`
+  - `reasoning`
+  - `referralRecommendation`
+- Completed lint checks for changed files with no diagnostics.
+- Executed backend API smoke verification across:
+  - `POST /api/consultation`
+  - `GET /api/summary/:id`
+  - `POST /api/summary/:id/override`
+- Verified structured fields are present and consistent across create/fetch/override lifecycle.
+
+### 38) Standalone Referral System (Frontend MVP, No NHS Integration) Added
+- Added a frontend-only referral directory in `frontend/lib/referralDirectory.ts` with deterministic nearby options for:
+  - pharmacy
+  - GP
+  - urgent care / hospital
+  - emergency contact pattern
+- Added outcome-based nearby recommendation selection via `getNearbyOptionsForOutcome(outcome)` with stable sorting and top-limit behavior.
+- Extended frontend consultation contracts in `frontend/types/consultation.ts` with:
+  - `NearbyOptionPayload`
+  - `nearbyOptions` on both `SummaryApiResponse` and `TriageResultView`
+- Updated `frontend/lib/apiMocks.ts` to include `nearbyOptions` in mock consultation and summary flows.
+- Updated `frontend/pages/result.tsx` to render a patient-facing **Nearby options** section with:
+  - service type
+  - distance
+  - open/closed status
+  - address
+  - phone
+- Added empty-state fallback guidance when nearby listings are unavailable.
+- Scope is intentionally standalone for MVP: no direct NHS system integration.
+
+### 39) Mock Postcode Filter for Nearby Options (Frontend-Only) Added
+- Extended referral directory model in `frontend/lib/referralDirectory.ts` with postcode-area mapping for mock service entries.
+- Updated `getNearbyOptionsForOutcome(outcome, postcode, limit)` to support postcode-prefix filtering while keeping deterministic local sorting.
+- Updated `frontend/pages/result.tsx` to add a patient-facing postcode filter input in the **Nearby options** section.
+- Result page now:
+  - uses entered postcode to recalculate nearby mock options
+  - falls back to unfiltered options when postcode is empty
+  - shows a clear empty-state message when no services match the entered postcode
+- Implementation remains frontend-only and standalone (no backend/NHS integration dependency).
+
+### 40) Postcode Query Auto-Prefill for Result Referrals Added
+- Updated `frontend/pages/result.tsx` to read `postcode` from URL query parameters on load.
+- Added auto-prefill behavior for referral postcode filter input, for example:
+  - `/result?id=<consultationId>&postcode=SW1A`
+- Added state-sync logic so if query `postcode` changes after initial render, the input value updates automatically.
+- Nearby-options filtering now applies immediately from URL-provided postcode without manual typing.

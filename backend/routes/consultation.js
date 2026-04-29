@@ -36,6 +36,41 @@ function clientIp(req) {
   return req.socket?.remoteAddress || null;
 }
 
+function ensureStructuredDecision(triageResult) {
+  const safeOutcome = triageResult.outcome || 'gp';
+  if (!triageResult.decision || typeof triageResult.decision !== 'object') {
+    triageResult.decision = {
+      code: safeOutcome,
+      label: triageResult.outcomeLabel || safeOutcome,
+      urgency: 'unknown',
+      title: triageResult.outcomeLabel || safeOutcome,
+    };
+  }
+  if (!triageResult.reasoning || typeof triageResult.reasoning !== 'object') {
+    triageResult.reasoning = {
+      steps: [triageResult.outcomeReason || 'Outcome determined by rule-based triage after safety and eligibility evaluation.'],
+      clinicalBasis: [triageResult.outcomeReason || ''],
+      engine: {
+        source: triageResult.redFlagTriggered ? 'red_flag_engine' : 'rule_engine',
+        ruleIdsMatched: [],
+        governanceUncertainty: triageResult.governanceUncertainty || [],
+      },
+    };
+  }
+  if (!Array.isArray(triageResult.reasoning.steps) || triageResult.reasoning.steps.length === 0) {
+    triageResult.reasoning.steps = [triageResult.outcomeReason || 'Outcome determined by rule-based triage after safety and eligibility evaluation.'];
+  }
+  if (!triageResult.referralRecommendation || typeof triageResult.referralRecommendation !== 'object') {
+    triageResult.referralRecommendation = {
+      service: safeOutcome,
+      instruction: triageResult.patientExplanation || triageResult.outcomeReason || 'Follow the recommended next step.',
+      actions: [],
+      escalationSafetyNet: triageResult.safetyNetAdvice ? [triageResult.safetyNetAdvice] : [],
+    };
+  }
+  return triageResult;
+}
+
 /**
  * POST /api/consultation
  *
@@ -125,6 +160,7 @@ router.post('/', async (req, res) => {
       ? triageResult.outcomeReason.trim()
       : 'Outcome determined by rule-based triage after safety and eligibility evaluation.';
   triageResult.outcomeReason = normalizedOutcomeReason;
+  ensureStructuredDecision(triageResult);
   triageResult.explanation = buildDecisionExplanation({
     decision: triageResult.outcome,
     reason: normalizedOutcomeReason,
@@ -192,6 +228,9 @@ router.post('/', async (req, res) => {
       pathwayCode,
       outcome: triageResult.outcome,
       outcomeReason: triageResult.outcomeReason,
+      decisionCode: triageResult.decision?.code || triageResult.outcome,
+      reasoningStepCount: Array.isArray(triageResult.reasoning?.steps) ? triageResult.reasoning.steps.length : 0,
+      referralService: triageResult.referralRecommendation?.service || null,
     },
   });
 
@@ -201,6 +240,9 @@ router.post('/', async (req, res) => {
     regulatoryContext,
     pathwayPatientDisclaimer,
     structuredReport: record.structuredReport,
+    decision: triageResult.decision,
+    reasoning: triageResult.reasoning,
+    referralRecommendation: triageResult.referralRecommendation,
   });
 });
 

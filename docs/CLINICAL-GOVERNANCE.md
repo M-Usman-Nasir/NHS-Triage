@@ -471,3 +471,14 @@ This supports **regulatory defensibility** (DCB0129-style: explainable baseline 
 | 1.9 | 2026-04-23 | §5 — Security and data protection (expectation vs repo; frontend implemented vs backlog) |
 
 **Clinical questions:** Clinical Safety Officer. **Technical:** engineering per [PLATFORM-HANDBOOK.md](./PLATFORM-HANDBOOK.md).
+
+Advanced (Recommended)
+
+Later we can also add:
+
+📍 Location-based referral
+“Nearest pharmacy near you”
+📄 Download summary (PDF)
+Patient shows to pharmacist
+👨‍⚕️ Direct routing (future)
+Send to pharmacist dashboard

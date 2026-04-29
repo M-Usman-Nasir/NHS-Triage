@@ -124,6 +124,27 @@ router.post('/:id/override', async (req, res) => {
     source: 'pharmacist_override',
   });
   record.status = 'reviewed';
+  record.decision = {
+    code: overridden_decision,
+    label: overridden_decision,
+    urgency: record.decision?.urgency || 'unknown',
+    title: record.decision?.title || overridden_decision,
+  };
+  record.reasoning = {
+    steps: [record.outcomeReason],
+    clinicalBasis: [record.outcomeReason],
+    engine: {
+      source: 'pharmacist_override',
+      ruleIdsMatched: [],
+      governanceUncertainty: record.governanceUncertainty || [],
+    },
+  };
+  record.referralRecommendation = {
+    service: overridden_decision,
+    instruction: record.outcomeReason,
+    actions: [],
+    escalationSafetyNet: record.safetyNetAdvice ? [record.safetyNetAdvice] : [],
+  };
   consultationStore.set(id, record);
 
   await logAuditEvent({

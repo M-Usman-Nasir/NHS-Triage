@@ -31,6 +31,43 @@ export interface RegulatoryContextPayload {
   redFlagTriggered?: boolean;
 }
 
+export interface DecisionPayload {
+  code: string;
+  label: string;
+  urgency?: string;
+  title?: string;
+}
+
+export interface ReasoningPayload {
+  steps: string[];
+  clinicalBasis?: string[];
+  engine?: {
+    source?: string;
+    ruleIdsMatched?: string[];
+    governanceUncertainty?: string[];
+  };
+}
+
+export interface ReferralRecommendationPayload {
+  service: string;
+  instruction: string;
+  actions: string[];
+  escalationSafetyNet: string[];
+  contact?: {
+    type: string;
+    value: string;
+  };
+}
+
+export interface NearbyOptionPayload {
+  type: 'self_care' | 'pharmacy' | 'gp' | 'urgent_care' | 'hospital' | 'emergency_999';
+  name: string;
+  distanceKm: number;
+  address: string;
+  phone: string;
+  openNow: boolean;
+}
+
 /** GET /api/summary/:id — aligned with backend/lib/summaryMapper.js */
 export interface SummaryApiResponse {
   id: string;
@@ -51,6 +88,10 @@ export interface SummaryApiResponse {
     reason: string;
     source?: string;
   };
+  decision?: DecisionPayload;
+  reasoning?: ReasoningPayload;
+  referralRecommendation?: ReferralRecommendationPayload;
+  nearbyOptions?: NearbyOptionPayload[];
   summaryText: string;
   pathwayPatientDisclaimer?: string | null;
   safetyNetAdvice?: string | null;
@@ -76,6 +117,10 @@ export interface TriageResultView {
     reason: string;
     source?: string;
   };
+  decision?: DecisionPayload;
+  reasoning?: ReasoningPayload;
+  referralRecommendation?: ReferralRecommendationPayload;
+  nearbyOptions?: NearbyOptionPayload[];
   redFlagTriggered: boolean;
   redFlags?: Array<{ code: string; description: string; message: string }>;
   pharmacyEligible: boolean;

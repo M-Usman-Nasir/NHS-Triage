@@ -66,6 +66,145 @@ const OUTCOME_COLOURS = {
   emergency_999: 'red',
 };
 
+const OUTCOME_URGENCY = {
+  self_care: 'routine',
+  pharmacy: 'same_day',
+  gp: 'soon',
+  urgent_care: 'immediate_same_day',
+  emergency_999: 'immediate_emergency',
+};
+
+const OUTCOME_TITLES = {
+  self_care: 'Self-care recommended',
+  pharmacy: 'Pharmacy consultation recommended',
+  gp: 'GP consultation recommended',
+  urgent_care: 'Urgent care recommended',
+  emergency_999: 'Call emergency services immediately',
+};
+
+const REFERRAL_TEMPLATES = {
+  self_care: {
+    service: 'self_care',
+    instruction: 'You can manage this at home.',
+    actions: [
+      'Follow the self-care advice shown below.',
+      'Monitor your symptoms over the next 24 to 48 hours.',
+    ],
+    escalationSafetyNet: [
+      'If symptoms worsen or new warning symptoms appear, contact a GP.',
+      'If severe symptoms develop suddenly, call 999.',
+    ],
+  },
+  pharmacy: {
+    service: 'pharmacy',
+    instruction: 'You should go to a pharmacy.',
+    actions: [
+      'Visit your nearest pharmacy today.',
+      'Speak to the pharmacist and describe your symptoms.',
+      'Show your consultation summary if available.',
+    ],
+    escalationSafetyNet: [
+      'If symptoms worsen, contact a GP or NHS 111.',
+      'If severe breathing, chest pain, or collapse occurs, call 999 immediately.',
+    ],
+  },
+  gp: {
+    service: 'gp',
+    instruction: 'You should contact a GP.',
+    actions: [
+      'Contact your GP surgery for an appointment.',
+      'Use NHS 111 for advice if you cannot reach your GP.',
+    ],
+    escalationSafetyNet: [
+      'If symptoms become severe while waiting, seek urgent care the same day.',
+      'If life-threatening symptoms appear, call 999 immediately.',
+    ],
+  },
+  urgent_care: {
+    service: 'urgent_care',
+    instruction: 'Visit urgent care immediately.',
+    actions: [
+      'Seek same-day urgent assessment now.',
+      'Use NHS 111 if you need help finding the correct urgent service.',
+    ],
+    escalationSafetyNet: [
+      'Do not delay if symptoms are getting worse.',
+      'Call 999 immediately if you develop emergency symptoms.',
+    ],
+  },
+  emergency_999: {
+    service: 'emergency_999',
+    instruction: 'Call emergency services immediately.',
+    actions: [
+      'Call 999 now.',
+      'Do not drive yourself if you feel unwell.',
+      'If possible, stay with another person while waiting for help.',
+    ],
+    escalationSafetyNet: [
+      'If the line disconnects, call 999 again immediately.',
+    ],
+    contact: { type: 'phone', value: '999' },
+  },
+};
+
+function buildDecisionMeta(outcome) {
+  return {
+    code: outcome,
+    label: OUTCOME_LABELS[outcome] || outcome,
+    urgency: OUTCOME_URGENCY[outcome] || 'unknown',
+    title: OUTCOME_TITLES[outcome] || 'Clinical triage recommendation',
+  };
+}
+
+function buildReasoningSteps({
+  outcome,
+  redFlagTriggered,
+  redFlagResult,
+  pharmacyEligible,
+  finalReason,
+  governanceUncertainty,
+}) {
+  const steps = [];
+  if (redFlagTriggered) {
+    const topFlag = (redFlagResult.flags || [])[0];
+    if (topFlag?.description) {
+      steps.push(`A safety red flag was detected: ${topFlag.description}.`);
+    } else {
+      steps.push('A safety red flag was detected from your answers.');
+    }
+    steps.push('Red-flag detection is evaluated first to prevent under-triage.');
+    steps.push(finalReason);
+  } else {
+    steps.push('No emergency red flags were detected from your answers.');
+    steps.push(
+      pharmacyEligible
+        ? 'Your answers remained eligible for pharmacy-level care after exclusions were checked.'
+        : 'Your answers did not meet pharmacy eligibility checks, so a higher level of care is recommended.',
+    );
+    steps.push(finalReason);
+  }
+  if (governanceUncertainty && governanceUncertainty.length > 0) {
+    steps.push(
+      'A conservative NHS governance fallback was applied because one or more automated checks were uncertain.',
+    );
+  }
+  if (outcome === 'emergency_999') {
+    steps.push('This outcome requires immediate emergency response.');
+  }
+  return steps.filter((s) => typeof s === 'string' && s.trim().length > 0);
+}
+
+function buildReferralRecommendation(outcome) {
+  const template = REFERRAL_TEMPLATES[outcome] || REFERRAL_TEMPLATES.gp;
+  return {
+    service: template.service,
+    instruction: template.instruction,
+    actions: [...template.actions],
+    escalationSafetyNet: [...template.escalationSafetyNet],
+    ...(template.contact ? { contact: template.contact } : {}),
+  };
+}
+
 /**
  * Load a clinical pathway file.
  * @param {string} pathwayCode
@@ -104,7 +243,16 @@ function evaluateOutcomeRules(outcomeRules, context, patient, pathway) {
       continue;
     }
     if (ev.value) {
-      return { outcome: rule.outcome, reason: rule.reason || '', engineUncertainty };
+      return {
+        outcome: rule.outcome,
+        reason: rule.reason || '',
+        engineUncertainty,
+        matchedRule: {
+          id: rule.id || null,
+          code: rule.code || null,
+          priority: rule.priority || null,
+        },
+      };
     }
   }
 
@@ -115,6 +263,7 @@ function evaluateOutcomeRules(outcomeRules, context, patient, pathway) {
       reason:
         'The system could not reliably match your answers to a single automated outcome. Same-day clinical assessment is recommended (GP urgent appointment, NHS 111, or urgent treatment centre).',
       engineUncertainty: true,
+      matchedRule: null,
     };
   }
 
@@ -122,6 +271,7 @@ function evaluateOutcomeRules(outcomeRules, context, patient, pathway) {
     outcome: 'gp',
     reason: 'Unable to determine a specific outcome from the current rule set. GP assessment recommended.',
     engineUncertainty: false,
+    matchedRule: null,
   };
 }
 
@@ -203,9 +353,20 @@ function runTriage({ pathwayCode, answers, patient, symptoms = [] }) {
       comorbidityFragments: [],
     });
 
+    const decision = buildDecisionMeta(outcome);
+    const governanceUncertainty = redFlagResult.governanceEvalFailure ? ['safety_rule_engine_uncertainty'] : [];
+    const reasoningSteps = buildReasoningSteps({
+      outcome,
+      redFlagTriggered: true,
+      redFlagResult,
+      pharmacyEligible: false,
+      finalReason: flagMessage,
+      governanceUncertainty,
+    });
+    const referralRecommendation = buildReferralRecommendation(outcome);
     return {
       outcome,
-      outcomeLabel: OUTCOME_LABELS[outcome],
+      outcomeLabel: decision.label,
       outcomeColour: OUTCOME_COLOURS[outcome],
       outcomeReason: flagMessage,
       explanation: buildDecisionExplanation({
@@ -213,6 +374,17 @@ function runTriage({ pathwayCode, answers, patient, symptoms = [] }) {
         reason: flagMessage,
         source: 'red_flag_engine',
       }),
+      decision,
+      reasoning: {
+        steps: reasoningSteps,
+        clinicalBasis: redFlagResult.flags.map((flag) => `${flag.code}: ${flag.description || 'red flag matched'}`),
+        engine: {
+          source: 'red_flag_engine',
+          ruleIdsMatched: redFlagResult.flags.map((flag) => flag.code).filter(Boolean),
+          governanceUncertainty,
+        },
+      },
+      referralRecommendation,
       redFlagTriggered: true,
       redFlags: redFlagResult.flags,
       pharmacyEligible: false,
@@ -225,7 +397,7 @@ function runTriage({ pathwayCode, answers, patient, symptoms = [] }) {
       selfCareAdvice: null,
       patientExplanation,
       comorbidityModifiersApplied: [],
-      governanceUncertainty: redFlagResult.governanceEvalFailure ? ['safety_rule_engine_uncertainty'] : [],
+      governanceUncertainty,
     };
   }
 
@@ -255,6 +427,7 @@ function runTriage({ pathwayCode, answers, patient, symptoms = [] }) {
     outcome: resolvedOutcome,
     reason: outcomeReason,
     engineUncertainty: outcomeEngineUncertainty,
+    matchedRule,
   } = evaluateOutcomeRules(pathway.outcomeRules || [], context, patient, pathway);
 
   const governanceUncertainty = [...(baseElig.governanceUncertainty || [])];
@@ -293,9 +466,24 @@ function runTriage({ pathwayCode, answers, patient, symptoms = [] }) {
     outcomeReason: finalReason,
   });
 
+  const decision = buildDecisionMeta(outcome);
+  const reasoningSteps = buildReasoningSteps({
+    outcome,
+    redFlagTriggered: false,
+    redFlagResult,
+    pharmacyEligible,
+    finalReason,
+    governanceUncertainty,
+  });
+  const referralRecommendation = buildReferralRecommendation(outcome);
+  const ruleIdsMatched = [];
+  if (matchedRule && (matchedRule.id || matchedRule.code || matchedRule.priority)) {
+    ruleIdsMatched.push(matchedRule.id || matchedRule.code || `priority_${matchedRule.priority}`);
+  }
+
   return {
     outcome,
-    outcomeLabel: OUTCOME_LABELS[outcome] || outcome,
+    outcomeLabel: decision.label,
     outcomeColour: OUTCOME_COLOURS[outcome] || 'grey',
     outcomeReason: finalReason,
     explanation: buildDecisionExplanation({
@@ -303,6 +491,17 @@ function runTriage({ pathwayCode, answers, patient, symptoms = [] }) {
       reason: finalReason,
       source: 'rule_engine',
     }),
+    decision,
+    reasoning: {
+      steps: reasoningSteps,
+      clinicalBasis: [finalReason],
+      engine: {
+        source: 'rule_engine',
+        ruleIdsMatched,
+        governanceUncertainty,
+      },
+    },
+    referralRecommendation,
     redFlagTriggered: false,
     redFlags: [],
     pharmacyEligible,

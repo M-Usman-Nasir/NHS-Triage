@@ -1,6 +1,28 @@
 import type { SummaryApiResponse, TriageResultView } from '../types/consultation';
 
 export function mapSummaryToResult(data: SummaryApiResponse): TriageResultView {
+  const fallbackDecision = {
+    code: data.outcome,
+    label: data.outcomeLabel,
+    urgency: undefined,
+    title: data.outcomeLabel,
+  };
+  const fallbackReasoning = {
+    steps: [data.outcomeReason],
+    clinicalBasis: [data.outcomeReason],
+    engine: {
+      source: data.explanation?.source,
+      ruleIdsMatched: [],
+      governanceUncertainty: data.governanceUncertainty ?? [],
+    },
+  };
+  const fallbackReferral = {
+    service: data.outcome,
+    instruction: data.patientExplanation ?? data.outcomeReason,
+    actions: [],
+    escalationSafetyNet: data.safetyNetAdvice ? [data.safetyNetAdvice] : [],
+  };
+
   return {
     consultationId: data.id,
     patient: data.patient,
@@ -10,6 +32,10 @@ export function mapSummaryToResult(data: SummaryApiResponse): TriageResultView {
     outcomeLabel: data.outcomeLabel,
     outcomeReason: data.outcomeReason,
     explanation: data.explanation ?? undefined,
+    decision: data.decision ?? fallbackDecision,
+    reasoning: data.reasoning ?? fallbackReasoning,
+    referralRecommendation: data.referralRecommendation ?? fallbackReferral,
+    nearbyOptions: data.nearbyOptions ?? [],
     redFlagTriggered: data.redFlagTriggered,
     redFlags: data.redFlagReasons,
     pharmacyEligible: data.pharmacyEligible,

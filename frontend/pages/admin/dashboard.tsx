@@ -22,6 +22,8 @@ import { MOCK_DATA_DISCLOSURE } from '../../lib/complianceContent';
 import StatusBadge from '../../components/StatusBadge';
 import type { AdminRule } from '../../types/admin';
 import { apiFetch, apiUrl } from '../../lib/api';
+import { PATHWAY_QUESTIONS } from '../../lib/pathwayQuestions';
+import OFFLINE_RED_FLAG_RULES from '../../lib/offlineRedFlagRules.json';
 
 // ─── Mock analytics data ──────────────────────────────────────────────────────
 
@@ -134,6 +136,51 @@ const EMPTY_QUESTION_FORM = {
   redFlagCode: '',
 };
 
+function extractQuestionIds(condition: string): string[] {
+  const ids = condition.match(/\bq\d+\b/g) || [];
+  return Array.from(new Set(ids));
+}
+
+function mapQuestionRedFlags(redFlags: Array<{ code?: string; condition?: string }>): Record<string, string[]> {
+  return redFlags.reduce<Record<string, string[]>>((acc, flag) => {
+    if (!flag.code || !flag.condition) return acc;
+    const ids = extractQuestionIds(flag.condition);
+    ids.forEach((id) => {
+      if (!acc[id]) {
+        acc[id] = [];
+      }
+      if (!acc[id].includes(flag.code!)) {
+        acc[id].push(flag.code!);
+      }
+    });
+    return acc;
+  }, {});
+}
+
+function offlineQuestionRows(): QuestionRow[] {
+  return Object.entries(PATHWAY_QUESTIONS).flatMap(([pathwayCode, questions]) => {
+    const pathwayMeta = PATHWAYS.find((item) => item.code === pathwayCode);
+    const pathwayLabel = pathwayMeta?.label || pathwayCode;
+    const redFlagsByQuestion = mapQuestionRedFlags(OFFLINE_RED_FLAG_RULES[pathwayCode] || []);
+
+    return questions.map((question, index) => {
+      const questionId = question.id || `question_${index + 1}`;
+      const matchedRedFlags = redFlagsByQuestion[questionId] || [];
+      return {
+        pathwayCode,
+        pathwayLabel,
+        questionId,
+        questionText: question.text || 'Untitled question',
+        questionType: question.type || 'unknown',
+        required: !!question.required,
+        hasRedFlag: matchedRedFlags.length > 0,
+        matchedRedFlags,
+        source: 'custom',
+      };
+    });
+  });
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function AdminDashboard() {
@@ -211,12 +258,11 @@ export default function AdminDashboard() {
           const pathwayLabel = detail.label || pathwayCode;
           const redFlags = Array.isArray(detail.redFlags) ? detail.redFlags : [];
           const questions = Array.isArray(detail.questions) ? detail.questions : [];
+          const redFlagsByQuestion = mapQuestionRedFlags(redFlags);
 
           return questions.map((question, index) => {
             const questionId = question.id || `question_${index + 1}`;
-            const matchedRedFlags = redFlags
-              .filter((flag) => (flag.condition || '').includes(questionId))
-              .map((flag) => flag.code || 'RF_UNKNOWN');
+            const matchedRedFlags = redFlagsByQuestion[questionId] || [];
 
             return {
               pathwayCode,
@@ -253,8 +299,9 @@ export default function AdminDashboard() {
             }
           }
         }
-        setQuestionRows([]);
-        setQuestionLoadError('Could not load live question coverage from admin APIs.');
+        const offlineRows = offlineQuestionRows();
+        setQuestionRows(offlineRows);
+        setQuestionLoadError('Could not load live question coverage from admin APIs. Showing built-in local question coverage.');
       }
     };
 
