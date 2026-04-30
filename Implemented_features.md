@@ -3,7 +3,7 @@
 ## Admin Features (Frontend)
 
 ### 1) Full Rule Management UI Added
-- Built a complete rules management interface in `frontend/pages/admin/dashboard.tsx`.
+- Built a complete rules management interface in `frontend/pages/admin_crm/settings.tsx`.
 - Admin users can now add new rules from the dashboard.
 - Admin users can edit existing rules directly from the rules table.
 - Admin users can delete rules with a confirmation prompt.
@@ -108,7 +108,7 @@
   - `frontend/pages/privacy.tsx`
   - `frontend/pages/terms.tsx`
 - Added explicit transparency notices on mock/offline CRM/admin pages:
-  - `frontend/pages/admin/dashboard.tsx`
+  - `frontend/pages/admin_crm/settings.tsx`
   - `frontend/pages/crm/cases.tsx`
   - `frontend/pages/crm/reports.tsx`
   - `frontend/pages/crm/patients/[id].tsx`
@@ -128,7 +128,7 @@
 ### 17) Phase 5 — Ops & Governance UI Consistency Improvements Added
 - Added reusable status badge component in `frontend/components/StatusBadge.tsx`.
 - Applied shared status badges in admin and CRM patient surfaces for consistent risk/outcome/state visuals:
-  - `frontend/pages/admin/dashboard.tsx`
+  - `frontend/pages/admin_crm/settings.tsx`
   - `frontend/pages/crm/patients/[id].tsx`
 - Introduced typed domain contracts for admin/CRM to reduce page-local type duplication:
   - `frontend/types/admin.ts`
@@ -222,7 +222,7 @@
 - Marked external integration proposals as post-MVP capabilities only.
 
 ### 27) Admin Question Coverage View Added (Questions with/without Red Flags)
-- Added a new **Question Coverage** tab in `frontend/pages/admin/dashboard.tsx`.
+- Added a new **Question Coverage** tab in `frontend/pages/admin_crm/settings.tsx`.
 - The new view lists pathway questions with:
   - pathway
   - question ID
@@ -237,7 +237,7 @@
 - Added search for pathway/question ID/question text/type.
 
 ### 28) Admin Question Entry Form Added (Red Flag Yes/No Option)
-- Added an admin form in `frontend/pages/admin/dashboard.tsx` to create question coverage entries with:
+- Added an admin form in `frontend/pages/admin_crm/settings.tsx` to create question coverage entries with:
   - pathway code + pathway label
   - question ID + text + type
   - required yes/no
@@ -247,7 +247,7 @@
 - Added local browser persistence key `admin-question-coverage-v1` for fallback/custom mode.
 
 ### 29) Admin Question Edit/Delete Actions Enabled
-- Added edit/delete actions for custom question entries in `frontend/pages/admin/dashboard.tsx`.
+- Added edit/delete actions for custom question entries in `frontend/pages/admin_crm/settings.tsx`.
 - Added edit mode with:
   - prefilled form values
   - update action
@@ -264,7 +264,7 @@
 - Added audit events for admin question add/update/delete operations.
 
 ### 31) Admin UI Wired to Live Question CRUD End-to-End
-- Updated `frontend/pages/admin/dashboard.tsx` so question actions now call backend live APIs for pathway question add/edit/delete.
+- Updated `frontend/pages/admin_crm/settings.tsx` so question actions now call backend live APIs for pathway question add/edit/delete.
 - Live rows are now editable/deletable through API-backed actions (not display-only anymore).
 - Added API reload after successful writes so table reflects current persisted pathway definitions.
 - Kept graceful local fallback behavior when live write is unavailable.

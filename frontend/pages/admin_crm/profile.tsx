@@ -1,26 +1,11 @@
-import Link from 'next/link';
-import { ArrowLeft, Mail, Shield, Stethoscope, UserRound } from 'lucide-react';
+import { Mail, Shield, Stethoscope, UserRound } from 'lucide-react';
+import CRMLayout from '../../components/CRMLayout';
 
 export default function AdminProfilePage() {
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-sidebar-border bg-sidebar px-6 py-4 text-sidebar-foreground shadow-sm">
-        <div className="mx-auto flex w-full max-w-4xl items-center justify-between gap-3">
-          <div>
-            <h1 className="text-lg font-bold text-foreground">Admin Profile</h1>
-            <p className="text-xs text-sidebar-muted">Aegis Health AI administration</p>
-          </div>
-          <Link
-            href="/admin/dashboard"
-            className="inline-flex items-center gap-1 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
-            Back to dashboard
-          </Link>
-        </div>
-      </header>
+    <CRMLayout title="Admin Profile" subtitle="Aegis Health AI administration">
+      <div className="mx-auto max-w-4xl">
 
-      <main className="mx-auto w-full max-w-4xl px-4 py-6 sm:py-8">
         <section className="rounded-2xl border border-border bg-card p-4 shadow-card sm:p-5">
           <div className="flex items-start gap-3">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary" aria-hidden>
@@ -58,7 +43,7 @@ export default function AdminProfilePage() {
             </div>
           </dl>
         </section>
-      </main>
-    </div>
+      </div>
+    </CRMLayout>
   );
 }

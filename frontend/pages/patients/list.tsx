@@ -13,8 +13,8 @@
 import { useState, useEffect } from 'react';
 import { Search } from 'lucide-react';
 import { useRouter } from 'next/router';
-import CRMLayout from '../../../components/CRMLayout';
-import { apiUrl, safeFetchJson } from '../../../lib/api';
+import CRMLayout from '../../components/CRMLayout';
+import { apiUrl, safeFetchJson } from '../../lib/api';
 
 interface Patient {
   id: string; fullName: string; dateOfBirth: string; age: number; gender: string;
@@ -51,7 +51,7 @@ const TAG_COLOUR: Record<string, string> = {
   gp_referred: 'bg-yellow-50 text-yellow-600', sore_throat: 'bg-yellow-50 text-yellow-600',
 };
 
-export default function PatientsPage() {
+export default function PatientsListPage() {
   const router = useRouter();
   const [patients, setPatients] = useState<Patient[]>(MOCK_PATIENTS);
   const [search, setSearch] = useState('');
@@ -76,21 +76,19 @@ export default function PatientsPage() {
 
   return (
     <CRMLayout title="Patients" subtitle={`${filtered.length} of ${patients.length} patients`}>
-
       <div className="min-w-0 max-w-full">
-      {/* Toolbar */}
-      <div className="flex flex-wrap gap-3 mb-5">
+      <div className="mb-5 flex flex-wrap gap-3">
         <input
           type="text"
           placeholder="Search by name, email or NHS number..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 min-w-60 border border-input rounded-lg px-4 py-2 text-sm bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+          className="min-w-60 flex-1 rounded-lg border border-input bg-card px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
         />
         <select
           value={riskFilter}
           onChange={(e) => setRiskFilter(e.target.value)}
-          className="border border-input rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring bg-card text-foreground"
+          className="rounded-lg border border-input bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
         >
           <option value="">All risk levels</option>
           <option value="HIGH">High risk</option>
@@ -99,17 +97,16 @@ export default function PatientsPage() {
         </select>
       </div>
 
-      {/* Table — horizontal scroll on narrow viewports (flex parent needs min-w-0 chain) */}
-      <div className="min-w-0 rounded-2xl border border-border bg-card shadow-card overflow-hidden">
+      <div className="min-w-0 overflow-hidden rounded-2xl border border-border bg-card shadow-card">
         <div
-          className="overflow-x-auto overflow-y-visible overscroll-x-contain touch-pan-x"
+          className="touch-pan-x overflow-x-auto overflow-y-visible overscroll-x-contain"
           style={{ WebkitOverflowScrolling: 'touch' }}
         >
         <table className="w-full min-w-[52rem] text-left lg:min-w-0">
-          <thead className="bg-muted border-b border-border">
+          <thead className="border-b border-border bg-muted">
             <tr>
               {['Patient', 'NHS No.', 'Age / Gender', 'GP Surgery', 'Consultations', 'Last Contact', 'Risk', 'Tags'].map((h) => (
-                <th key={h} className="text-left text-xs font-semibold text-muted-foreground uppercase px-4 py-3">{h}</th>
+                <th key={h} className="px-4 py-3 text-left text-xs font-semibold uppercase text-muted-foreground">{h}</th>
               ))}
             </tr>
           </thead>
@@ -117,14 +114,14 @@ export default function PatientsPage() {
             {filtered.map((p) => (
               <tr
                 key={p.id}
-                onClick={() => router.push(`/crm/patients/${p.id}`)}
-                className="hover:bg-primary/5 cursor-pointer transition-colors"
+                onClick={() => router.push(`/patients/${p.id}`)}
+                className="cursor-pointer transition-colors hover:bg-primary/5"
               >
                 <td className="px-4 py-3">
-                  <div className="font-medium text-foreground text-sm">{p.fullName}</div>
-                  <div className="text-muted-foreground text-xs">{p.email}</div>
+                  <div className="text-sm font-medium text-foreground">{p.fullName}</div>
+                  <div className="text-xs text-muted-foreground">{p.email}</div>
                 </td>
-                <td className="px-4 py-3 text-muted-foreground text-xs font-mono">{p.nhsNumber}</td>
+                <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{p.nhsNumber}</td>
                 <td className="px-4 py-3 text-sm text-muted-foreground">{p.age}y · {p.gender}</td>
                 <td className="px-4 py-3">
                   <div className="text-sm text-foreground">{p.gpName}</div>
@@ -140,17 +137,17 @@ export default function PatientsPage() {
                 </td>
                 <td className="px-4 py-3">
                   {p.riskFlag ? (
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${RISK_CONFIG[p.riskFlag]}`}>
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${RISK_CONFIG[p.riskFlag]}`}>
                       {p.riskFlag}
                     </span>
                   ) : (
-                    <span className="text-muted-foreground/40 text-xs">—</span>
+                    <span className="text-xs text-muted-foreground/40">—</span>
                   )}
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex flex-wrap gap-1">
                     {p.tags.slice(0, 2).map((tag) => (
-                      <span key={tag} className={`text-xs px-1.5 py-0.5 rounded text-xs ${TAG_COLOUR[tag] || 'bg-muted text-muted-foreground'}`}>
+                      <span key={tag} className={`rounded px-1.5 py-0.5 text-xs ${TAG_COLOUR[tag] || 'bg-muted text-muted-foreground'}`}>
                         {tag.replace(/_/g, ' ')}
                       </span>
                     ))}
@@ -163,8 +160,8 @@ export default function PatientsPage() {
         </table>
         </div>
         {filtered.length === 0 && (
-          <div className="text-center py-12 text-muted-foreground">
-            <Search className="h-10 w-10 mx-auto mb-2 opacity-40" strokeWidth={1.5} aria-hidden />
+          <div className="py-12 text-center text-muted-foreground">
+            <Search className="mx-auto mb-2 h-10 w-10 opacity-40" strokeWidth={1.5} aria-hidden />
             <p>No patients found matching your search.</p>
           </div>
         )}

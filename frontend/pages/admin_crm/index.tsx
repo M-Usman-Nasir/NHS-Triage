@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import {
+  ArrowLeft,
   BadgeCheck,
   ChartColumn,
   Clock,
@@ -111,14 +112,14 @@ export default function CRMDashboard() {
     /** Tinted icon chip + hover ring (cards stay light) */
     accent: string;
   }> = [
-    { label: 'Patients',      value: kpis.totalPatients,       Icon: Users,         accent: 'bg-primary/12 text-primary ring-primary/15', href: '/crm/patients' },
-    { label: 'Open Cases',    value: kpis.openCases,           Icon: FolderKanban,   accent: 'bg-amber-50 text-amber-700 ring-amber-200/80', href: '/crm/cases' },
-    { label: 'Critical',      value: kpis.criticalCases,       Icon: Siren,         accent: 'bg-red-50 text-red-600 ring-red-200/80', href: '/crm/cases' },
-    { label: 'Overdue',       value: kpis.overdueTasks,        Icon: Clock,         accent: 'bg-orange-50 text-orange-700 ring-orange-200/80', href: '/crm/tasks' },
-    { label: 'Tasks',         value: kpis.pendingTasks,        Icon: BadgeCheck,    accent: 'bg-emerald-50 text-emerald-700 ring-emerald-200/80', href: '/crm/tasks' },
-    { label: 'High Risk',     value: kpis.highRiskPatients,    Icon: TriangleAlert, accent: 'bg-rose-50 text-rose-600 ring-rose-200/80', href: '/crm/patients' },
-    { label: 'Providers',     value: kpis.totalProviders,      Icon: Hospital,      accent: 'bg-violet-50 text-violet-700 ring-violet-200/80', href: '/crm/providers' },
-    { label: 'Comms',         value: kpis.totalCommunications, Icon: MessageSquare, accent: 'bg-sky-50 text-sky-700 ring-sky-200/80', href: '/crm/communications' },
+    { label: 'Patients',      value: kpis.totalPatients,       Icon: Users,         accent: 'bg-primary/12 text-primary ring-primary/15', href: '/patients/list' },
+    { label: 'Open Cases',    value: kpis.openCases,           Icon: FolderKanban,   accent: 'bg-amber-50 text-amber-700 ring-amber-200/80', href: '/admin_crm/cases' },
+    { label: 'Critical',      value: kpis.criticalCases,       Icon: Siren,         accent: 'bg-red-50 text-red-600 ring-red-200/80', href: '/admin_crm/cases' },
+    { label: 'Overdue',       value: kpis.overdueTasks,        Icon: Clock,         accent: 'bg-orange-50 text-orange-700 ring-orange-200/80', href: '/admin_crm/tasks' },
+    { label: 'Tasks',         value: kpis.pendingTasks,        Icon: BadgeCheck,    accent: 'bg-emerald-50 text-emerald-700 ring-emerald-200/80', href: '/admin_crm/tasks' },
+    { label: 'High Risk',     value: kpis.highRiskPatients,    Icon: TriangleAlert, accent: 'bg-rose-50 text-rose-600 ring-rose-200/80', href: '/patients/list' },
+    { label: 'Providers',     value: kpis.totalProviders,      Icon: Hospital,      accent: 'bg-violet-50 text-violet-700 ring-violet-200/80', href: '/admin_crm/providers' },
+    { label: 'Comms',         value: kpis.totalCommunications, Icon: MessageSquare, accent: 'bg-sky-50 text-sky-700 ring-sky-200/80', href: '/admin_crm/communications' },
   ];
 
   const totalCases    = Object.values(casesByStage).reduce((a, b) => a + b, 0) || 1;
@@ -126,6 +127,16 @@ export default function CRMDashboard() {
 
   return (
     <CRMLayout title="Dashboard" subtitle="Patient & Case Management Overview">
+      <div className="mb-4">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-1.5 rounded-md text-sm font-medium text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          aria-label="Back to home"
+        >
+          <ArrowLeft className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
+          Home
+        </Link>
+      </div>
 
       {/* KPI grid — 4 cols on mobile, 8 on lg */}
       <div className="grid grid-cols-4 lg:grid-cols-8 gap-2 sm:gap-3 mb-5">
@@ -153,7 +164,7 @@ export default function CRMDashboard() {
               {kpis.criticalCases} critical case{kpis.criticalCases > 1 ? 's' : ''} require immediate attention
             </p>
           </div>
-          <Link href="/crm/cases">
+          <Link href="/admin_crm/cases">
             <span className="text-red-600 text-xs font-semibold cursor-pointer flex-shrink-0 hover:underline">Review →</span>
           </Link>
         </div>
@@ -166,7 +177,7 @@ export default function CRMDashboard() {
         <div className="bg-card rounded-2xl shadow-card border border-border p-4">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-bold text-foreground text-sm">Cases by Stage</h3>
-            <Link href="/crm/cases">
+            <Link href="/admin_crm/cases">
               <span className="text-primary text-xs cursor-pointer hover:underline">View all →</span>
             </Link>
           </div>
@@ -215,12 +226,12 @@ export default function CRMDashboard() {
           <h3 className="font-bold text-foreground text-sm mb-3">Quick Actions</h3>
           <div className="grid grid-cols-2 gap-2">
             {[
-              { label: 'Open Cases',    href: '/crm/cases',          Icon: FolderKanban,   cls: 'bg-primary/10 text-primary' },
-              { label: 'High Risk',     href: '/crm/patients',       Icon: TriangleAlert, cls: 'bg-red-50 text-red-700' },
-              { label: 'Tasks',         href: '/crm/tasks',          Icon: ListTodo,      cls: 'bg-green-50 text-green-700' },
-              { label: 'Comms',         href: '/crm/communications', Icon: MessageSquare, cls: 'bg-indigo-50 text-indigo-700' },
-              { label: 'Providers',     href: '/crm/providers',      Icon: Hospital,      cls: 'bg-purple-50 text-purple-700' },
-              { label: 'Reports',       href: '/crm/reports',        Icon: ChartColumn,   cls: 'bg-emerald-50 text-emerald-700' },
+              { label: 'Open Cases',    href: '/admin_crm/cases',          Icon: FolderKanban,   cls: 'bg-primary/10 text-primary' },
+              { label: 'High Risk',     href: '/patients/list',       Icon: TriangleAlert, cls: 'bg-red-50 text-red-700' },
+              { label: 'Tasks',         href: '/admin_crm/tasks',          Icon: ListTodo,      cls: 'bg-green-50 text-green-700' },
+              { label: 'Comms',         href: '/admin_crm/communications', Icon: MessageSquare, cls: 'bg-indigo-50 text-indigo-700' },
+              { label: 'Providers',     href: '/admin_crm/providers',      Icon: Hospital,      cls: 'bg-purple-50 text-purple-700' },
+              { label: 'Reports',       href: '/admin_crm/reports',        Icon: ChartColumn,   cls: 'bg-emerald-50 text-emerald-700' },
             ].map(({ label, href, Icon, cls }) => (
               <Link key={label} href={href}>
                 <div className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold cursor-pointer transition-all active:scale-95 ${cls}`}>

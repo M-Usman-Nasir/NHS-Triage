@@ -14,12 +14,12 @@
 import { useState, useEffect } from 'react';
 import { Check, ListChecks, MessageSquare } from 'lucide-react';
 import { useRouter } from 'next/router';
-import CRMLayout from '../../../components/CRMLayout';
+import CRMLayout from '../../components/CRMLayout';
 import Link from 'next/link';
-import { apiUrl, safeFetchJson } from '../../../lib/api';
-import { ChannelIcon } from '../../../lib/channelIcons';
-import InlineNotice from '../../../components/InlineNotice';
-import StatusBadge from '../../../components/StatusBadge';
+import { apiUrl, safeFetchJson } from '../../lib/api';
+import { ChannelIcon } from '../../lib/channelIcons';
+import InlineNotice from '../../components/InlineNotice';
+import StatusBadge from '../../components/StatusBadge';
 
 const MOCK_PROFILES: Record<string, any> = {
   'PAT-001': {
@@ -277,13 +277,13 @@ export default function PatientProfile() {
                 <p className="text-xs text-muted-foreground">Last contact: {patient.lastContactDate}</p>
               )}
               <div className="flex gap-3 pt-2">
-                <Link href={`/crm/communications?patientId=${patient.id}`}>
+                <Link href={`/admin_crm/communications?patientId=${patient.id}`}>
                   <span className="flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary rounded-lg text-sm font-medium cursor-pointer hover:bg-primary/15">
                     <MessageSquare className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
                     Message Patient
                   </span>
                 </Link>
-                <Link href={`/crm/tasks?patientId=${patient.id}`}>
+                <Link href={`/admin_crm/tasks?patientId=${patient.id}`}>
                   <span className="flex items-center gap-2 px-4 py-2 bg-green-50 text-green-600 rounded-lg text-sm font-medium cursor-pointer hover:bg-green-100">
                     <ListChecks className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
                     Add Task

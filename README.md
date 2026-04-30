@@ -58,9 +58,8 @@ NHS Triage/
 │   │   ├── index.tsx               ← Landing, consent, pathway pick
 │   │   ├── consultation.tsx        ← Questionnaire (pathway-specific + defaults)
 │   │   ├── result.tsx              ← Outcome & summary
-│   │   ├── admin/dashboard.tsx     ← Admin analytics / pathways (demo)
+│   │   ├── admin_crm/              ← CRM + admin settings (`settings`, `profile`, cases, …)
 │   │   ├── pharmacist/dashboard.tsx
-│   │   └── crm/                    ← Staff CRM (dashboard, patients, cases, …)
 │   ├── components/CRMLayout.tsx
 │   ├── lib/                        ← triageOutcomeIcons, channelIcons, …
 │   └── styles/globals.css
@@ -172,8 +171,8 @@ FRONTEND_URL=http://localhost:3000
 |------|----------------|
 | **Patient** | `/`, `/consultation`, `/result` |
 | **Pharmacist** | `/pharmacist/dashboard` |
-| **Admin** | `/admin/dashboard` |
-| **CRM / operations** | `/crm` and sub-routes |
+| **Admin (settings)** | `/admin_crm/settings`, `/admin_crm/profile` |
+| **CRM / operations** | `/admin_crm` and sub-routes |
 
 ---
 

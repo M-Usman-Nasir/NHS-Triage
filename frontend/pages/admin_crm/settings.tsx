@@ -1,5 +1,5 @@
 /**
- * admin/dashboard.tsx — Admin Dashboard
+ * admin_crm/settings.tsx — Admin settings (analytics, pathways, rules, question coverage)
  * Aegis Health AI
  *
  * Platform administration and analytics dashboard.
@@ -15,8 +15,8 @@
  */
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
-import { ArrowLeft, LayoutDashboard, ListChecks, Map, TriangleAlert } from 'lucide-react';
+import { LayoutDashboard, ListChecks, Map, TriangleAlert } from 'lucide-react';
+import CRMLayout from '../../components/CRMLayout';
 import InlineNotice from '../../components/InlineNotice';
 import { MOCK_DATA_DISCLOSURE } from '../../lib/complianceContent';
 import StatusBadge from '../../components/StatusBadge';
@@ -184,7 +184,7 @@ function offlineQuestionRows(): QuestionRow[] {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function AdminDashboard() {
-  const [activeTab, setActiveTab] = useState<'overview' | 'pathways' | 'rules' | 'questions'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'pathways' | 'rules' | 'questions'>('pathways');
   const [rules, setRules] = useState<AdminRule[]>(RED_FLAG_SAMPLES);
   const [ruleForm, setRuleForm] = useState<RuleFormState>(EMPTY_RULE_FORM);
   const [editingRuleId, setEditingRuleId] = useState<string | null>(null);
@@ -663,38 +663,8 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-sidebar-border bg-sidebar py-4 px-6 text-sidebar-foreground shadow-sm">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <Link
-              href="/"
-              aria-label="Back to home"
-              className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
-              Back
-            </Link>
-            <div className="min-w-0">
-              <h1 className="font-bold text-lg text-foreground">Aegis Health AI</h1>
-              <p className="text-xs text-sidebar-muted">Admin Dashboard — Dr. Admin User</p>
-            </div>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <Link
-              href="/admin/profile"
-              className="inline-flex items-center rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            >
-              Profile
-            </Link>
-            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-800">
-              System Online
-            </span>
-          </div>
-        </div>
-      </header>
-
-      <div className="max-w-7xl mx-auto px-4 py-8">
+    <CRMLayout title="Admin Settings" subtitle="Dr. Admin User · Analytics, pathways, rules, and question coverage">
+      <div className="mx-auto max-w-7xl">
         <InlineNotice title="Demo mode" tone="warning" className="mb-4">
           {MOCK_DATA_DISCLOSURE} Rules are persisted locally in this browser via localStorage.
         </InlineNotice>
@@ -703,10 +673,10 @@ export default function AdminDashboard() {
         <div className="flex gap-4 mb-8 border-b border-border">
           {(
             [
-              { id: 'overview' as const, label: 'Overview', Icon: LayoutDashboard },
               { id: 'pathways' as const, label: 'Pathways', Icon: Map },
               { id: 'rules' as const, label: 'Rules', Icon: TriangleAlert },
               { id: 'questions' as const, label: 'Question Coverage', Icon: ListChecks },
+              { id: 'overview' as const, label: 'Overview', Icon: LayoutDashboard },
             ] as const
           ).map(({ id, label, Icon }) => (
             <button
@@ -1209,6 +1179,6 @@ export default function AdminDashboard() {
           </div>
         )}
       </div>
-    </div>
+    </CRMLayout>
   );
 }

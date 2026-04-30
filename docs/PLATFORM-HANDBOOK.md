@@ -191,7 +191,7 @@ Roles: **CL** Clinical Lead, **SI** Safety Officer, **PO** Product Owner, **EL**
 |------|--------|
 | Patient | `/`, `/consultation`, `/result` |
 | Pharmacist | `/pharmacist/dashboard` |
-| Admin | `/admin/dashboard` |
+| Admin (settings) | `/admin_crm/settings` |
 | CRM staff | `/crm/*` |
 
 ---
@@ -254,7 +254,7 @@ Use this table in **planning meetings** and tick rows in git issues when scope c
 | Explainability: every decision has reason | **Done (core)** | `decisionEngine` response includes `outcomeReason`; rendered in `pages/result.tsx` | Add automated contract check that reason is always present (including fallback/error branches) |
 | Structured output report (symptoms/answers/decision/reasoning/timestamp) | **Partial** | Consultation + summary payloads include most fields (`routes/consultation.js`, `routes/summary.js`, `summaryMapper`) | Formalize versioned report schema and enforce required fields in contract validation |
 | Pharmacist dashboard → live summaries | **Partial** | `GET /api/summary`, `GET /api/summary/` list exist | `pages/pharmacist/dashboard.tsx` uses **mock rows**; wire to API + auth |
-| Admin dashboard → admin APIs | **Partial** | `GET /api/admin/pathways`, `/rules`, `/analytics` | `pages/admin/dashboard.tsx` uses **local mock data** only (no `fetch` to backend) |
+| Admin settings → admin APIs | **Partial** | `GET /api/admin/pathways`, `/rules`, `/analytics` | `pages/admin_crm/settings.tsx` uses **local mock data** only (no `fetch` to backend) |
 | Admin analytics from live consultations | **Partial** | `GET /api/consultation` list + store | `routes/admin.js` `/analytics` returns **static demo** series; not aggregated from `consultationStore` |
 | Consultation PDF export | **Partial** | `GET /api/summary/:id/pdf` | Returns **501** until implemented |
 | In-app pathway / rule configuration | **Not in UI** | Pathways are `backend/data/pathways/*.json` | Editor + publish / RBAC (E-04, E-07) |
@@ -387,7 +387,7 @@ The following items are intentionally tracked for later phases and are **not imp
 | `frontend/pages/privacy.tsx`, `terms.tsx`, `accessibility.tsx` | Legal / IG pages |
 | `frontend/pages/consultation.tsx` | Questionnaire |
 | `frontend/pages/result.tsx` | Outcomes |
-| `frontend/pages/admin/` | Admin |
+| `frontend/pages/admin_crm/` (includes `settings.tsx`, `profile.tsx`) | CRM + admin settings |
 | `frontend/pages/pharmacist/` | Pharmacist |
 | `frontend/pages/crm/` | CRM |
 | `frontend/lib/triageOutcomeIcons.tsx` | Outcome icons |

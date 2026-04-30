@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import type { LucideIcon } from 'lucide-react';
@@ -10,7 +10,8 @@ import {
   LayoutDashboard,
   ListTodo,
   MessageSquare,
-  Shield,
+  Settings,
+  User,
   Users,
 } from 'lucide-react';
 
@@ -21,14 +22,15 @@ interface CRMLayoutProps {
 }
 
 const NAV_ITEMS: Array<{ href: string; label: string; Icon: LucideIcon }> = [
-  { href: '/crm',                label: 'Dashboard', Icon: LayoutDashboard },
-  { href: '/crm/patients',       label: 'Patients', Icon: Users },
-  { href: '/crm/cases',          label: 'Cases', Icon: FolderKanban },
-  { href: '/crm/tasks',          label: 'Tasks', Icon: ListTodo },
-  { href: '/crm/communications', label: 'Comms', Icon: MessageSquare },
-  { href: '/crm/providers',      label: 'Providers', Icon: Hospital },
-  { href: '/crm/reports',        label: 'Reports', Icon: ChartColumn },
-  { href: '/admin/dashboard',   label: 'Admin', Icon: Shield },
+  { href: '/admin_crm', label: 'Dashboard', Icon: LayoutDashboard },
+  { href: '/patients/list', label: 'Patients', Icon: Users },
+  { href: '/admin_crm/cases', label: 'Cases', Icon: FolderKanban },
+  { href: '/admin_crm/tasks', label: 'Tasks', Icon: ListTodo },
+  { href: '/admin_crm/communications', label: 'Communications', Icon: MessageSquare },
+  { href: '/admin_crm/providers', label: 'Providers', Icon: Hospital },
+  { href: '/admin_crm/reports', label: 'Reports', Icon: ChartColumn },
+  { href: '/admin_crm/profile', label: 'Profile', Icon: User },
+  { href: '/admin_crm/settings', label: 'Settings', Icon: Settings },
 ];
 
 const BOTTOM_NAV = NAV_ITEMS.slice(0, 5);
@@ -37,10 +39,31 @@ export default function CRMLayout({ children, title, subtitle }: CRMLayoutProps)
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [router.asPath]);
+
+  useEffect(() => {
+    if (!sidebarOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [sidebarOpen]);
+
   const isActive = (href: string) => {
-    if (href === '/crm') return router.pathname === '/crm';
-    if (href === '/admin/dashboard') return router.pathname.startsWith('/admin');
-    return router.pathname.startsWith(href);
+    if (href === '/admin_crm') {
+      return router.pathname === '/admin_crm';
+    }
+    if (href === '/admin_crm/settings') {
+      return router.pathname === '/admin_crm/settings';
+    }
+    if (href === '/patients/list') {
+      if (router.pathname === '/patients/list') return true;
+      return /^\/patients\/[^/]+$/.test(router.pathname) && router.pathname !== '/patients';
+    }
+    return router.pathname === href || router.pathname.startsWith(`${href}/`);
   };
 
   return (
@@ -60,7 +83,12 @@ export default function CRMLayout({ children, title, subtitle }: CRMLayoutProps)
         </div>
         <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
           {NAV_ITEMS.map(({ href, label, Icon }) => (
-            <Link key={href} href={href}>
+            <Link
+              key={href}
+              href={href}
+              className="block rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+              onClick={() => setSidebarOpen(false)}
+            >
               <span className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium cursor-pointer transition-all ${
                 isActive(href) ? 'bg-sidebar-primary text-sidebar-primary-foreground' : 'text-sidebar-muted hover:bg-sidebar-accent hover:text-sidebar-foreground'
               }`}>
@@ -80,12 +108,6 @@ export default function CRMLayout({ children, title, subtitle }: CRMLayoutProps)
               <p className="text-sidebar-muted text-xs truncate">admin@aegishealth.ai</p>
             </div>
           </div>
-          <Link href="/">
-            <span className="mt-3 flex items-center gap-2 text-sidebar-muted hover:text-sidebar-foreground text-xs cursor-pointer">
-              <ArrowLeft className="h-3.5 w-3.5 shrink-0" strokeWidth={2} aria-hidden />
-              Platform
-            </span>
-          </Link>
         </div>
       </aside>
 
@@ -114,9 +136,13 @@ export default function CRMLayout({ children, title, subtitle }: CRMLayoutProps)
             </div>
             <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
               {NAV_ITEMS.map(({ href, label, Icon }) => (
-                <Link key={href} href={href}>
+                <Link
+                  key={href}
+                  href={href}
+                  className="block rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+                  onClick={() => setSidebarOpen(false)}
+                >
                   <span
-                    onClick={() => setSidebarOpen(false)}
                     className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium cursor-pointer transition-all ${
                       isActive(href) ? 'bg-sidebar-primary text-sidebar-primary-foreground' : 'text-sidebar-foreground/90 hover:bg-sidebar-accent hover:text-sidebar-foreground'
                     }`}
@@ -187,7 +213,7 @@ export default function CRMLayout({ children, title, subtitle }: CRMLayoutProps)
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border z-40 shadow-card-md safe-area-bottom">
         <div className="flex items-center justify-around px-1 py-1">
           {BOTTOM_NAV.map(({ href, label, Icon }) => (
-            <Link key={href} href={href}>
+            <Link key={href} href={href} onClick={() => setSidebarOpen(false)} className="min-w-0 flex-1 max-w-[5.5rem]">
               <span className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl cursor-pointer transition-all min-w-0 ${
                 isActive(href) ? 'text-primary' : 'text-muted-foreground'
               }`}>
