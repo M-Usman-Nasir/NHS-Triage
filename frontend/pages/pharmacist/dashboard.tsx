@@ -15,8 +15,9 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import type { LucideIcon } from 'lucide-react';
-import { CheckCircle2, Clock, ListChecks, Pill, Printer, Stethoscope } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Clock, ListChecks, Pill, Printer, Stethoscope } from 'lucide-react';
 import { apiFetch, apiUrl } from '../../lib/api';
 
 type PharmacistSummary = {
@@ -123,7 +124,6 @@ export default function PharmacistDashboard() {
         }
       } catch {
         if (!cancelled) {
-          setLoadError('API unavailable — showing built-in demo referrals.');
           setCases(MOCK_CASES);
         }
       }
@@ -231,6 +231,35 @@ export default function PharmacistDashboard() {
           </div>
         </div>
       </header>
+
+      <div className="max-w-6xl mx-auto px-4 pt-4">
+        <div className="mb-3">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-input bg-card px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+          >
+            <ArrowLeft className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
+            Back
+          </Link>
+        </div>
+        <nav aria-label="Breadcrumb" className="text-sm text-muted-foreground">
+          <ol className="flex items-center gap-2">
+            <li>
+              <Link href="/" className="hover:text-primary">
+                Home
+              </Link>
+            </li>
+            <li aria-hidden>/</li>
+            <li>
+              <Link href="/pharmacist/dashboard" className="hover:text-primary">
+                Pharmacist
+              </Link>
+            </li>
+            <li aria-hidden>/</li>
+            <li className="font-semibold text-foreground">Dashboard</li>
+          </ol>
+        </nav>
+      </div>
 
       <div className="max-w-6xl mx-auto px-4 py-8 flex gap-6">
 

@@ -176,6 +176,12 @@ export default function LandingPage() {
               </span>
               Pharmacist
             </Link>
+            <Link
+              href="/profile"
+              className="inline-flex items-center gap-1.5 rounded-full border-2 border-primary/25 bg-white/90 px-3.5 py-2 text-xs font-semibold text-primary shadow-sm transition hover:border-primary/40 hover:bg-sky-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 sm:px-4 sm:text-sm"
+            >
+              My Profile
+            </Link>
           </div>
         </div>
       </header>

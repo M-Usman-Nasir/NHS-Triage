@@ -537,6 +537,14 @@ export default function ResultPage() {
 
         <button
           type="button"
+          onClick={() => router.push('/profile')}
+          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-primary/30 bg-primary/10 py-4 text-sm font-semibold text-primary transition-all hover:bg-primary/15 active:scale-[0.98]"
+        >
+          My Profile
+        </button>
+
+        <button
+          type="button"
           onClick={() => router.push('/')}
           className="flex w-full items-center justify-center gap-2 bg-muted text-muted-foreground py-4 rounded-2xl font-semibold hover:bg-secondary active:scale-[0.98] transition-all text-sm"
         >

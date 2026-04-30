@@ -360,3 +360,64 @@
   - `/result?id=<consultationId>&postcode=SW1A`
 - Added state-sync logic so if query `postcode` changes after initial render, the input value updates automatically.
 - Nearby-options filtering now applies immediately from URL-provided postcode without manual typing.
+
+### 41) Patient Profile Page + NHS Integration-Ready Placeholders Added (Frontend-Only)
+- Added new patient-facing profile route in `frontend/pages/profile.tsx`.
+- Added profile sections for:
+  - personal information (Name, Age, DOB)
+  - consultation history
+  - manage health details
+  - NHS connections (`NHS Login`, `GP Connection`, `Pharmacy Connection`)
+- Added integration-ready frontend data contracts in `frontend/lib/patientProfileMock.ts`:
+  - `NhsConnectionKey`
+  - `NhsConnectionStatus`
+  - `NhsConnectionItem`
+  - `PatientProfileView`
+- Added `NHS Integration Ready` platform marker on profile surface.
+- Scope intentionally remains frontend-only with placeholder connection state (no real NHS/GP/Spine integration).
+
+### 42) My Profile Navigation Flow Added (Patient Journey)
+- Updated post-consultation flow by adding `My Profile` CTA in `frontend/pages/result.tsx` so users can open profile after consultation completion.
+- Updated landing page header in `frontend/pages/index.tsx` with a `My Profile` entry point.
+- Preserved existing consultation and result routing while adding profile as an additive patient-facing pathway.
+
+### 43) NHS Connection Dummy Loader + Success Toast Added
+- Enhanced `frontend/pages/profile.tsx` NHS connection actions with simulated async UX:
+  - clicking `Connect` sets service to `pending`
+  - shows per-service loading state (`Connecting...`)
+  - after dummy delay, marks service as `connected`
+- Added lightweight success toast feedback on completion, for example:
+  - `<Service> successfully connected`
+- Connect buttons are disabled during the simulated loading window to prevent duplicate actions.
+
+### 44) Pharmacist Dashboard Navigation UX Improvements Added
+- Updated `frontend/pages/pharmacist/dashboard.tsx` to add breadcrumb navigation:
+  - `Home / Pharmacist / Dashboard`
+- Added a visible back arrow/button (`Back`) to return to home.
+- Removed the API-unavailable banner message from the summary-list fallback path; dashboard now silently falls back to mock referrals when list API is unreachable.
+- Kept existing error messaging for other pharmacist actions (for example, override-save failures).
+
+### 45) NHS Integration Modal / Popup Flow Added (Profile Page)
+- Replaced row-level ad-hoc NHS connection actions in `frontend/pages/profile.tsx` with a structured modal-driven flow.
+- Added reusable modal component `frontend/components/profile/NhsIntegrationModal.tsx` with:
+  - Basic verification fields:
+    - NHS Number
+    - Date of Birth
+    - Email
+    - Phone Number
+  - Connection options:
+    - Connect GP Services
+    - Connect Pharmacy Services
+    - Connect Consultation History
+  - Required consent checkbox:
+    - `I consent to securely share my data`
+- Added client-side validation for required fields, NHS number format, email format, phone validity, and consent/option requirements.
+- Added simulated save/loading state in modal (`Saving...`) before applying connection status updates.
+- Added professional toast feedback states:
+  - success: `NHS profile connected successfully`
+  - validation error: `Please complete all required fields`
+- On successful submit, selected NHS services are marked as connected in profile connection status badges.
+
+### 46) Modal Background Scroll Lock Added
+- Updated `frontend/pages/profile.tsx` to disable page/background scrolling while NHS integration modal is open.
+- Implemented body overflow lock with safe cleanup on modal close/unmount to restore prior page scroll behavior.

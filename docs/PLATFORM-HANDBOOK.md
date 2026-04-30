@@ -424,3 +424,45 @@ The following items are intentionally tracked for later phases and are **not imp
 | 2.0 | 2026-04-27 | Added strict MVP architecture constraint: standalone-only, no external integrations, and mandatory module list in §2.5 |
 
 **Superseded files (removed from repo):** `alignment-and-planning.md`, `milestone-plan.md`, `patient-flow-ui-finalization.md`, `architecture.md`, `user_flows.md`, `TASKS.md`, `MVP_Build.md` (under docs), `ClientQ&A.md` — content merged here or into CLINICAL-GOVERNANCE.
+
+Future NHS Integration Architecture
+
+Later, when approved:
+
+Patient clicks:
+[ Connect NHS Account ]
+Flow:
+User → NHS Authentication → Permission Grant → Linked Profile
+
+ Database Design (Important)
+
+Add fields:
+
+patients table
+id
+name
+dob
+gender
+phone
+email
+nhs_connected
+nhs_number
+gp_connected
+integration_connections
+id
+patient_id
+service_type
+status
+connected_at
+token_reference
+
+Security Requirements ⭐
+
+If you ever add NHS integrations:
+
+You MUST implement:
+
+OAuth authentication
+Encryption
+Audit logging
+Consent management
