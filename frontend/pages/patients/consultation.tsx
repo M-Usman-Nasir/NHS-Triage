@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import {
   Activity,
+  ArrowLeft,
   Check,
   ChevronRight,
   ListChecks,
@@ -10,33 +11,89 @@ import {
   Sparkles,
   X,
 } from 'lucide-react';
-import { apiFetch, apiUrl } from '../lib/api';
-import { augmentAnswersForPathway } from '../lib/augmentConsultationAnswers';
+import { apiFetch, apiUrl } from '../../lib/api';
+import { augmentAnswersForPathway } from '../../lib/augmentConsultationAnswers';
 import {
   CONSULTATION_PREFACE_QUESTIONS,
   contextAnswersToSymptomHints,
   stripContextAnswers,
-} from '../lib/consultationPrefaceQuestions';
-import { PATHWAY_LABELS } from '../lib/patientPathways';
+} from '../../lib/consultationPrefaceQuestions';
+import { PATHWAY_LABELS } from '../../lib/patientPathways';
 import {
   isKnownPathwayQuestions,
   PATHWAY_QUESTIONS,
   pathwayClinicalQuestionsForPatient,
   type PathwayQuestion,
-} from '../lib/pathwayQuestions';
-import type { AnswerValue, ConsultationSubmitPayload } from '../types/consultation';
-import { useMultiConditionFlow } from '../hooks/useMultiConditionFlow';
-import InlineNotice from '../components/InlineNotice';
-import { MOCK_DATA_DISCLOSURE } from '../lib/complianceContent';
-import SafetyPanel from '../components/SafetyPanel';
-import { PageLoadingState } from '../components/PageState';
-import ClinicalQuestionCard from '../components/consultation/ClinicalQuestionCard';
-import ConsultationHeader from '../components/consultation/ConsultationHeader';
+} from '../../lib/pathwayQuestions';
+import type { AnswerValue, ConsultationSubmitPayload } from '../../types/consultation';
+import { useMultiConditionFlow } from '../../hooks/useMultiConditionFlow';
+import InlineNotice from '../../components/InlineNotice';
+import { MOCK_DATA_DISCLOSURE } from '../../lib/complianceContent';
+import SafetyPanel from '../../components/SafetyPanel';
+import ClinicalQuestionCard from '../../components/consultation/ClinicalQuestionCard';
+import ConsultationHeader from '../../components/consultation/ConsultationHeader';
 
 interface PatientInfo {
   fullName: string;
   age: string;
   gender: string;
+}
+
+function PatientsShellFallbackHeader() {
+  return (
+    <header className="sticky top-0 z-30 border-b border-sky-200/70 bg-white/80 text-foreground shadow-sm backdrop-blur-xl supports-[backdrop-filter]:bg-white/65">
+      <div className="mx-auto flex w-full max-w-5xl items-center gap-2 px-3 pb-3 pt-[max(0.5rem,env(safe-area-inset-top))] sm:gap-3 sm:px-4 sm:pb-3 sm:pt-3">
+        <Link
+          href="/patients"
+          aria-label="Back to triage"
+          className="touch-manipulation inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 border-primary/25 bg-white/90 text-primary shadow-sm transition active:scale-95 hover:border-primary/40 hover:bg-sky-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+        >
+          <ArrowLeft className="h-5 w-5" strokeWidth={2.2} aria-hidden />
+        </Link>
+        <div
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-black text-primary-foreground shadow-md ring-2 ring-primary/20 sm:h-11 sm:w-11"
+          aria-hidden
+        >
+          A
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-bold leading-tight tracking-tight text-slate-900 sm:text-base">
+            Aegis Health AI
+          </p>
+          <p className="truncate text-[11px] font-medium leading-tight text-slate-500 sm:text-xs">Consultation</p>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function PatientsMobileShell({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex min-h-[100dvh] min-h-screen flex-col items-center justify-center bg-gradient-to-br from-slate-300 via-slate-200 to-slate-400 px-2 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:px-4 sm:py-4 md:px-6 md:py-6">
+      <div className="relative flex h-[min(52rem,calc(100dvh-1rem))] w-full max-w-[min(calc(100vw-1rem),24rem)] flex-col overflow-hidden rounded-2xl border-[5px] border-slate-900 bg-gradient-to-b from-sky-50 via-[#e8f2ff] to-slate-50 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.45)] ring-1 ring-white/10 sm:rounded-[1.75rem] sm:border-[6px] sm:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.55)] sm:ring-white/15 md:max-w-[24rem] md:rounded-[1.875rem]">
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.55]"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Cg fill='%232563eb' fill-opacity='0.06'%3E%3Cpath d='M22 10h4v12h12v4H26v12h-4V26H10v-4h12V10z'/%3E%3C/g%3E%3C/svg%3E")`,
+          }}
+          aria-hidden
+        />
+        <div
+          className="pointer-events-none absolute inset-x-0 top-0 h-[min(52vh,28rem)] bg-[radial-gradient(ellipse_85%_70%_at_50%_-5%,rgba(37,99,235,0.14),transparent_65%)]"
+          aria-hidden
+        />
+        <div className="relative z-0 flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden overscroll-y-contain [-webkit-overflow-scrolling:touch]">
+          <a
+            href="#main-content"
+            className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-slate-900 focus:shadow-lg focus:ring-2 focus:ring-primary"
+          >
+            Skip to main content
+          </a>
+          {children}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function isAnswerEmpty(question: PathwayQuestion, value: AnswerValue | undefined): boolean {
@@ -334,7 +391,7 @@ export default function ConsultationPage() {
     }
     if (completedConsultationIds.length > 0) {
       const allIds = completedConsultationIds.join(',');
-      void router.push(`/result?ids=${encodeURIComponent(allIds)}&id=${encodeURIComponent(completedConsultationIds[0])}`);
+      void router.push(`/patients/result?ids=${encodeURIComponent(allIds)}&id=${encodeURIComponent(completedConsultationIds[0])}`);
       return;
     }
     void router.push('/');
@@ -386,7 +443,7 @@ export default function ConsultationPage() {
         return;
       }
       const allIds = nextIds.join(',');
-      router.push(`/result?ids=${encodeURIComponent(allIds)}&id=${encodeURIComponent(nextIds[0])}&outcome=${data.outcome ?? ''}`);
+      router.push(`/patients/result?ids=${encodeURIComponent(allIds)}&id=${encodeURIComponent(nextIds[0])}&outcome=${data.outcome ?? ''}`);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Submission failed';
       setWizardStep('clinical');
@@ -409,42 +466,70 @@ export default function ConsultationPage() {
   const headerPathwayText = pathwayCodes.map((code) => PATHWAY_LABELS[code] || code).join(' + ');
 
   if (!router.isReady) {
-    return <PageLoadingState title="Loading consultation" message="Preparing your selected pathways." />;
+    return (
+      <PatientsMobileShell>
+        <main className="flex flex-1 flex-col items-center justify-center px-6 py-16">
+          <div
+            className="h-10 w-10 rounded-full border-4 border-primary border-t-transparent motion-safe:animate-spin"
+            aria-hidden
+          />
+          <p className="mt-4 text-sm font-semibold text-slate-900">Loading consultation</p>
+          <p className="mt-1 text-center text-xs text-slate-600">Preparing your selected pathways.</p>
+        </main>
+      </PatientsMobileShell>
+    );
   }
 
   if (pathwayCodes.length === 0) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background px-4">
-        <p className="text-muted-foreground text-sm mb-4 text-center">No clinical pathway was selected.</p>
-        <Link href="/" className="text-primary font-semibold underline">
-          Return to start
-        </Link>
-      </div>
+      <PatientsMobileShell>
+        <PatientsShellFallbackHeader />
+        <main
+          id="main-content"
+          className="relative mx-auto w-full min-w-0 max-w-5xl flex-1 px-3 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-5 sm:px-4 sm:py-8"
+        >
+          <div className="rounded-2xl border border-sky-200/60 bg-white/90 p-5 text-center shadow-xl shadow-sky-900/10 backdrop-blur-sm sm:p-6">
+            <p className="text-sm text-slate-600">No clinical pathway was selected.</p>
+            <Link
+              href="/patients"
+              className="mt-4 inline-block text-sm font-semibold text-primary underline underline-offset-2"
+            >
+              Return to triage
+            </Link>
+          </div>
+        </main>
+      </PatientsMobileShell>
     );
   }
 
   if (pathwayCodes.some((code) => !isKnownPathwayQuestions(code))) {
     const unknownCode = pathwayCodes.find((code) => !isKnownPathwayQuestions(code));
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background px-4">
-        <p className="text-foreground font-semibold mb-2">Unknown pathway</p>
-        <p className="text-muted-foreground text-sm mb-4 text-center max-w-md">
-          &quot;{unknownCode}&quot; is not a recognised pathway. Choose a symptom from the home page.
-        </p>
-        <Link href="/" className="text-primary font-semibold underline">
-          Return to start
-        </Link>
-      </div>
+      <PatientsMobileShell>
+        <PatientsShellFallbackHeader />
+        <main
+          id="main-content"
+          className="relative mx-auto w-full min-w-0 max-w-5xl flex-1 px-3 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-5 sm:px-4 sm:py-8"
+        >
+          <div className="rounded-2xl border border-sky-200/60 bg-white/90 p-5 text-center shadow-xl shadow-sky-900/10 backdrop-blur-sm sm:p-6">
+            <p className="font-semibold text-slate-900">Unknown pathway</p>
+            <p className="mt-2 text-sm text-slate-600">
+              &quot;{unknownCode}&quot; is not a recognised pathway. Choose a symptom from triage.
+            </p>
+            <Link
+              href="/patients"
+              className="mt-4 inline-block text-sm font-semibold text-primary underline underline-offset-2"
+            >
+              Return to triage
+            </Link>
+          </div>
+        </main>
+      </PatientsMobileShell>
     );
   }
 
   return (
-    <div className="relative flex min-h-screen flex-col overflow-x-hidden bg-gradient-to-b from-primary/[0.07] via-background to-muted/40">
-      <div
-        className="pointer-events-none absolute inset-x-0 top-0 h-64 max-h-[40vh] bg-[radial-gradient(ellipse_70%_50%_at_50%_-15%,hsl(var(--primary)/0.12),transparent)]"
-        aria-hidden
-      />
-
+    <PatientsMobileShell>
       <ConsultationHeader
         titlePathwayText={headerPathwayText}
         pathwayIndex={pathwayIndex}
@@ -460,7 +545,10 @@ export default function ConsultationPage() {
         onGoBack={goBack}
       />
 
-      <main className="relative mx-auto w-full max-w-xl flex-1 px-4 py-6 sm:px-5 sm:py-8">
+      <main
+        id="main-content"
+        className="relative mx-auto w-full min-w-0 max-w-5xl flex-1 px-3 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-4 sm:px-4 sm:py-6 lg:py-6"
+      >
         {!useServerFlow && wizardStep === 'clinical' && !clinicalSchemaLoading ? (
           <InlineNotice title="Offline pathway mode" tone="warning" className="mb-4">
             {MOCK_DATA_DISCLOSURE}
@@ -468,45 +556,45 @@ export default function ConsultationPage() {
         ) : null}
         {wizardStep === 'demographics' && (
           <div>
-            <div className="mb-6 text-center sm:text-left">
-              <p className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-xs font-medium text-primary">
-                <Sparkles className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
+            <div className="mb-5 text-center sm:mb-6 sm:text-left">
+              <p className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-sky-200/80 bg-white/80 px-3 py-1 text-[11px] font-semibold text-primary shadow-sm backdrop-blur-md sm:text-xs">
+                <Sparkles className="h-3.5 w-3.5 shrink-0" strokeWidth={2} aria-hidden />
                 Step 1 — About you
               </p>
-              <h2 className="text-balance text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">
+              <h2 className="text-balance text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
                 Before we begin
               </h2>
-              <p className="mt-2 text-sm text-muted-foreground">
+              <p className="mt-2 text-sm leading-relaxed text-slate-600">
                 A few details so we can tailor safety checks and your summary. Clinical questions follow a{' '}
-                <span className="font-medium text-foreground">server-driven pathway</span> (including any branching
+                <span className="font-medium text-slate-900">server-driven pathway</span> (including any branching
                 rules) so the same logic is used in the app and the triage engine.
               </p>
             </div>
 
-            <div className="mb-4 flex items-start gap-3 rounded-2xl border border-primary/15 bg-primary/[0.04] px-4 py-3 text-left">
+            <div className="mb-4 flex items-start gap-3 rounded-2xl border border-sky-200/70 bg-white/80 px-4 py-3 text-left shadow-sm backdrop-blur-sm">
               <Shield className="mt-0.5 h-5 w-5 shrink-0 text-primary" strokeWidth={1.75} aria-hidden />
-              <p className="text-xs leading-relaxed text-muted-foreground">
-                <span className="font-semibold text-foreground">Rules-based triage</span>
+              <p className="text-xs leading-relaxed text-slate-600">
+                <span className="font-semibold text-slate-900">Rules-based triage</span>
                 {' — '}
                 your answers are checked against NHS-aligned pathway rules, not a free-text chatbot.
               </p>
             </div>
 
             <div className="space-y-4">
-              <div className="space-y-4 rounded-3xl border border-border/80 bg-card/90 p-5 shadow-card-md shadow-primary/[0.06] ring-1 ring-border/50 backdrop-blur-sm sm:p-6">
+              <div className="space-y-4 rounded-2xl border border-sky-200/60 bg-white/90 p-4 shadow-xl shadow-sky-900/10 backdrop-blur-sm sm:rounded-3xl sm:p-6">
                 <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-foreground">Full name</label>
+                  <label className="mb-1.5 block text-sm font-semibold text-slate-900">Full name</label>
                   <input
                     type="text"
                     placeholder="e.g. Sarah Mitchell"
                     value={patient.fullName}
                     onChange={(e) => setPatient({ ...patient, fullName: e.target.value })}
-                    className="w-full rounded-2xl border border-input bg-background/80 px-4 py-3.5 text-sm text-foreground placeholder:text-muted-foreground transition-shadow focus:border-transparent focus:outline-none focus:ring-2 focus:ring-ring"
+                    className="w-full rounded-2xl border border-sky-200/90 bg-white px-4 py-3.5 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/30"
                   />
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
-                    <label className="mb-1.5 block text-sm font-semibold text-foreground">Age</label>
+                    <label className="mb-1.5 block text-sm font-semibold text-slate-900">Age</label>
                     <input
                       type="number"
                       placeholder="e.g. 34"
@@ -515,15 +603,15 @@ export default function ConsultationPage() {
                       inputMode="numeric"
                       value={patient.age}
                       onChange={(e) => setPatient({ ...patient, age: e.target.value })}
-                      className="w-full rounded-2xl border border-input bg-background/80 px-4 py-3.5 text-sm text-foreground placeholder:text-muted-foreground transition-shadow focus:border-transparent focus:outline-none focus:ring-2 focus:ring-ring"
+                      className="w-full rounded-2xl border border-sky-200/90 bg-white px-4 py-3.5 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/30"
                     />
                   </div>
                   <div>
-                    <label className="mb-1.5 block text-sm font-semibold text-foreground">Gender</label>
+                    <label className="mb-1.5 block text-sm font-semibold text-slate-900">Gender</label>
                     <select
                       value={patient.gender}
                       onChange={(e) => setPatient({ ...patient, gender: e.target.value })}
-                      className="w-full rounded-2xl border border-input bg-background/80 px-4 py-3.5 text-sm text-foreground focus:border-transparent focus:outline-none focus:ring-2 focus:ring-ring"
+                      className="w-full rounded-2xl border border-sky-200/90 bg-white px-4 py-3.5 text-sm text-slate-900 shadow-sm focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/30"
                     >
                       <option value="">Select</option>
                       <option>Female</option>
@@ -534,21 +622,21 @@ export default function ConsultationPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-foreground">
-                    Describe your symptoms <span className="font-normal text-muted-foreground">(optional)</span>
+                  <label className="mb-1.5 block text-sm font-semibold text-slate-900">
+                    Describe your symptoms <span className="font-normal text-slate-500">(optional)</span>
                   </label>
                   <input
                     type="text"
                     placeholder="e.g. burning when passing urine, fever"
                     value={symptoms}
                     onChange={(e) => setSymptoms(e.target.value)}
-                    className="w-full rounded-2xl border border-input bg-background/80 px-4 py-3.5 text-sm text-foreground placeholder:text-muted-foreground transition-shadow focus:border-transparent focus:outline-none focus:ring-2 focus:ring-ring"
+                    className="w-full rounded-2xl border border-sky-200/90 bg-white px-4 py-3.5 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/30"
                   />
                 </div>
               </div>
 
               {error && (
-                <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
+                <div className="rounded-2xl border border-red-200/90 bg-rose-50/95 px-4 py-3 text-sm text-red-800 shadow-sm" role="alert">
                   {error}
                 </div>
               )}
@@ -556,7 +644,7 @@ export default function ConsultationPage() {
               <button
                 type="button"
                 onClick={handleDemographicsSubmit}
-                className="group flex w-full items-center justify-center gap-2 rounded-2xl bg-primary py-4 text-base font-bold text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:bg-primary/92 active:scale-[0.99] motion-reduce:transition-none motion-reduce:active:scale-100"
+                className="touch-manipulation group flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl bg-primary py-4 text-base font-bold text-primary-foreground shadow-lg shadow-primary/25 ring-offset-white transition-all hover:bg-primary/90 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 motion-reduce:transition-none motion-reduce:active:scale-100"
               >
                 Continue to questions
                 <ChevronRight className="h-5 w-5 transition-transform group-hover:translate-x-0.5 motion-reduce:transform-none" strokeWidth={2} aria-hidden />
@@ -567,13 +655,13 @@ export default function ConsultationPage() {
 
         {wizardStep === 'preface' && prefaceQuestion && (
           <div>
-            <p className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-muted-foreground/20 bg-muted/50 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-              <Activity className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
+            <p className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-sky-200/80 bg-white/80 px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-slate-600 shadow-sm backdrop-blur-md sm:text-[11px]">
+              <Activity className="h-3.5 w-3.5 shrink-0" strokeWidth={2} aria-hidden />
               Quick context ({prefaceIndex + 1}/{prefaceCount})
             </p>
 
-            <div className="rounded-3xl border border-primary/10 bg-card/95 p-5 shadow-card-md shadow-primary/[0.08] ring-1 ring-border/60 backdrop-blur-sm sm:p-7">
-              <h2 className="text-balance text-lg font-bold leading-snug text-foreground sm:text-xl">
+            <div className="rounded-2xl border border-sky-200/60 bg-white/90 p-4 shadow-xl shadow-sky-900/10 backdrop-blur-sm sm:rounded-3xl sm:p-7">
+              <h2 className="text-balance text-lg font-bold leading-snug text-slate-900 sm:text-xl">
                 {prefaceQuestion.text}
               </h2>
 
@@ -585,12 +673,12 @@ export default function ConsultationPage() {
                         key={opt}
                         type="button"
                         onClick={() => handlePrefaceAnswer(opt === 'Yes')}
-                        className={`rounded-2xl border-2 py-4 text-base font-bold transition-all active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100 sm:py-5 ${
+                        className={`touch-manipulation rounded-2xl border-2 py-4 text-base font-bold transition-all active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100 sm:py-5 ${
                           answers[prefaceQuestion.id] === (opt === 'Yes')
                             ? opt === 'Yes'
                               ? 'border-primary bg-primary/12 text-primary shadow-md shadow-primary/10'
-                              : 'border-muted-foreground/35 bg-muted text-foreground shadow-inner'
-                            : 'border-border text-muted-foreground hover:border-primary/35 hover:bg-muted/40'
+                              : 'border-slate-300 bg-slate-100 text-slate-800 shadow-inner'
+                            : 'border-sky-200/80 bg-white/70 text-slate-500 hover:border-primary/35 hover:bg-sky-50/80'
                         }`}
                       >
                         {opt === 'Yes' ? (
@@ -618,21 +706,21 @@ export default function ConsultationPage() {
                           key={opt}
                           type="button"
                           onClick={() => setAnswers({ ...answers, [prefaceQuestion.id]: opt })}
-                          className={`flex w-full items-center gap-3 rounded-2xl border-2 px-4 py-3.5 text-left text-sm font-medium transition-all active:scale-[0.99] motion-reduce:transition-none motion-reduce:active:scale-100 sm:py-4 ${
+                          className={`touch-manipulation flex w-full items-center gap-3 rounded-2xl border-2 px-4 py-3.5 text-left text-sm font-medium transition-all active:scale-[0.99] motion-reduce:transition-none motion-reduce:active:scale-100 sm:py-4 ${
                             selected
                               ? 'border-primary bg-primary/10 text-primary shadow-sm'
-                              : 'border-border text-card-foreground hover:border-primary/30 hover:bg-muted/50'
+                              : 'border-sky-200/80 bg-white/80 text-slate-800 hover:border-primary/30 hover:bg-sky-50/80'
                           }`}
                         >
                           <span
                             className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 text-xs font-bold ${
-                              selected ? 'border-primary bg-primary text-primary-foreground' : 'border-muted-foreground/25 text-muted-foreground'
+                              selected ? 'border-primary bg-primary text-primary-foreground' : 'border-slate-300 text-slate-500'
                             }`}
                           >
                             {selected ? '✓' : ''}
                           </span>
                           <span className="flex-1 leading-snug">{opt}</span>
-                          <ChevronRight className={`h-4 w-4 shrink-0 ${selected ? 'text-primary' : 'text-muted-foreground/40'}`} strokeWidth={2} aria-hidden />
+                          <ChevronRight className={`h-4 w-4 shrink-0 ${selected ? 'text-primary' : 'text-slate-400'}`} strokeWidth={2} aria-hidden />
                         </button>
                       );
                     })}
@@ -641,7 +729,7 @@ export default function ConsultationPage() {
               </div>
 
               {error && (
-                <p className="mt-4 text-sm font-medium text-destructive" role="alert">
+                <p className="mt-4 text-sm font-medium text-red-700" role="alert">
                   {error}
                 </p>
               )}
@@ -651,13 +739,13 @@ export default function ConsultationPage() {
                   <button
                     type="button"
                     onClick={advancePrefaceManual}
-                    className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary py-4 text-base font-bold text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:bg-primary/92 active:scale-[0.99] motion-reduce:transition-none motion-reduce:active:scale-100"
+                    className="touch-manipulation flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl bg-primary py-4 text-base font-bold text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:bg-primary/90 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 motion-reduce:transition-none motion-reduce:active:scale-100"
                   >
                     {prefaceIndex === prefaceCount - 1 ? 'Continue to clinical questions' : 'Next'}
                     <ChevronRight className="h-5 w-5" strokeWidth={2} aria-hidden />
                   </button>
                   {!prefaceQuestion.required && (
-                    <p className="mt-2 text-center text-xs text-muted-foreground">Optional — you can tap Next to skip.</p>
+                    <p className="mt-2 text-center text-xs text-slate-500">Optional — you can tap Next to skip.</p>
                   )}
                 </div>
               )}
@@ -666,9 +754,9 @@ export default function ConsultationPage() {
         )}
 
         {wizardStep === 'clinical' && clinicalSchemaLoading && (
-          <div className="flex flex-col items-center justify-center py-16">
+          <div className="flex flex-col items-center justify-center rounded-2xl border border-sky-200/60 bg-white/90 py-16 shadow-inner backdrop-blur-sm">
             <div className="h-10 w-10 rounded-full border-4 border-primary border-t-transparent motion-safe:animate-spin" aria-hidden />
-            <p className="mt-4 text-sm text-muted-foreground">Loading clinical pathway…</p>
+            <p className="mt-4 text-sm text-slate-600">Loading clinical pathway…</p>
           </div>
         )}
 
@@ -679,7 +767,7 @@ export default function ConsultationPage() {
                 <button
                   type="button"
                   onClick={skipCurrentCondition}
-                  className="rounded-xl border border-input bg-background px-3 py-2 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  className="touch-manipulation rounded-xl border-2 border-sky-200/80 bg-white/90 px-3 py-2 text-xs font-semibold text-slate-600 shadow-sm transition-colors hover:border-primary/30 hover:bg-sky-50 hover:text-slate-900"
                 >
                   Skip this condition
                 </button>
@@ -691,11 +779,11 @@ export default function ConsultationPage() {
               </SafetyPanel>
             )}
 
-            <p className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-primary">
-              <ListChecks className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
+            <p className="mb-3 inline-flex flex-wrap items-center gap-1.5 rounded-full border border-sky-200/80 bg-white/80 px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-primary shadow-sm backdrop-blur-md sm:text-[11px]">
+              <ListChecks className="h-3.5 w-3.5 shrink-0" strokeWidth={2} aria-hidden />
               Clinical pathway ({Math.min(clinicalHistory.length + 1, clinicalProgressMax)}/{clinicalProgressMax})
               {!useServerFlow ? (
-                <span className="ml-1 font-normal normal-case text-muted-foreground">(offline order)</span>
+                <span className="font-normal normal-case text-slate-500">(offline order)</span>
               ) : null}
             </p>
 
@@ -713,17 +801,17 @@ export default function ConsultationPage() {
         )}
 
         {wizardStep === 'submitting' && (
-          <div className="rounded-3xl border border-border bg-card/95 p-10 text-center shadow-card-md ring-1 ring-border/60 backdrop-blur-sm sm:p-12">
+          <div className="rounded-2xl border border-sky-200/60 bg-white/90 p-8 text-center shadow-xl shadow-sky-900/10 backdrop-blur-sm sm:rounded-3xl sm:p-12">
             <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
               <div className="h-10 w-10 rounded-full border-4 border-primary border-t-transparent motion-safe:animate-spin" aria-hidden />
             </div>
-            <h2 className="text-xl font-bold text-foreground sm:text-2xl">Analysing your responses…</h2>
-            <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
+            <h2 className="text-xl font-bold text-slate-900 sm:text-2xl">Analysing your responses…</h2>
+            <p className="mx-auto mt-2 max-w-sm text-sm text-slate-600">
               Our clinical decision engine is evaluating your answers using the selected pathway rules.
             </p>
           </div>
         )}
       </main>
-    </div>
+    </PatientsMobileShell>
   );
 }

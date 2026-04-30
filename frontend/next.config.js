@@ -21,6 +21,20 @@ if (isProd) {
 
 module.exports = {
   reactStrictMode: true,
+  async redirects() {
+    return [
+      {
+        source: '/consultation',
+        destination: '/patients/consultation',
+        permanent: false,
+      },
+      {
+        source: '/result',
+        destination: '/patients/result',
+        permanent: false,
+      },
+    ];
+  },
   async headers() {
     return [
       {

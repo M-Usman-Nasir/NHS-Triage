@@ -19,6 +19,7 @@ import {
   Stethoscope,
   Thermometer,
   TriangleAlert,
+  User,
   Wind,
   Zap,
 } from 'lucide-react';
@@ -103,7 +104,7 @@ export default function PatientsLandingPage() {
   const handleStart = () => {
     if (!consentGiven || selectedPathways.length === 0) return;
     const encoded = encodeURIComponent(selectedPathways.join(','));
-    router.push(`/consultation?pathways=${encoded}`);
+    router.push(`/patients/consultation?pathways=${encoded}`);
   };
 
   const selectedPathwayLabels = PATIENT_PATHWAYS.filter((p) => selectedPathways.includes(p.code))
@@ -168,6 +169,13 @@ export default function PatientsLandingPage() {
                   </p>
                 </div>
               </div>
+              <Link
+                href="/patients/profile"
+                className="touch-manipulation inline-flex shrink-0 items-center gap-1.5 rounded-full border-2 border-primary/25 bg-white/90 px-3 py-2 text-xs font-semibold text-primary shadow-sm transition active:scale-95 hover:border-primary/40 hover:bg-sky-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 sm:px-4 sm:text-sm"
+              >
+                <User className="h-4 w-4 shrink-0" strokeWidth={2.2} aria-hidden />
+                Profile
+              </Link>
             </div>
           </header>
 

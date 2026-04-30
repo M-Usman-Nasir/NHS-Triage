@@ -24,8 +24,8 @@ export default function ClinicalQuestionCard({
   onNext,
 }: ClinicalQuestionCardProps) {
   return (
-    <div className="rounded-3xl border border-primary/10 bg-card/95 p-5 shadow-card-md shadow-primary/[0.08] ring-1 ring-border/60 backdrop-blur-sm sm:p-7">
-      <h2 className="text-balance text-lg font-bold leading-snug text-foreground sm:text-xl">{question.text}</h2>
+    <div className="rounded-2xl border border-sky-200/60 bg-white/90 p-4 shadow-xl shadow-sky-900/10 backdrop-blur-sm sm:rounded-3xl sm:p-7">
+      <h2 className="text-balance text-lg font-bold leading-snug text-slate-900 sm:text-xl">{question.text}</h2>
 
       <div className="mt-6">
         {question.type === 'boolean' && (
@@ -35,12 +35,12 @@ export default function ClinicalQuestionCard({
                 key={opt}
                 type="button"
                 onClick={() => onBooleanAnswer(opt === 'Yes')}
-                className={`rounded-2xl border-2 py-4 text-base font-bold transition-all active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100 sm:py-5 ${
+                className={`touch-manipulation rounded-2xl border-2 py-4 text-base font-bold transition-all active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100 sm:py-5 ${
                   answers[question.id] === (opt === 'Yes')
                     ? opt === 'Yes'
                       ? 'border-primary bg-primary/12 text-primary shadow-md shadow-primary/10'
-                      : 'border-muted-foreground/35 bg-muted text-foreground shadow-inner'
-                    : 'border-border text-muted-foreground hover:border-primary/35 hover:bg-muted/40'
+                      : 'border-slate-300 bg-slate-100 text-slate-800 shadow-inner'
+                    : 'border-sky-200/80 bg-white/70 text-slate-500 hover:border-primary/35 hover:bg-sky-50/80'
                 }`}
               >
                 {opt === 'Yes' ? (
@@ -68,21 +68,21 @@ export default function ClinicalQuestionCard({
                   key={opt}
                   type="button"
                   onClick={() => onSelectAnswer(opt)}
-                  className={`flex w-full items-center gap-3 rounded-2xl border-2 px-4 py-3.5 text-left text-sm font-medium transition-all active:scale-[0.99] motion-reduce:transition-none motion-reduce:active:scale-100 sm:py-4 ${
+                  className={`touch-manipulation flex w-full items-center gap-3 rounded-2xl border-2 px-4 py-3.5 text-left text-sm font-medium transition-all active:scale-[0.99] motion-reduce:transition-none motion-reduce:active:scale-100 sm:py-4 ${
                     selected
                       ? 'border-primary bg-primary/10 text-primary shadow-sm'
-                      : 'border-border text-card-foreground hover:border-primary/30 hover:bg-muted/50'
+                      : 'border-sky-200/80 bg-white/80 text-slate-800 hover:border-primary/30 hover:bg-sky-50/80'
                   }`}
                 >
                   <span
                     className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 text-xs font-bold ${
-                      selected ? 'border-primary bg-primary text-primary-foreground' : 'border-muted-foreground/25 text-muted-foreground'
+                      selected ? 'border-primary bg-primary text-primary-foreground' : 'border-slate-300 text-slate-500'
                     }`}
                   >
                     {selected ? '✓' : ''}
                   </span>
                   <span className="flex-1 leading-snug">{opt}</span>
-                  <ChevronRight className={`h-4 w-4 shrink-0 ${selected ? 'text-primary' : 'text-muted-foreground/40'}`} strokeWidth={2} aria-hidden />
+                  <ChevronRight className={`h-4 w-4 shrink-0 ${selected ? 'text-primary' : 'text-slate-400'}`} strokeWidth={2} aria-hidden />
                 </button>
               );
             })}
@@ -98,15 +98,15 @@ export default function ClinicalQuestionCard({
                   key={opt}
                   type="button"
                   onClick={() => onMultiselectToggle(opt)}
-                  className={`flex w-full items-center gap-3 rounded-2xl border-2 px-4 py-3.5 text-left text-sm font-medium transition-all active:scale-[0.99] motion-reduce:transition-none motion-reduce:active:scale-100 sm:py-4 ${
+                  className={`touch-manipulation flex w-full items-center gap-3 rounded-2xl border-2 px-4 py-3.5 text-left text-sm font-medium transition-all active:scale-[0.99] motion-reduce:transition-none motion-reduce:active:scale-100 sm:py-4 ${
                     selected
                       ? 'border-primary bg-primary/10 text-primary shadow-sm'
-                      : 'border-border text-card-foreground hover:border-primary/30 hover:bg-muted/50'
+                      : 'border-sky-200/80 bg-white/80 text-slate-800 hover:border-primary/30 hover:bg-sky-50/80'
                   }`}
                 >
                   <span
                     className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border-2 text-xs ${
-                      selected ? 'border-primary bg-primary text-primary-foreground' : 'border-muted-foreground/25 text-muted-foreground'
+                      selected ? 'border-primary bg-primary text-primary-foreground' : 'border-slate-300 text-slate-500'
                     }`}
                   >
                     {selected ? '✓' : ''}
@@ -124,13 +124,13 @@ export default function ClinicalQuestionCard({
             value={typeof answers[question.id] === 'string' ? (answers[question.id] as string) : ''}
             onChange={(e) => onTextAnswer(e.target.value)}
             rows={4}
-            className="w-full resize-none rounded-2xl border border-input bg-background/80 px-4 py-3.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-transparent focus:outline-none focus:ring-2 focus:ring-ring"
+            className="w-full resize-none rounded-2xl border border-sky-200/90 bg-white px-4 py-3.5 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/30"
           />
         )}
       </div>
 
       {error && (
-        <p className="mt-4 text-sm font-medium text-destructive" role="alert">
+        <p className="mt-4 text-sm font-medium text-red-700" role="alert">
           {error}
         </p>
       )}
@@ -140,13 +140,13 @@ export default function ClinicalQuestionCard({
           <button
             type="button"
             onClick={onNext}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary py-4 text-base font-bold text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:bg-primary/92 active:scale-[0.99] motion-reduce:transition-none motion-reduce:active:scale-100"
+            className="touch-manipulation flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl bg-primary py-4 text-base font-bold text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:bg-primary/90 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 motion-reduce:transition-none motion-reduce:active:scale-100"
           >
             Next
             <ChevronRight className="h-5 w-5" strokeWidth={2} aria-hidden />
           </button>
           {!question.required && (
-            <p className="mt-2 text-center text-xs text-muted-foreground">Optional — you can tap Next without selecting if you prefer.</p>
+            <p className="mt-2 text-center text-xs text-slate-500">Optional — you can tap Next without selecting if you prefer.</p>
           )}
         </div>
       )}
