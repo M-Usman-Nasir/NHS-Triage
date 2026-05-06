@@ -11,6 +11,8 @@ import type { SummaryApiResponse } from '../types/consultation';
 import { PATIENT_PATHWAYS } from './patientPathways';
 import { PATHWAY_QUESTIONS, pathwayClinicalQuestionsForPatient, type PathwayQuestion } from './pathwayQuestions';
 import { getNearbyOptionsForOutcome } from './referralDirectory';
+import { applyMockPathwayScoring } from './mockScoring';
+import { listMockPathwayCodes, validateMockPathwayMaster } from './mockPathwayMaster';
 
 export function isApiMocksEnabled(): boolean {
   return process.env.NEXT_PUBLIC_USE_API_MOCKS !== 'false';
@@ -18,6 +20,7 @@ export function isApiMocksEnabled(): boolean {
 
 const mockSummaryById = new Map<string, SummaryApiResponse>();
 const MOCK_SUMMARY_STORAGE_KEY = 'mock-summary-by-id-v1';
+const MOCK_MASTER_VALIDATION = validateMockPathwayMaster();
 
 function getStoredMockSummaryMap(): Record<string, SummaryApiResponse> {
   if (typeof window === 'undefined') return {};
@@ -154,18 +157,79 @@ function mockStructuredDecision(outcome: string, outcomeLabel: string, outcomeRe
   };
 }
 
-function mockOutcomeFromAnswers(answers: Record<string, unknown>): 'self_care' | 'pharmacy' | 'gp' | 'urgent_care' | 'emergency_999' {
-  const values = Object.values(answers);
+function mockOutcomeFromAnswers(
+  pathwayCode: string,
+  answers: Record<string, unknown>,
+  patient: { age: number; gender: string },
+): {
+  outcome: 'self_care' | 'pharmacy' | 'gp' | 'urgent_care' | 'emergency_999';
+  scoreBreakdown: NonNullable<SummaryApiResponse['scoreBreakdown']>;
+} {
   const hasTrue = (key: string) => answers[key] === true;
-  const hasEmergencySignal =
-    hasTrue('q3') && hasTrue('q4') ||
-    hasTrue('q6') ||
-    values.some((v) => typeof v === 'string' && /breath|chest pain|collapse/i.test(v));
-  if (hasEmergencySignal) return 'emergency_999';
-  if (hasTrue('q5') || hasTrue('q7')) return 'urgent_care';
-  if (hasTrue('q8')) return 'gp';
-  if (values.some((v) => typeof v === 'string' && /mild|improving/i.test(v))) return 'self_care';
-  return 'pharmacy';
+  const scored = applyMockPathwayScoring(pathwayCode, answers);
+  const ctx = scored.context;
+  const age = Number.isFinite(Number(patient.age)) ? Number(patient.age) : -1;
+  const gender = typeof patient.gender === 'string' ? patient.gender : '';
+
+  if (pathwayCode === 'uti') {
+    if (hasTrue('q11') && hasTrue('q12')) return { outcome: 'urgent_care', scoreBreakdown: scored.scoreBreakdown };
+    if (hasTrue('q13')) return { outcome: 'urgent_care', scoreBreakdown: scored.scoreBreakdown };
+    if (gender !== 'Female' || age < 16 || age > 64 || hasTrue('q7') || hasTrue('q8') || hasTrue('q9') || hasTrue('q10') || hasTrue('q6')) {
+      return { outcome: 'gp', scoreBreakdown: scored.scoreBreakdown };
+    }
+    const lowerUtiPattern = hasTrue('q2') && (hasTrue('q3') || hasTrue('q4') || hasTrue('q5'));
+    return { outcome: lowerUtiPattern ? 'pharmacy' : 'self_care', scoreBreakdown: scored.scoreBreakdown };
+  }
+
+  if (pathwayCode === 'sore_throat') {
+    if (hasTrue('q3')) return { outcome: 'emergency_999', scoreBreakdown: scored.scoreBreakdown };
+    if (hasTrue('q10') && hasTrue('q4')) return { outcome: 'urgent_care', scoreBreakdown: scored.scoreBreakdown };
+    if (age < 5 || hasTrue('q8') || hasTrue('q9') || hasTrue('q10')) return { outcome: 'gp', scoreBreakdown: scored.scoreBreakdown };
+    const feverPain = Number.isFinite(Number(ctx.feverPainScore)) ? Number(ctx.feverPainScore) : 0;
+    if (feverPain >= 4) return { outcome: 'gp', scoreBreakdown: scored.scoreBreakdown };
+    if (feverPain >= 2) return { outcome: 'pharmacy', scoreBreakdown: scored.scoreBreakdown };
+    return { outcome: 'self_care', scoreBreakdown: scored.scoreBreakdown };
+  }
+
+  if (pathwayCode === 'sinusitis') {
+    if (hasTrue('q6') || hasTrue('q7')) return { outcome: 'emergency_999', scoreBreakdown: scored.scoreBreakdown };
+    if (hasTrue('q4') && hasTrue('q9')) return { outcome: 'urgent_care', scoreBreakdown: scored.scoreBreakdown };
+    if (age < 12 || answers.q1 === 'More than 12 weeks' || answers.q8 === 'Yes') return { outcome: 'gp', scoreBreakdown: scored.scoreBreakdown };
+    if (answers.q1 === 'Less than 10 days') return { outcome: 'self_care', scoreBreakdown: scored.scoreBreakdown };
+    return { outcome: 'pharmacy', scoreBreakdown: scored.scoreBreakdown };
+  }
+
+  if (pathwayCode === 'otitis_media') {
+    if (hasTrue('q6') || hasTrue('q7')) return { outcome: 'emergency_999', scoreBreakdown: scored.scoreBreakdown };
+    if (hasTrue('q5') || hasTrue('q8') || hasTrue('q9')) return { outcome: 'urgent_care', scoreBreakdown: scored.scoreBreakdown };
+    if (age < 1 || age > 17) return { outcome: 'gp', scoreBreakdown: scored.scoreBreakdown };
+    return { outcome: hasTrue('q2') && (hasTrue('q3') || hasTrue('q4') || hasTrue('q10')) ? 'pharmacy' : 'self_care', scoreBreakdown: scored.scoreBreakdown };
+  }
+
+  if (pathwayCode === 'insect_bites') {
+    if (hasTrue('q6') || hasTrue('q5') || hasTrue('q8')) return { outcome: 'emergency_999', scoreBreakdown: scored.scoreBreakdown };
+    if (hasTrue('q4') && hasTrue('q3')) return { outcome: 'urgent_care', scoreBreakdown: scored.scoreBreakdown };
+    if (age < 1 || hasTrue('q7') === false || hasTrue('q3') || hasTrue('q4')) return { outcome: 'gp', scoreBreakdown: scored.scoreBreakdown };
+    return { outcome: hasTrue('q2') ? 'pharmacy' : 'self_care', scoreBreakdown: scored.scoreBreakdown };
+  }
+
+  if (pathwayCode === 'impetigo') {
+    if (hasTrue('q5') && hasTrue('q6')) return { outcome: 'urgent_care', scoreBreakdown: scored.scoreBreakdown };
+    if (hasTrue('q5')) return { outcome: 'urgent_care', scoreBreakdown: scored.scoreBreakdown };
+    const widespread = Array.isArray(answers.q2) && (answers.q2 as string[]).includes('Widespread across multiple areas');
+    const lesionClusterCount = Number.isFinite(Number(ctx.lesionClusterCount)) ? Number(ctx.lesionClusterCount) : 0;
+    if (hasTrue('q4') || hasTrue('q6') || hasTrue('q7') || lesionClusterCount > 4 || widespread) return { outcome: 'gp', scoreBreakdown: scored.scoreBreakdown };
+    return { outcome: hasTrue('q3') ? 'pharmacy' : 'self_care', scoreBreakdown: scored.scoreBreakdown };
+  }
+
+  if (pathwayCode === 'shingles') {
+    if (hasTrue('q5') && hasTrue('q6')) return { outcome: 'emergency_999', scoreBreakdown: scored.scoreBreakdown };
+    if (hasTrue('q5') || hasTrue('q6') || hasTrue('q7') || hasTrue('q8')) return { outcome: 'urgent_care', scoreBreakdown: scored.scoreBreakdown };
+    if (age < 18 || answers.q1 === 'More than 7 days ago' || answers.q2 === false) return { outcome: 'gp', scoreBreakdown: scored.scoreBreakdown };
+    return { outcome: 'pharmacy', scoreBreakdown: scored.scoreBreakdown };
+  }
+
+  return { outcome: 'pharmacy', scoreBreakdown: scored.scoreBreakdown };
 }
 
 function outcomeLabelFromCode(outcome: string): string {
@@ -177,12 +241,12 @@ function outcomeLabelFromCode(outcome: string): string {
   return 'Clinical Recommendation';
 }
 
-function mockOutcomeReason(outcome: string): string {
-  if (outcome === 'self_care') return 'Mock decision: symptoms appear mild and suitable for home care with safety-net advice.';
-  if (outcome === 'pharmacy') return 'Mock decision: symptoms are suitable for pharmacy-first assessment and treatment advice.';
-  if (outcome === 'gp') return 'Mock decision: GP assessment is preferred for this symptom profile.';
-  if (outcome === 'urgent_care') return 'Mock decision: same-day urgent clinical review is recommended.';
-  return 'Mock decision: high-risk signal detected; emergency response is recommended.';
+function mockOutcomeReason(pathwayCode: string, outcome: string): string {
+  if (outcome === 'self_care') return `Demo ${pathwayCode}: current answers are suitable for self-care with safety-net advice.`;
+  if (outcome === 'pharmacy') return `Demo ${pathwayCode}: answers suggest pharmacy-first assessment is appropriate.`;
+  if (outcome === 'gp') return `Demo ${pathwayCode}: exclusion or complexity criteria indicate GP review is safer.`;
+  if (outcome === 'urgent_care') return `Demo ${pathwayCode}: warning symptoms indicate urgent same-day assessment.`;
+  return `Demo ${pathwayCode}: emergency red-flag pattern detected; call 999 immediately.`;
 }
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -281,11 +345,14 @@ function buildMockSummary(
 ): SummaryApiResponse {
   const meta = PATIENT_PATHWAYS.find((p) => p.code === pathwayCode);
   const pathwayLabel = meta?.fullLabel ?? pathwayCode;
-  const outcome = mockOutcomeFromAnswers(answers);
+  const triage = mockOutcomeFromAnswers(pathwayCode, answers, patient);
+  const outcome = triage.outcome;
   const outcomeLabel = outcomeLabelFromCode(outcome);
-  const outcomeReason = mockOutcomeReason(outcome);
+  const outcomeReason = mockOutcomeReason(pathwayCode, outcome);
   const structured = mockStructuredDecision(outcome, outcomeLabel, outcomeReason);
   const nearbyOptions = getNearbyOptionsForOutcome(outcome);
+  const redFlagTriggered = outcome === 'urgent_care' || outcome === 'emergency_999';
+  const pharmacyEligible = outcome === 'pharmacy';
   return {
     id,
     createdAt: new Date().toISOString(),
@@ -294,25 +361,29 @@ function buildMockSummary(
     pathwayLabel,
     symptoms,
     answers,
-    redFlagTriggered: false,
-    redFlagReasons: [],
-    pharmacyEligible: true,
+    redFlagTriggered,
+    redFlagReasons: redFlagTriggered
+      ? [{ code: `MOCK_${outcome.toUpperCase()}`, description: 'Mock safety escalation', message: outcomeReason }]
+      : [],
+    pharmacyEligible,
     outcome,
     outcomeLabel,
     outcomeReason,
     decision: structured.decision,
     reasoning: structured.reasoning,
     referralRecommendation: structured.referralRecommendation,
+    scoreBreakdown: triage.scoreBreakdown,
+    pharmacistNotes: [],
     nearbyOptions,
     summaryText: `${patient.fullName} (${patient.gender}, ${patient.age}) — ${pathwayLabel}. Mock consultation (API mocks).`,
     pathwayPatientDisclaimer:
-      'Mock mode: generic care-navigation disclaimer — run the backend for pathway-specific CDS lines from clinical JSON.',
+      'Demo mode: care-navigation only. Connect backend clinical pathways for final CDS wording and governance content.',
     safetyNetAdvice:
-      'Mock mode only: if you feel worse or develop new symptoms, use NHS 111 or seek appropriate care immediately.',
+      'Demo mode safety net: if symptoms worsen or new severe symptoms appear, use NHS 111 or emergency services as appropriate.',
     pharmacyTreatmentOptions: ['(Mock) Discuss treatment options with a pharmacist.', '(Mock) Not a real prescription.'],
     selfCareAdvice: null,
     patientExplanation:
-      'This screen uses mock data so the frontend works without the API. Clinical outcomes are not calculated.',
+      'This screen uses pathway-aware demo data so triage cards, severity badges, and referral banners can be validated without a backend.',
     regulatoryContext: {
       intendedPurpose: 'Frontend development mock — not for patient care or clinical decisions.',
       mhraSamDConsiderations: {
@@ -333,6 +404,9 @@ function buildMockSummary(
  */
 export async function tryMockApiResponse(input: RequestInfo | URL, init?: RequestInit): Promise<Response | null> {
   if (!isApiMocksEnabled()) return null;
+  if (!MOCK_MASTER_VALIDATION.ok) {
+    console.warn('[apiMocks] Mock pathway master validation warning:', MOCK_MASTER_VALIDATION.errors.join(' | '));
+  }
 
   const u = parseUrl(input);
   if (!u) return null;
@@ -345,7 +419,7 @@ export async function tryMockApiResponse(input: RequestInfo | URL, init?: Reques
     const gender = typeof u.searchParams.get('gender') === 'string' ? u.searchParams.get('gender')! : '';
     const payload = definitionsPayload(pathwayCode, gender);
     if (!payload) {
-      return jsonResponse({ error: `Unknown pathway: "${pathwayCode}".`, availablePathways: Object.keys(PATHWAY_QUESTIONS) }, 400);
+      return jsonResponse({ error: `Unknown pathway: "${pathwayCode}".`, availablePathways: listMockPathwayCodes() }, 400);
     }
     return jsonResponse(payload);
   }
@@ -359,7 +433,7 @@ export async function tryMockApiResponse(input: RequestInfo | URL, init?: Reques
     const currentQuestionId: string | null =
       typeof rawCurrent === 'string' ? rawCurrent : rawCurrent === null ? null : null;
     if (!pathwayCode || !PATHWAY_QUESTIONS[pathwayCode]) {
-      return jsonResponse({ error: 'pathwayCode is required or unknown.', availablePathways: Object.keys(PATHWAY_QUESTIONS) }, 400);
+      return jsonResponse({ error: 'pathwayCode is required or unknown.', availablePathways: listMockPathwayCodes() }, 400);
     }
     const out = questionNextPayload(pathwayCode, currentQuestionId, gender);
     return jsonResponse(out);
@@ -397,6 +471,8 @@ export async function tryMockApiResponse(input: RequestInfo | URL, init?: Reques
         decision: summary.decision,
         reasoning: summary.reasoning,
         referralRecommendation: summary.referralRecommendation,
+        scoreBreakdown: summary.scoreBreakdown,
+        pharmacistNotes: summary.pharmacistNotes,
         nearbyOptions: summary.nearbyOptions,
         redFlagTriggered: summary.redFlagTriggered,
         redFlags: [],
@@ -410,6 +486,75 @@ export async function tryMockApiResponse(input: RequestInfo | URL, init?: Reques
       },
       201,
     );
+  }
+
+  if (method === 'GET' && /^\/api\/summary\/[^/]+\/pdf$/.test(path)) {
+    const id = decodeURIComponent(path.replace(/^\/api\/summary\//, '').replace(/\/pdf$/, '') || '');
+    const summary = mockSummaryById.get(id) || loadPersistedMockSummary(id);
+    if (!summary) {
+      return jsonResponse({ error: `No consultation summary found for ID: ${id}` }, 404);
+    }
+    const pseudoPdf = `%PDF-1.1
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R >>
+endobj
+4 0 obj
+<< /Length 140 >>
+stream
+BT /F1 12 Tf 50 740 Td (Aegis Health AI Mock Referral Summary) Tj T* (${summary.pathwayLabel}) Tj T* (${summary.outcomeLabel}) Tj ET
+endstream
+endobj
+trailer
+<< /Root 1 0 R >>
+%%EOF`;
+    return new Response(pseudoPdf, {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="consultation-summary-${id}.pdf"`,
+      },
+    });
+  }
+
+  if (method === 'GET' && /^\/api\/summary\/[^/]+\/notes$/.test(path)) {
+    const id = decodeURIComponent(path.replace(/^\/api\/summary\//, '').replace(/\/notes$/, '') || '');
+    const summary = mockSummaryById.get(id) || loadPersistedMockSummary(id);
+    if (!summary) {
+      return jsonResponse({ error: `No consultation summary found for ID: ${id}` }, 404);
+    }
+    return jsonResponse({ consultationId: id, notes: summary.pharmacistNotes || [] });
+  }
+
+  if (method === 'POST' && /^\/api\/summary\/[^/]+\/notes$/.test(path)) {
+    const id = decodeURIComponent(path.replace(/^\/api\/summary\//, '').replace(/\/notes$/, '') || '');
+    const summary = mockSummaryById.get(id) || loadPersistedMockSummary(id);
+    if (!summary) {
+      return jsonResponse({ error: `No consultation summary found for ID: ${id}` }, 404);
+    }
+    const body = readJsonBody(init);
+    const pharmacistId = typeof body.pharmacist_id === 'string' ? body.pharmacist_id : '';
+    const noteText = typeof body.note === 'string' ? body.note.trim() : '';
+    if (!pharmacistId || !noteText) {
+      return jsonResponse({ error: 'pharmacist_id and note are required.' }, 400);
+    }
+    const created = {
+      id: `note_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      pharmacistId,
+      note: noteText,
+      createdAt: new Date().toISOString(),
+      updatedAt: null,
+    };
+    const nextNotes = [...(summary.pharmacistNotes || []), created];
+    const nextSummary = { ...summary, pharmacistNotes: nextNotes };
+    mockSummaryById.set(id, nextSummary);
+    persistMockSummary(nextSummary);
+    return jsonResponse({ success: true, note: created, notes: nextNotes }, 201);
   }
 
   if (method === 'GET' && path.startsWith('/api/summary/')) {
@@ -444,6 +589,7 @@ export async function tryMockApiResponse(input: RequestInfo | URL, init?: Reques
         nearbyOptions: getNearbyOptionsForOutcome('pharmacy'),
         summaryText: 'Mock summary (id was not created in this browser session). Enable flow from consultation with mocks on.',
         patient: { fullName: 'Demo patient', age: 33, gender: 'Female' },
+        pharmacistNotes: [],
       } satisfies SummaryApiResponse,
       200,
     );

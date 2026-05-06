@@ -12,13 +12,17 @@ describe('consultation stability and explainability contract', () => {
         answers: {
           q1: '1–3 days',
           q2: false,
-          q3: false,
-          q4: false,
+          q3: true,
+          q4: true,
           q5: false,
           q6: false,
           q7: false,
           q8: false,
-          q9: 'No known allergies',
+          q9: false,
+          q10: false,
+          q11: false,
+          q12: false,
+          q13: false,
         },
         patient: { fullName: 'Test User', age: 30, gender: 'Female' },
         symptoms: ['painful urination'],
@@ -45,14 +49,18 @@ describe('consultation stability and explainability contract', () => {
         pathwayCode: 'uti',
         answers: {
           q1: 'Less than 24 hours',
-          q2: false,
-          q3: false,
-          q4: false,
+          q2: true,
+          q3: true,
+          q4: true,
           q5: false,
           q6: false,
           q7: false,
           q8: false,
-          q9: 'None',
+          q9: false,
+          q10: false,
+          q11: false,
+          q12: false,
+          q13: false,
         },
         patient: { fullName: 'Second User', age: 28, gender: 'Female' },
         symptoms: ['frequent urination'],
@@ -83,14 +91,18 @@ describe('consultation stability and explainability contract', () => {
         pathwayCode: 'uti',
         answers: {
           q1: '1–3 days',
-          q2: false,
-          q3: false,
-          q4: false,
+          q2: true,
+          q3: true,
+          q4: true,
           q5: false,
           q6: false,
           q7: false,
           q8: false,
-          q9: 'No allergies',
+          q9: false,
+          q10: false,
+          q11: false,
+          q12: false,
+          q13: false,
         },
         patient: { fullName: 'Override User', age: 34, gender: 'Female' },
         symptoms: ['painful urination'],
@@ -125,5 +137,183 @@ describe('consultation stability and explainability contract', () => {
       source: 'pharmacist_override',
     });
     expect(typeof override.body.summary.explanation.reason).toBe('string');
+  });
+
+  it('UTI routes to GP when recurrent UTI exclusion is present', async () => {
+    const res = await request(app)
+      .post('/api/consultation')
+      .send({
+        pathwayCode: 'uti',
+        answers: {
+          q1: '1–3 days',
+          q2: true,
+          q3: true,
+          q4: false,
+          q5: false,
+          q6: false,
+          q7: false,
+          q8: false,
+          q9: false,
+          q10: true,
+          q11: false,
+          q12: false,
+          q13: false,
+        },
+        patient: { fullName: 'UTI Exclusion', age: 26, gender: 'Female' },
+        symptoms: ['urinary urgency'],
+      });
+
+    expect(res.statusCode).toBe(201);
+    expect(res.body.outcome).toBe('gp');
+  });
+
+  it('Sore throat high FeverPAIN profile routes to GP', async () => {
+    const res = await request(app)
+      .post('/api/consultation')
+      .send({
+        pathwayCode: 'sore_throat',
+        answers: {
+          q1: 'Less than 3 days',
+          q2: true,
+          q3: false,
+          q4: true,
+          q5: true,
+          q6: true,
+          q7: false,
+          q8: false,
+          q9: false,
+          q10: false,
+        },
+        patient: { fullName: 'Sore Throat High Score', age: 22, gender: 'Female' },
+        symptoms: ['sore throat'],
+      });
+
+    expect(res.statusCode).toBe(201);
+    expect(res.body.outcome).toBe('gp');
+    expect(Array.isArray(res.body.scoreBreakdown)).toBe(true);
+    const feverPain = res.body.scoreBreakdown.find((entry) => entry.outputKey === 'feverPainScore');
+    expect(feverPain).toBeDefined();
+    expect(feverPain.score).toBeGreaterThanOrEqual(4);
+  });
+
+  it('Sinusitis under 10 days routes to self-care', async () => {
+    const res = await request(app)
+      .post('/api/consultation')
+      .send({
+        pathwayCode: 'sinusitis',
+        answers: {
+          q1: 'Less than 10 days',
+          q2: true,
+          q3: true,
+          q4: false,
+          q5: true,
+          q6: false,
+          q7: false,
+          q8: 'No',
+          q9: false,
+        },
+        patient: { fullName: 'Sinus Self Care', age: 33, gender: 'Male' },
+        symptoms: ['blocked nose'],
+      });
+
+    expect(res.statusCode).toBe(201);
+    expect(res.body.outcome).toBe('self_care');
+  });
+
+  it('Otitis media adult routes to GP', async () => {
+    const res = await request(app)
+      .post('/api/consultation')
+      .send({
+        pathwayCode: 'otitis_media',
+        answers: {
+          q1: '1–3 days',
+          q2: true,
+          q3: true,
+          q4: true,
+          q5: false,
+          q6: false,
+          q7: false,
+          q8: false,
+          q9: false,
+          q10: true,
+        },
+        patient: { fullName: 'Adult Otitis', age: 28, gender: 'Female' },
+        symptoms: ['ear pain'],
+      });
+
+    expect(res.statusCode).toBe(201);
+    expect(res.body.outcome).toBe('gp');
+  });
+
+  it('Insect bite without 48-hour worsening routes to GP', async () => {
+    const res = await request(app)
+      .post('/api/consultation')
+      .send({
+        pathwayCode: 'insect_bites',
+        answers: {
+          q1: '1–3 days ago',
+          q2: true,
+          q3: false,
+          q4: false,
+          q5: false,
+          q6: false,
+          q7: false,
+          q8: false,
+        },
+        patient: { fullName: 'Insect Bite No Worsening', age: 19, gender: 'Male' },
+        symptoms: ['bite redness'],
+      });
+
+    expect(res.statusCode).toBe(201);
+    expect(res.body.outcome).toBe('gp');
+  });
+
+  it('Impetigo with more than 4 lesions routes to GP', async () => {
+    const res = await request(app)
+      .post('/api/consultation')
+      .send({
+        pathwayCode: 'impetigo',
+        answers: {
+          q1: '1–3 days',
+          q2: ['Face'],
+          q3: true,
+          q4: false,
+          q5: false,
+          q6: false,
+          q7: false,
+          q8: 'More than 4',
+        },
+        patient: { fullName: 'Impetigo Lesion Count', age: 8, gender: 'Female' },
+        symptoms: ['crusted sores'],
+      });
+
+    expect(res.statusCode).toBe(201);
+    expect(res.body.outcome).toBe('gp');
+    const lesionScore = (res.body.scoreBreakdown || []).find((entry) => entry.outputKey === 'lesionClusterCount');
+    expect(lesionScore).toBeDefined();
+    expect(lesionScore.score).toBe(5);
+  });
+
+  it('Shingles with eye involvement escalates to urgent care', async () => {
+    const res = await request(app)
+      .post('/api/consultation')
+      .send({
+        pathwayCode: 'shingles',
+        answers: {
+          q1: '1–2 days ago',
+          q2: true,
+          q3: 'Around one eye',
+          q4: true,
+          q5: true,
+          q6: false,
+          q7: false,
+          q8: false,
+        },
+        patient: { fullName: 'Shingles Eye Risk', age: 55, gender: 'Male' },
+        symptoms: ['painful rash'],
+      });
+
+    expect(res.statusCode).toBe(201);
+    expect(res.body.outcome).toBe('urgent_care');
   });
 });

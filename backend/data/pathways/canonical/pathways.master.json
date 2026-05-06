@@ -1,0 +1,35 @@
+{
+  "_comment": "Phase 1 canonical registry for runtime NHS pathways. Runtime files must stay in sync with this list.",
+  "version": "phase-1",
+  "runtimeDirectory": "../",
+  "pathways": [
+    {
+      "code": "impetigo",
+      "runtimeFile": "impetigo.json"
+    },
+    {
+      "code": "insect_bites",
+      "runtimeFile": "insect_bites.json"
+    },
+    {
+      "code": "otitis_media",
+      "runtimeFile": "otitis_media.json"
+    },
+    {
+      "code": "shingles",
+      "runtimeFile": "shingles.json"
+    },
+    {
+      "code": "sinusitis",
+      "runtimeFile": "sinusitis.json"
+    },
+    {
+      "code": "sore_throat",
+      "runtimeFile": "sore_throat.json"
+    },
+    {
+      "code": "uti",
+      "runtimeFile": "uti.json"
+    }
+  ]
+}

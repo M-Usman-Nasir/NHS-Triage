@@ -1,60 +1,74 @@
 {
-  "_comment": "Clinical decision pathway for Acute Otitis Media (ear infection). Based on NICE CG60.",
+  "_comment": "Clinical decision pathway for Acute Otitis Media aligned to NHS Pharmacy First pediatric criteria.",
   "pathway": "otitis_media",
   "label": "Acute Otitis Media (Ear Infection)",
   "applicableGenders": ["Male", "Female", "Other"],
   "minimumAge": 1,
-  "maximumAge": null,
+  "maximumAge": 17,
   "questions": [
     {
       "id": "q1",
-      "text": "How long have you had ear pain?",
+      "text": "How long has the ear pain been present?",
       "type": "select",
       "options": ["Less than 3 days", "3–7 days", "More than 7 days"],
       "required": true
     },
     {
       "id": "q2",
-      "text": "Do you have discharge coming from your ear?",
+      "text": "Is the child pulling at the ear or very irritable due to ear discomfort?",
       "type": "boolean",
       "required": true
     },
     {
       "id": "q3",
-      "text": "Do you have a fever (temperature above 38°C)?",
+      "text": "Is there fever (38°C or above)?",
       "type": "boolean",
       "required": true
     },
     {
       "id": "q4",
-      "text": "Do you have dizziness or problems with your balance?",
+      "text": "Is there reduced hearing in the affected ear?",
       "type": "boolean",
-      "required": true,
-      "redFlagHint": true
+      "required": true
     },
     {
       "id": "q5",
-      "text": "Do you have any facial weakness or drooping?",
+      "text": "Do you have neck stiffness?",
       "type": "boolean",
       "required": true,
       "redFlagHint": true
     },
     {
       "id": "q6",
-      "text": "Do you have swelling or redness behind the ear?",
+      "text": "Do you have any facial weakness or drooping?",
       "type": "boolean",
       "required": true,
       "redFlagHint": true
     },
     {
       "id": "q7",
-      "text": "Have you had any recent hearing loss in the affected ear?",
+      "text": "Do you have swelling or redness behind the ear?",
       "type": "boolean",
-      "required": true
+      "required": true,
+      "redFlagHint": true
     },
     {
       "id": "q8",
-      "text": "Do you have a perforated eardrum (diagnosed previously)?",
+      "text": "Do you have severe headache?",
+      "type": "boolean",
+      "required": true,
+      "redFlagHint": true
+    },
+    {
+      "id": "q9",
+      "text": "Has there been ear discharge from a known perforated eardrum?",
+      "type": "boolean",
+      "required": true,
+      "redFlagHint": true
+    },
+    {
+      "id": "q10",
+      "text": "Have symptoms clearly worsened despite 48-72 hours of self-care?",
       "type": "boolean",
       "required": true
     }
@@ -62,38 +76,51 @@
   "redFlags": [
     {
       "code": "RF_OM_001",
-      "condition": "q5 === true",
-      "description": "Facial nerve weakness — possible facial nerve palsy from inner ear infection",
+      "condition": "q6 === true",
+      "description": "Facial weakness with ear symptoms indicates possible serious complication",
       "outcome": "emergency_999",
-      "message": "Facial weakness is an emergency. Call 999 immediately."
+      "message": "Facial weakness with ear infection symptoms needs emergency assessment now."
     },
     {
       "code": "RF_OM_002",
-      "condition": "q6 === true",
-      "description": "Post-auricular swelling/redness — possible mastoiditis",
+      "condition": "q7 === true",
+      "description": "Post-auricular swelling suggests mastoiditis",
       "outcome": "emergency_999",
-      "message": "Swelling behind the ear may indicate mastoiditis. Go to A&E immediately."
+      "message": "Swelling behind the ear can indicate mastoiditis. Seek emergency care immediately."
     },
     {
       "code": "RF_OM_003",
-      "condition": "q4 === true && q3 === true",
-      "description": "Dizziness with fever — possible inner ear infection or labyrinthitis",
+      "condition": "q5 === true || q8 === true",
+      "description": "Neck stiffness or severe headache with ear symptoms",
       "outcome": "urgent_care",
-      "message": "Dizziness and fever together need urgent medical assessment today."
+      "message": "Neck stiffness or severe headache needs urgent same-day review."
+    },
+    {
+      "code": "RF_OM_004",
+      "condition": "q9 === true",
+      "description": "Perforated eardrum with discharge requires urgent clinician assessment",
+      "outcome": "urgent_care",
+      "message": "Ear discharge from a known perforation should be assessed urgently."
     }
   ],
   "eligibilityRules": [
     {
       "id": "elig_1",
-      "condition": "q8 === true && q2 === true",
+      "condition": "age < 1 || age > 17",
       "eligible": false,
-      "reason": "Ear discharge with known perforated eardrum — requires GP assessment before treatment"
+      "reason": "Acute otitis media pharmacy pathway is restricted to ages 1-17"
     },
     {
       "id": "elig_2",
-      "condition": "q1 === 'Less than 3 days' && q3 === false",
+      "condition": "q5 === true || q6 === true || q7 === true || q8 === true || q9 === true",
       "eligible": false,
-      "reason": "Mild symptoms under 3 days without fever — self-care first approach recommended"
+      "reason": "Red-flag or complicated ear infection features require non-pharmacy assessment"
+    },
+    {
+      "id": "elig_3",
+      "condition": "age >= 1 && age <= 17 && q2 === true && (q3 === true || q4 === true || q10 === true) && q5 === false && q6 === false && q7 === false && q8 === false && q9 === false",
+      "eligible": true,
+      "reason": "Meets pediatric acute otitis media Pharmacy First criteria"
     }
   ],
   "outcomeRules": [
@@ -104,28 +131,34 @@
     },
     {
       "priority": 2,
-      "condition": "q1 === 'Less than 3 days' && q3 === false",
-      "outcome": "self_care",
-      "reason": "Mild early-stage ear infection — watchful waiting with self-care"
+      "condition": "age > 17",
+      "outcome": "gp",
+      "reason": "Adults are outside the Acute Otitis Media Pharmacy First pathway"
     },
     {
       "priority": 3,
-      "condition": "pharmacyEligible === false",
-      "outcome": "gp",
-      "reason": "Requires GP assessment"
+      "condition": "pharmacyEligible === true",
+      "outcome": "pharmacy",
+      "reason": "Pediatric AOM criteria met for pharmacy treatment pathway"
     },
     {
       "priority": 4,
-      "condition": "pharmacyEligible === true",
-      "outcome": "pharmacy",
-      "reason": "Acute otitis media eligible for pharmacy-led treatment"
+      "condition": "q2 === false && q3 === false && q4 === false",
+      "outcome": "self_care",
+      "reason": "Symptoms do not currently indicate clear acute otitis media"
+    },
+    {
+      "priority": 5,
+      "condition": "pharmacyEligible === false",
+      "outcome": "gp",
+      "reason": "Outside pharmacy criteria or exclusion factors present"
     }
   ],
-  "selfCareAdvice": "Paracetamol or ibuprofen for pain relief. Warm compress against the ear. Most ear infections resolve within 3 days without antibiotics.",
+  "selfCareAdvice": "Use suitable pain relief and monitor symptoms. If symptoms worsen or do not improve, seek clinical review.",
   "pharmacyTreatmentOptions": [
     "Amoxicillin 500mg three times daily for 5 days",
     "Clarithromycin 500mg twice daily for 5 days (penicillin allergy)"
   ],
-  "safetyNetAdvice": "Return urgently if: swelling behind the ear, facial weakness, dizziness, or if a child becomes very unwell.",
-  "pathwayPatientDisclaimer": "This pathway addresses ear pain and suspected acute otitis media within encoded age rules; otoscopy findings and hearing cannot be confirmed remotely — a clinician or pharmacist must examine when indicated."
+  "safetyNetAdvice": "Seek urgent help for neck stiffness, mastoid swelling, facial weakness, severe headache, or rapidly worsening illness.",
+  "pathwayPatientDisclaimer": "Community pharmacists may assess and treat acute otitis media in eligible children and young people (age 1-17) under NHS Pharmacy First. Complicated features require urgent clinician assessment."
 }

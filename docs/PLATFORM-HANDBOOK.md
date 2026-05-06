@@ -194,6 +194,18 @@ Roles: **CL** Clinical Lead, **SI** Safety Officer, **PO** Product Owner, **EL**
 | Admin (settings) | `/admin_crm/settings` |
 | CRM staff | `/crm/*` |
 
+### 6.4 At-a-glance criteria (QA/dev)
+
+| Condition | Age | Key rule |
+|-----------|-----|----------|
+| UTI | Female 16-64 | Lower uncomplicated only |
+| Sore Throat | 5+ | Use FeverPAIN |
+| Sinusitis | 12+ | Symptoms >= 10 days |
+| Otitis Media | 1-17 | Children only |
+| Infected Bite | 1+ | Worse after 48h |
+| Impetigo | 1+ | Localized only |
+| Shingles | 18+ | Rash within 7 days |
+
 ---
 
 ## 7. Architecture (condensed)
@@ -237,19 +249,25 @@ Use this table in **planning meetings** and tick rows in git issues when scope c
 | Capability | Status | Evidence / location | Gap / next step |
 |------------|--------|---------------------|-----------------|
 | Red-flag **first** in engine | **Done** | `decisionEngine.js` → `redFlagDetector.js` | More integration tests per pathway |
-| Pharmacy eligibility | **Done** | `pharmacyEligibility.js` | Signed clinical matrix + edge-case tests (E-05) |
+| Compliance guardrails regression (six “Never” cases) | **Done** | `backend/__tests__/compliance.guardrails.test.js` | Keep in CI and extend when pathway criteria change |
+| Pharmacy eligibility | **Done** | `pharmacyEligibility.js` + `backend/data/pathways/*.json` | Keep local commissioning deltas versioned and clinically signed (E-05) |
 | Outcome rules from JSON | **Done** | `backend/data/pathways/*.json` | DB-backed version + publish workflow (E-04, E-07) |
+| Dynamic scoring modules (config-driven) | **Done** | `backend/engine/scoring/`, pathway `scoring.modules` config (e.g. `sore_throat.json`, `impetigo.json`) | Add further scales as named modules and cover thresholds in regression tests |
 | Summary text in triage result | **Done** | `decisionEngine.js` | Versioned summary schema + PDF (E-06) |
 | POST consultation + triage | **Done** | `routes/consultation.js` | Persist to PostgreSQL; ruleset hash on row |
 | GET consultation by ID | **Done** | In-memory `Map` | Same store as summary / single source |
 | GET consultation list | **Done** | Pagination query params | Auth |
 | GET pathways list | **Done** | `consultation.js` `/pathways/list` | — |
-| GET summary by ID | **Done** | `summary.js` + `lib/summaryMapper.js` read **`store/consultationStore`** (seeded mocks + live POST) | PDF export still 501 |
+| GET summary by ID | **Done** | `summary.js` + `lib/summaryMapper.js` read **`store/consultationStore`** (seeded mocks + live POST) | Keep summary + PDF template + notes payloads in sync |
+| Summary PDF export | **Done** | `GET /api/summary/:id/pdf`, `backend/lib/pdfSummary.js` | Keep PDF template aligned with structured report fields |
+| Pharmacist notes on consultations | **Done** | `GET/POST/PUT /api/summary/:id/notes*`, summary mapper `pharmacistNotes` | Add role-based auth before production |
+| NHS integration scaffold (feature-flagged) | **Done (scaffold)** | `GET /api/nhs/status`, `POST /api/nhs/connect`, `backend/lib/nhsIntegrationService.js` | Replace stub with authenticated NHS connector in enabled environments |
 | Admin analytics / pathways / rules | **Demo** | `routes/admin.js` | Auth + real DB |
 | CRM APIs + pages | **Demo** | `routes/crm.js`, `frontend/pages/crm/*` | Real DB; remove mock-only gaps |
 | Patient landing + consent | **Done** | `pages/index.tsx` | Links to `/privacy`, `/terms`, `/accessibility` |
-| Consultation UI | **Done** | `pages/consultation.tsx`, `GET/POST` consultation definitions + `question/next`, `lib/pathwayQuestions.ts` (fallback) | **Server-driven branching** (E-03): `questionGraph` in pathway JSON (e.g. sinusitis, shingles); offline fallback uses linear `PATHWAY_QUESTIONS` |
+| Consultation UI | **Done** | `pages/consultation.tsx`, `GET/POST` consultation definitions + `question/next`, `lib/pathwayQuestions.ts` (fallback) | Keep fallback question text synchronized with NHS-aligned pathway JSON to avoid offline/online criteria drift |
 | Result UI | **Done** | `pages/result.tsx`, `lib/mapSummaryToResult.ts` | Live summary vs `?demo=true`; errors do not fall back to mock silently |
+| Safety-first triage UX | **Done** | Consultation stepper, red-flag warning treatment, severity badges, result emergency banners, referral summary layout | Keep visual severity mapping aligned to outcome codes and referral urgency semantics |
 | Stability: no broken flows + all paths tested | **Partial** | Core patient flow implemented; selective tests | Define full path matrix (happy/alternate/error), add CI regression suite, enforce release gate |
 | Explainability: every decision has reason | **Done (core)** | `decisionEngine` response includes `outcomeReason`; rendered in `pages/result.tsx` | Add automated contract check that reason is always present (including fallback/error branches) |
 | Structured output report (symptoms/answers/decision/reasoning/timestamp) | **Partial** | Consultation + summary payloads include most fields (`routes/consultation.js`, `routes/summary.js`, `summaryMapper`) | Formalize versioned report schema and enforce required fields in contract validation |
@@ -377,6 +395,31 @@ The following items are intentionally tracked for later phases and are **not imp
 | Video / telehealth | **Not implemented** | Treat as a separate clinical workflow module (scheduling, consent, identity, recording policy, escalation and handoff rules). |
 | Advanced analytics | **Partially implemented (demo analytics only)** | Expand from current demo dashboards to governed analytics with production data quality controls, role-based access, and IG-approved reporting definitions. |
 
+### 9.5 Production go-live tracker (NHS live readiness)
+
+Use this tracker for final release governance.  
+Status key: `not_started` / `in_progress` / `blocked` / `done`.
+
+| Workstream | Status | Owner | Evidence | Blocking | Target date |
+|------------|--------|-------|----------|----------|-------------|
+| NHS auth integration (OAuth/OpenID end-to-end) | not_started | _TBD_ | PR + auth flow test evidence + callback logs | **Blocking** | _TBD_ |
+| NHS connector implementation (real APIs, retries/timeouts) | not_started | _TBD_ | Integration tests + sandbox traces + error handling report | **Blocking** | _TBD_ |
+| Secrets/key management (secure store + rotation) | not_started | _TBD_ | Secrets policy + rotation runbook + deployment config review | **Blocking** | _TBD_ |
+| Identity verification and patient linking workflow | not_started | _TBD_ | UAT scripts + mismatch handling tests + process sign-off | **Blocking** | _TBD_ |
+| Backend auth + RBAC on sensitive routes | not_started | _TBD_ | Endpoint access tests + middleware coverage report | **Blocking** | _TBD_ |
+| Audit immutability, retention, and monitoring | in_progress | _TBD_ | Audit schema + retention policy + alert dashboard screenshots | **Blocking** | _TBD_ |
+| Clinical safety pack (DCB0129/DTAC artefacts + CSO sign-off) | not_started | _TBD_ | Safety case, hazard log, CSO approval record | **Blocking** | _TBD_ |
+| GDPR production workflow (verified SAR/erasure flow) | not_started | _TBD_ | DPO process doc + identity verification steps + SLA metrics | **Blocking** | _TBD_ |
+| Security hardening (rate limits, headers, CSRF model, CORS hardening) | in_progress | _TBD_ | Security test report + config snapshots | **Blocking** | _TBD_ |
+| Durable persistence for consultations/notes/audit (no in-memory dependency) | in_progress | _TBD_ | DB migration evidence + failover test logs | **Blocking** | _TBD_ |
+| PDF handoff template clinical sign-off | in_progress | _TBD_ | Approved template + sample output pack | Non-blocking | _TBD_ |
+| SRE readiness (SLOs, alerts, runbooks, DR drill) | not_started | _TBD_ | On-call runbook + DR drill report + SLO dashboard | **Blocking** | _TBD_ |
+| Environment segregation and prod guardrails | not_started | _TBD_ | Environment checklist + fail-fast config tests | **Blocking** | _TBD_ |
+| End-to-end assurance tests (NHS flow, token expiry, outage fallback) | in_progress | _TBD_ | CI test suite links + test matrix | **Blocking** | _TBD_ |
+| UAT + final clinical acceptance | not_started | _TBD_ | UAT report + signed go/no-go decision | **Blocking** | _TBD_ |
+
+**Go-live gate:** production NHS live is permitted only when all **Blocking** rows are marked `done` with attached evidence links.
+
 ---
 
 ## 10. Repository map
@@ -392,6 +435,7 @@ The following items are intentionally tracked for later phases and are **not imp
 | `frontend/pages/crm/` | CRM |
 | `frontend/lib/triageOutcomeIcons.tsx` | Outcome icons |
 | `frontend/lib/api.ts`, `frontend/.env.example` | `NEXT_PUBLIC_API_URL` for patient + CRM fetches |
+| `frontend/lib/mockPathwayMaster.ts`, `frontend/lib/mockScoring.ts`, `frontend/lib/apiMocks.ts` | Frontend mock Phase 1/2 contract source (master pathway map + config-driven scoring in demo mode) |
 | `frontend/schemas/` | JSON Schema drafts for consultation POST + summary GET |
 | `frontend/types/consultation.ts` | Shared TS types for payloads and summary |
 | `backend/engine/*.js` | Triage engine |
@@ -403,6 +447,9 @@ The following items are intentionally tracked for later phases and are **not imp
 | `backend/routes/gdpr.js` | Subject access export + erasure request (demo) |
 | `database/migrations/*.sql` | Versioned DDL |
 | `backend/data/pathways/` | Rule data |
+| `backend/data/pathways/canonical/pathways.master.json` | Canonical runtime pathway registry (Phase 1 source-of-truth list) |
+| `backend/data/pathways/pathway.schema.json` | Pathway schema contract used by backend validation tests |
+| `backend/__tests__/pathway.schema.validation.test.js` | Contract test: schema validation + canonical/runtime drift detection |
 | `database/schema.sql` | Target persistence model |
 
 ---
@@ -422,6 +469,8 @@ The following items are intentionally tracked for later phases and are **not imp
 | 1.8 | 2026-04-27 | Added §9.4 future capability backlog (AI diagnosis, ML, NHS integrations, telehealth, advanced analytics) |
 | 1.9 | 2026-04-27 | Added mandatory system requirements for stability, explainability, and structured output; added status rows in §9 |
 | 2.0 | 2026-04-27 | Added strict MVP architecture constraint: standalone-only, no external integrations, and mandatory module list in §2.5 |
+| 2.1 | 2026-05-05 | §9 implementation status wording updated to reflect NHS Pharmacy First pathway alignment and fallback-question parity requirements |
+| 2.2 | 2026-05-05 | Added Phase 1 pathway contract assets: canonical registry, JSON schema, and backend schema drift test |
 
 **Superseded files (removed from repo):** `alignment-and-planning.md`, `milestone-plan.md`, `patient-flow-ui-finalization.md`, `architecture.md`, `user_flows.md`, `TASKS.md`, `MVP_Build.md` (under docs), `ClientQ&A.md` — content merged here or into CLINICAL-GOVERNANCE.
 

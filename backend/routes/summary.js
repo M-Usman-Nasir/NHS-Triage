@@ -13,6 +13,7 @@ const { consultationStore } = require('../store/consultationStore');
 const { recordToSummaryResponse } = require('../lib/summaryMapper');
 const { logAuditEvent } = require('../lib/auditLog');
 const { buildDecisionExplanation } = require('../lib/explanationEngine');
+const { buildSummaryPdfBuffer } = require('../lib/pdfSummary');
 
 const router = express.Router();
 
@@ -59,18 +60,133 @@ router.get('/', async (req, res) => {
 /**
  * GET /api/summary/:id/pdf — must be before /:id
  */
-router.get('/:id/pdf', (req, res) => {
+router.get('/:id/pdf', async (req, res) => {
   const { id } = req.params;
   const record = consultationStore.get(id);
   if (!record) {
     return res.status(404).json({ error: `Consultation not found: ${id}` });
   }
 
-  return res.status(501).json({
-    message: 'PDF generation is not yet implemented.',
-    consultationId: id,
-    hint: 'This endpoint will return a downloadable PDF of the consultation summary in a future release.',
+  await logAuditEvent({
+    eventType: 'summary_pdf_requested',
+    requestId: req.requestId,
+    entityType: 'consultation',
+    entityId: id,
+    ip: clientIp(req),
+    payload: { pathwayCode: record.pathwayCode, outcome: record.outcome },
   });
+
+  try {
+    const summary = recordToSummaryResponse(record);
+    const pdfBuffer = await buildSummaryPdfBuffer(summary);
+    await logAuditEvent({
+      eventType: 'summary_pdf_generated',
+      requestId: req.requestId,
+      entityType: 'consultation',
+      entityId: id,
+      ip: clientIp(req),
+      payload: { byteLength: pdfBuffer.length },
+    });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="consultation-summary-${id}.pdf"`);
+    return res.status(200).send(pdfBuffer);
+  } catch (err) {
+    await logAuditEvent({
+      eventType: 'summary_pdf_failed',
+      requestId: req.requestId,
+      entityType: 'consultation',
+      entityId: id,
+      ip: clientIp(req),
+      payload: { error: err.message },
+    });
+    return res.status(500).json({ error: 'Could not generate PDF summary.', detail: err.message });
+  }
+});
+
+router.get('/:id/notes', async (req, res) => {
+  const { id } = req.params;
+  const record = consultationStore.get(id);
+  if (!record) {
+    return res.status(404).json({ error: `No consultation summary found for ID: ${id}` });
+  }
+  const notes = Array.isArray(record.pharmacistNotes) ? record.pharmacistNotes : [];
+  await logAuditEvent({
+    eventType: 'pharmacist_notes_viewed',
+    requestId: req.requestId,
+    entityType: 'consultation',
+    entityId: id,
+    ip: clientIp(req),
+    payload: { noteCount: notes.length },
+  });
+  return res.json({ consultationId: id, notes });
+});
+
+router.post('/:id/notes', async (req, res) => {
+  const { id } = req.params;
+  const { pharmacist_id, note } = req.body || {};
+  if (!pharmacist_id || !note || !String(note).trim()) {
+    return res.status(400).json({ error: 'pharmacist_id and note are required.' });
+  }
+  const record = consultationStore.get(id);
+  if (!record) {
+    return res.status(404).json({ error: `No consultation summary found for ID: ${id}` });
+  }
+  const notes = Array.isArray(record.pharmacistNotes) ? record.pharmacistNotes : [];
+  const created = {
+    id: `note_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    pharmacistId: String(pharmacist_id),
+    note: String(note).trim(),
+    createdAt: new Date().toISOString(),
+    updatedAt: null,
+  };
+  notes.push(created);
+  record.pharmacistNotes = notes;
+  consultationStore.set(id, record);
+  await logAuditEvent({
+    eventType: 'pharmacist_note_added',
+    requestId: req.requestId,
+    entityType: 'consultation_note',
+    entityId: id,
+    userId: String(pharmacist_id),
+    ip: clientIp(req),
+    payload: { noteId: created.id },
+  });
+  return res.status(201).json({ success: true, note: created, notes });
+});
+
+router.put('/:id/notes/:noteId', async (req, res) => {
+  const { id, noteId } = req.params;
+  const { pharmacist_id, note } = req.body || {};
+  if (!pharmacist_id || !note || !String(note).trim()) {
+    return res.status(400).json({ error: 'pharmacist_id and note are required.' });
+  }
+  const record = consultationStore.get(id);
+  if (!record) {
+    return res.status(404).json({ error: `No consultation summary found for ID: ${id}` });
+  }
+  const notes = Array.isArray(record.pharmacistNotes) ? record.pharmacistNotes : [];
+  const idx = notes.findIndex((n) => n.id === noteId);
+  if (idx < 0) {
+    return res.status(404).json({ error: `Note not found: ${noteId}` });
+  }
+  notes[idx] = {
+    ...notes[idx],
+    note: String(note).trim(),
+    updatedAt: new Date().toISOString(),
+    pharmacistId: String(pharmacist_id),
+  };
+  record.pharmacistNotes = notes;
+  consultationStore.set(id, record);
+  await logAuditEvent({
+    eventType: 'pharmacist_note_updated',
+    requestId: req.requestId,
+    entityType: 'consultation_note',
+    entityId: id,
+    userId: String(pharmacist_id),
+    ip: clientIp(req),
+    payload: { noteId },
+  });
+  return res.json({ success: true, note: notes[idx], notes });
 });
 
 /**

@@ -1,6 +1,5 @@
 import Head from 'next/head';
-import Link from 'next/link';
-import { LegalLayout } from '../components/LegalLayout';
+import { LegalLayout } from '../../components/LegalLayout';
 
 export default function AccessibilityPage() {
   return (
@@ -26,19 +25,13 @@ export default function AccessibilityPage() {
           <p>
             Some staff CRM and admin screens are demonstration interfaces and may not yet meet the same standard as the
             patient journey. A formal WCAG audit is tracked as a pre-pilot programme item — see{' '}
-            <code className="rounded bg-muted px-1 py-0.5 text-xs text-foreground">docs/CLINICAL-GOVERNANCE.md</code> §5–6.
+            <code className="rounded bg-muted px-1 py-0.5 text-xs text-foreground">docs/CLINICAL-GOVERNANCE.md</code>.
           </p>
 
           <h2 className="mt-8 text-base">Feedback</h2>
           <p>
             If you cannot use part of this site, contact the organisation operating the deployment. For the open-source
             demo, use repository issues with the label <strong className="text-foreground">accessibility</strong>.
-          </p>
-
-          <p className="mt-10 text-sm">
-            <Link href="/" className="font-medium text-primary underline-offset-4 hover:underline">
-              Return home
-            </Link>
           </p>
         </article>
       </LegalLayout>

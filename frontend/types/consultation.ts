@@ -59,6 +59,28 @@ export interface ReferralRecommendationPayload {
   };
 }
 
+export interface ScoreBreakdownPayload {
+  module: string;
+  outputKey?: string;
+  score?: number;
+  ok: boolean;
+  error?: string | null;
+  factors?: Array<{
+    id: string;
+    matched: boolean;
+    points: number;
+    error?: string;
+  }>;
+}
+
+export interface PharmacistNotePayload {
+  id: string;
+  pharmacistId: string;
+  note: string;
+  createdAt: string;
+  updatedAt?: string | null;
+}
+
 export interface NearbyOptionPayload {
   type: 'self_care' | 'pharmacy' | 'gp' | 'urgent_care' | 'hospital' | 'emergency_999';
   name: string;
@@ -91,6 +113,8 @@ export interface SummaryApiResponse {
   decision?: DecisionPayload;
   reasoning?: ReasoningPayload;
   referralRecommendation?: ReferralRecommendationPayload;
+  scoreBreakdown?: ScoreBreakdownPayload[];
+  pharmacistNotes?: PharmacistNotePayload[];
   nearbyOptions?: NearbyOptionPayload[];
   summaryText: string;
   pathwayPatientDisclaimer?: string | null;
@@ -120,6 +144,8 @@ export interface TriageResultView {
   decision?: DecisionPayload;
   reasoning?: ReasoningPayload;
   referralRecommendation?: ReferralRecommendationPayload;
+  scoreBreakdown?: ScoreBreakdownPayload[];
+  pharmacistNotes?: PharmacistNotePayload[];
   nearbyOptions?: NearbyOptionPayload[];
   redFlagTriggered: boolean;
   redFlags?: Array<{ code: string; description: string; message: string }>;

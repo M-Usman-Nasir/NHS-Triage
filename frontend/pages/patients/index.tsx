@@ -56,7 +56,7 @@ const STEPS: Array<{ step: string; title: string; Icon: LucideIcon }> = [
 const FOOTER_LINKS: Array<{ label: string; href: string; external?: boolean }> = [
   { label: 'Privacy Policy', href: '/privacy' },
   { label: 'Terms of Use', href: '/terms' },
-  { label: 'Accessibility', href: '/accessibility' },
+  { label: 'Accessibility', href: '/patients/accessibility' },
   { label: 'NHS 111 Online', href: 'https://111.nhs.uk/', external: true },
 ];
 

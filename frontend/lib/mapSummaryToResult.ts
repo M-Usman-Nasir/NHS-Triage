@@ -35,6 +35,8 @@ export function mapSummaryToResult(data: SummaryApiResponse): TriageResultView {
     decision: data.decision ?? fallbackDecision,
     reasoning: data.reasoning ?? fallbackReasoning,
     referralRecommendation: data.referralRecommendation ?? fallbackReferral,
+    scoreBreakdown: data.scoreBreakdown ?? undefined,
+    pharmacistNotes: data.pharmacistNotes ?? undefined,
     nearbyOptions: data.nearbyOptions ?? [],
     redFlagTriggered: data.redFlagTriggered,
     redFlags: data.redFlagReasons,

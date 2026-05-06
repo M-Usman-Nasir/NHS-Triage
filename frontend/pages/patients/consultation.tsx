@@ -32,6 +32,8 @@ import { MOCK_DATA_DISCLOSURE } from '../../lib/complianceContent';
 import SafetyPanel from '../../components/SafetyPanel';
 import ClinicalQuestionCard from '../../components/consultation/ClinicalQuestionCard';
 import ConsultationHeader from '../../components/consultation/ConsultationHeader';
+import StatusBadge from '../../components/StatusBadge';
+import { applyMockPathwayScoring } from '../../lib/mockScoring';
 
 interface PatientInfo {
   fullName: string;
@@ -464,6 +466,19 @@ export default function ConsultationPage() {
       : 0;
   const clinicalProgressLabel = `${Math.min(clinicalHistory.length + 1, clinicalProgressMax)}/${clinicalProgressMax}`;
   const headerPathwayText = pathwayCodes.map((code) => PATHWAY_LABELS[code] || code).join(' + ');
+  const branchModeLabel = useServerFlow ? 'NHS Pathway Logic' : 'Offline Fallback Order';
+  const currentSeverity = clinicalQuestion?.redFlagHint
+    ? { label: 'Urgent Safety Check', tone: 'danger' as const }
+    : clinicalQuestion?.required
+      ? { label: 'Clinical Check', tone: 'info' as const }
+      : { label: 'Additional Context', tone: 'neutral' as const };
+  const previewScoring = activePathwayCode ? applyMockPathwayScoring(activePathwayCode, answers as Record<string, unknown>) : null;
+  const previewScoreBadge =
+    wizardStep === 'clinical' && previewScoring && previewScoring.scoreBreakdown.length > 0
+      ? previewScoring.scoreBreakdown
+          .map((item) => `${item.outputKey || item.module}: ${typeof item.score === 'number' ? item.score : '-'}`)
+          .join(' | ')
+      : '';
 
   if (!router.isReady) {
     return (
@@ -542,6 +557,7 @@ export default function ConsultationPage() {
         clinicalProgressLabel={clinicalProgressLabel}
         prefaceProgressPct={prefaceProgressPct}
         clinicalProgressPct={clinicalProgressPct}
+        branchModeLabel={branchModeLabel}
         onGoBack={goBack}
       />
 
@@ -782,10 +798,23 @@ export default function ConsultationPage() {
             <p className="mb-3 inline-flex flex-wrap items-center gap-1.5 rounded-full border border-sky-200/80 bg-white/80 px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-primary shadow-sm backdrop-blur-md sm:text-[11px]">
               <ListChecks className="h-3.5 w-3.5 shrink-0" strokeWidth={2} aria-hidden />
               Clinical pathway ({Math.min(clinicalHistory.length + 1, clinicalProgressMax)}/{clinicalProgressMax})
-              {!useServerFlow ? (
-                <span className="font-normal normal-case text-slate-500">(offline order)</span>
-              ) : null}
             </p>
+            <div className="mb-3 flex justify-end">
+              <div className="flex flex-wrap justify-end gap-2">
+                <StatusBadge
+                  label={branchModeLabel}
+                  tone={useServerFlow ? 'info' : 'warning'}
+                  className="text-[10px] font-semibold uppercase tracking-wide"
+                />
+                {previewScoreBadge ? (
+                  <StatusBadge
+                    label={`Score preview: ${previewScoreBadge}`}
+                    tone="neutral"
+                    className="text-[10px] font-semibold"
+                  />
+                ) : null}
+              </div>
+            </div>
 
             <ClinicalQuestionCard
               question={clinicalQuestion}
@@ -796,6 +825,8 @@ export default function ConsultationPage() {
               onMultiselectToggle={toggleClinicalMultiselect}
               onTextAnswer={(value) => setAnswers({ ...answers, [clinicalQuestion.id]: value })}
               onNext={advanceClinicalManual}
+              severityLabel={currentSeverity.label}
+              severityTone={currentSeverity.tone}
             />
           </div>
         )}

@@ -162,6 +162,7 @@ function recordToSummaryResponse(rec) {
     regulatoryContext,
     structuredReport: rec.structuredReport || buildStructuredReport({ ...rec, outcomeReason }),
     pharmacistOverride: rec.pharmacistOverride || null,
+    pharmacistNotes: Array.isArray(rec.pharmacistNotes) ? rec.pharmacistNotes : [],
   };
 }
 

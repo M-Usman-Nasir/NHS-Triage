@@ -47,6 +47,7 @@ const { checkPharmacyEligibility } = require('./pharmacyEligibility');
 const { evaluateComorbidityModifiers } = require('./comorbidityModifiers');
 const { buildPatientExplanation } = require('./patientExplanation');
 const { buildDecisionExplanation } = require('../lib/explanationEngine');
+const { applyPathwayScoring } = require('./scoring');
 
 // Human-readable labels for each outcome code
 const OUTCOME_LABELS = {
@@ -384,6 +385,7 @@ function runTriage({ pathwayCode, answers, patient, symptoms = [] }) {
           governanceUncertainty,
         },
       },
+      scoreBreakdown: [],
       referralRecommendation,
       redFlagTriggered: true,
       redFlags: redFlagResult.flags,
@@ -423,14 +425,20 @@ function runTriage({ pathwayCode, answers, patient, symptoms = [] }) {
     gender: patient.gender || null,
   };
 
+  const scoringResult = applyPathwayScoring({ pathway, context, patient });
+  const contextWithScores = scoringResult.context;
+
   const {
     outcome: resolvedOutcome,
     reason: outcomeReason,
     engineUncertainty: outcomeEngineUncertainty,
     matchedRule,
-  } = evaluateOutcomeRules(pathway.outcomeRules || [], context, patient, pathway);
+  } = evaluateOutcomeRules(pathway.outcomeRules || [], contextWithScores, patient, pathway);
 
-  const governanceUncertainty = [...(baseElig.governanceUncertainty || [])];
+  const governanceUncertainty = [
+    ...(baseElig.governanceUncertainty || []),
+    ...(scoringResult.governanceUncertainty || []),
+  ];
   if (outcomeEngineUncertainty) {
     governanceUncertainty.push('outcome_rule_engine_uncertainty');
   }
@@ -501,6 +509,7 @@ function runTriage({ pathwayCode, answers, patient, symptoms = [] }) {
         governanceUncertainty,
       },
     },
+      scoreBreakdown: scoringResult.scoreBreakdown,
     referralRecommendation,
     redFlagTriggered: false,
     redFlags: [],

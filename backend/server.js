@@ -25,6 +25,7 @@ const summaryRoutes = require('./routes/summary');
 const adminRoutes = require('./routes/admin');
 const crmRoutes = require('./routes/crm');
 const gdprRoutes = require('./routes/gdpr');
+const nhsRoutes = require('./routes/nhs');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -81,6 +82,8 @@ app.get('/', (req, res) => {
       summary:      'GET  /api/summary/:id',
       gdprSubjectAccess: 'GET  /api/gdpr/subject-access/:consultationId',
       gdprErasure:  'POST /api/gdpr/erasure-request',
+      nhsStatus:    'GET  /api/nhs/status',
+      nhsConnect:   'POST /api/nhs/connect',
       adminAudit:   'GET  /api/admin/audit',
       admin:        'GET  /api/admin/analytics',
       pathways:     'GET  /api/admin/pathways',
@@ -95,6 +98,7 @@ app.get('/', (req, res) => {
 app.use('/api/consultation', consultationRoutes);
 app.use('/api/summary', summaryRoutes);
 app.use('/api/gdpr', gdprRoutes);
+app.use('/api/nhs', nhsRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/crm', crmRoutes);
 

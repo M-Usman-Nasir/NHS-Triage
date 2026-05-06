@@ -1,0 +1,220 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aegis-health-ai.local/schemas/pathway.schema.json",
+  "title": "NHS Pharmacy First Pathway",
+  "type": "object",
+  "required": [
+    "pathway",
+    "label",
+    "questions",
+    "redFlags",
+    "eligibilityRules",
+    "outcomeRules"
+  ],
+  "properties": {
+    "_comment": { "type": "string" },
+    "pathway": { "type": "string", "minLength": 1 },
+    "label": { "type": "string", "minLength": 1 },
+    "applicableGenders": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "minimumAge": { "type": ["integer", "null"] },
+    "maximumAge": { "type": ["integer", "null"] },
+    "questions": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/question" }
+    },
+    "questionGraph": { "$ref": "#/$defs/questionGraph" },
+    "emergencyOverrides": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/safetyRule" }
+    },
+    "redFlags": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/safetyRule" }
+    },
+    "eligibilityRules": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/eligibilityRule" }
+    },
+    "exclusions": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "scoring": { "$ref": "#/$defs/scoringConfig" },
+    "comorbidityModifiers": {
+      "type": "array",
+      "items": { "type": "object" }
+    },
+    "outcomeRules": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/outcomeRule" }
+    },
+    "selfCareAdvice": { "type": ["string", "null"] },
+    "pharmacyTreatmentOptions": {
+      "type": ["array", "null"],
+      "items": { "type": "string" }
+    },
+    "safetyNetAdvice": { "type": ["string", "null"] },
+    "pathwayPatientDisclaimer": { "type": ["string", "null"] }
+  },
+  "$defs": {
+    "question": {
+      "type": "object",
+      "required": ["id", "type", "text", "required"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "type": {
+          "type": "string",
+          "enum": ["boolean", "select", "multiselect", "text", "number"]
+        },
+        "text": { "type": "string", "minLength": 1 },
+        "required": { "type": "boolean" },
+        "options": {
+          "type": "array",
+          "items": { "type": ["string", "number", "boolean"] }
+        },
+        "display": { "type": ["boolean", "object", "string"] },
+        "displayWhen": { "type": ["string", "object"] },
+        "branch": { "type": ["string", "object", "array"] },
+        "clinicalNote": { "type": "string" },
+        "redFlagHint": { "type": "boolean" }
+      },
+      "additionalProperties": true
+    },
+    "graphNode": {
+      "type": "object",
+      "properties": {
+        "next": { "type": ["string", "null"] },
+        "branches": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["condition"],
+            "properties": {
+              "condition": { "type": ["string", "boolean"] },
+              "next": { "type": ["string", "null"] }
+            },
+            "additionalProperties": true
+          }
+        }
+      },
+      "additionalProperties": true,
+      "anyOf": [{ "required": ["next"] }, { "required": ["branches"] }]
+    },
+    "questionGraph": {
+      "type": "object",
+      "required": ["startId", "nodes"],
+      "properties": {
+        "startId": { "type": ["string", "null"] },
+        "nodes": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/graphNode" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "safetyRule": {
+      "type": "object",
+      "required": ["code"],
+      "properties": {
+        "code": { "type": "string", "minLength": 1 },
+        "severity": {
+          "type": "string",
+          "enum": ["low", "moderate", "high", "critical"]
+        },
+        "condition": { "type": "string", "minLength": 1 },
+        "trigger": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "message": { "type": "string" },
+        "outcome": { "$ref": "#/$defs/safetyOutcomeCode" },
+        "action": { "$ref": "#/$defs/safetyOutcomeCode" }
+      },
+      "additionalProperties": true,
+      "allOf": [
+        { "anyOf": [{ "required": ["condition"] }, { "required": ["trigger"] }] },
+        { "anyOf": [{ "required": ["outcome"] }, { "required": ["action"] }] }
+      ]
+    },
+    "eligibilityRule": {
+      "type": "object",
+      "required": ["condition", "eligible"],
+      "properties": {
+        "id": { "type": "string" },
+        "condition": { "type": "string", "minLength": 1 },
+        "eligible": { "type": "boolean" },
+        "reason": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "scoringFactor": {
+      "type": "object",
+      "required": ["condition", "points"],
+      "properties": {
+        "id": { "type": "string" },
+        "condition": { "type": "string", "minLength": 1 },
+        "points": { "type": "number" }
+      },
+      "additionalProperties": true
+    },
+    "scoringModule": {
+      "type": "object",
+      "required": ["module", "outputKey", "factors"],
+      "properties": {
+        "id": { "type": "string" },
+        "module": { "type": "string", "minLength": 1 },
+        "outputKey": { "type": "string", "minLength": 1 },
+        "factors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/scoringFactor" }
+        }
+      },
+      "additionalProperties": true
+    },
+    "scoringConfig": {
+      "type": "object",
+      "required": ["modules"],
+      "properties": {
+        "modules": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/scoringModule" }
+        }
+      },
+      "additionalProperties": true
+    },
+    "outcomeRule": {
+      "type": "object",
+      "required": ["priority", "condition", "outcome"],
+      "properties": {
+        "id": { "type": "string" },
+        "code": { "type": "string" },
+        "priority": { "type": "integer", "minimum": 1 },
+        "condition": { "type": "string", "minLength": 1 },
+        "outcome": { "$ref": "#/$defs/outcomeCode" },
+        "reason": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "safetyOutcomeCode": {
+      "type": "string",
+      "enum": ["gp", "urgent_care", "emergency_999"]
+    },
+    "outcomeCode": {
+      "type": "string",
+      "enum": [
+        "self_care",
+        "pharmacy",
+        "gp",
+        "urgent_care",
+        "emergency_999",
+        "escalated_by_red_flag"
+      ]
+    }
+  },
+  "additionalProperties": true
+}

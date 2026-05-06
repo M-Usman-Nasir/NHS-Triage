@@ -123,52 +123,78 @@ Stakeholder specs often list steps **6–8** in the wrong **order** (decision en
 
 ### Urinary tract infection (UTI)
 
-- Based on: NICE CG149 + Pharmacy First–style guidance  
-- Eligible cohort example: women 16–64 with uncomplicated symptoms (validate against current JSON)  
-- Exclusions example: pregnancy, catheter, recent antibiotics, recurrent UTIs, fever + loin pain  
-- Pharmacy options: e.g. trimethoprim / nitrofurantoin where rules allow  
+- Pharmacy First cohort: women aged 16-64 with uncomplicated lower UTI symptom pattern  
+- Inclusion pattern: dysuria plus lower urinary symptoms (frequency/urgency/cloudy urine)  
+- Exclusions / referral gates: pregnancy, breastfeeding, catheter, recurrent UTI, visible haematuria  
+- Red flags: fever with flank pain, vomiting (urgent same-day care)  
 
 ### Sore throat
 
-- NICE NG84 + FeverPAIN-style logic where encoded  
-- Red flags: breathing difficulty, facial swelling, combined rash + fever (scarlet fever suspicion)  
+- Age threshold: 5+ only  
+- FeverPAIN-style scoring encoded directly in outcome rules (high score -> GP, moderate -> pharmacy, low -> self-care)  
+- Exclusions: recurrent tonsillitis, post-tonsillectomy presentations, immunocompromise  
+- Red flags: breathing difficulty / airway compromise and severe prolonged inflammatory presentation  
 
 ### Sinusitis
 
-- NICE NG107–aligned rules where encoded  
-- Red flags: eye swelling, neck stiffness / photophobia (serious differential)  
+- Age threshold: 12+ only  
+- Key gate: pharmacy pathway requires symptoms for at least 10 days (and less than 12 weeks)  
+- Exclusions: recurrent sinusitis and severe systemic features  
+- Red flags: eye swelling/visual change, neurological symptoms, severe headache with systemic illness  
 
 ### Acute otitis media
 
-- NICE CG60–aligned rules where encoded  
-- Red flags: mastoid tenderness/swelling, facial weakness  
+- Pharmacy pathway is pediatric-only (age 1-17); adults route to GP  
+- Inclusion pattern: age-eligible child with otitis symptom profile and no danger signs  
+- Red flags: neck stiffness, facial weakness, mastoid swelling, severe headache, perforation with discharge  
 
 ### Infected insect bite
 
-- Local vs spreading infection; anaphylaxis / lymphangitis red flags  
+- Age threshold: 1+  
+- Key gate: symptoms must clearly worsen >=48 hours after bite/sting for pharmacy infected-bite treatment  
+- Red flags: anaphylaxis symptoms, lymphangitis red line, possible sepsis features, spreading infection with systemic illness  
 
 ### Impetigo
 
-- Non-bullous vs bullous; immunosuppression / pregnancy exclusions  
+- Age threshold: 1+  
+- Inclusion pattern: localized non-bullous impetigo with no systemic illness  
+- Exclusions: bullous lesions, recurrent episodes, rapid spread, systemic illness  
+- Localized threshold encoded: no widespread distribution and lesion count not above pharmacy threshold  
 
 ### Shingles (herpes zoster)
 
-- **72-hour** antiviral window where encoded  
-- Red flags: eye or ear involvement (ophthalmic zoster / Ramsay Hunt)  
+- Age threshold: 18+  
+- Timing gate: pharmacy route uses early-treatment window up to 7 days (highest priority early onset)  
+- Exclusions: pregnancy, immunocompromise, atypical/non-unilateral pattern  
+- Red flags: eye involvement (urgent same-day), ear involvement (Ramsay Hunt risk), combined eye+ear emergency profile  
 
 ### Clinical scope matrix
 
 | Pathway (code) | Phase-1 content | Questionnaire structure |
 |----------------|-----------------|-------------------------|
-| UTI (`uti`) | Uncomplicated adult female cohort per JSON + exclusions | **Linear** `questions` (ordered list; server-driven `question/next`) |
-| Sore throat (`sore_throat`) | FeverPAIN-style scoring + exclusions | **Linear** |
-| Sinusitis (`sinusitis`) | NG107-aligned rules + red flags | **`questionGraph`** (branching) + `questions` for metadata |
-| Acute otitis media (`otitis_media`) | Age/pharmacy rules + mastoid / facial weakness flags | **Linear** |
-| Infected insect bite (`insect_bites`) | Local vs spreading + anaphylaxis / lymphangitis | **Linear** |
-| Impetigo (`impetigo`) | Bullous / immunosuppression / pregnancy gates | **Linear** |
-| Shingles (`shingles`) | 72-hour window + ophthalmic / Ramsay Hunt | **`questionGraph`** + `questions` |
+| UTI (`uti`) | Female 16-64 uncomplicated lower UTI with strict exclusion + red-flag gating | **Linear** `questions` (ordered list; server-driven `question/next`) |
+| Sore throat (`sore_throat`) | Age >=5 with FeverPAIN-style rule scoring and explicit exclusions | **Linear** |
+| Sinusitis (`sinusitis`) | Age >=12 with >=10-day gate, recurrence exclusion, eye/neuro red flags | **`questionGraph`** (branching) + `questions` for metadata |
+| Acute otitis media (`otitis_media`) | Pediatric-only (1-17), adult GP deflection, mastoid/facial/neurological flags | **Linear** |
+| Infected insect bite (`insect_bites`) | 48-hour worsening gate with anaphylaxis / lymphangitis / sepsis checks | **Linear** |
+| Impetigo (`impetigo`) | Localized non-bullous threshold with lesion-count and spread exclusions | **Linear** |
+| Shingles (`shingles`) | Age >=18 with timing gate, eye/ear risk handling, pregnancy/immunocompromise exclusions | **`questionGraph`** + `questions` |
 
 **Honest product line:** all pathways are **server-driven** and **fully specified in JSON**; “partial” only means **not every pathway uses a full branching graph** — five use a **linear** question list with the same completion and safety ordering as graph pathways.
+
+**Phase 1 contract baseline:** pathway structure is now enforced by `backend/data/pathways/pathway.schema.json` and validated in `backend/__tests__/pathway.schema.validation.test.js`; the canonical registry of expected runtime pathway files is `backend/data/pathways/canonical/pathways.master.json`.
+
+### At-a-glance criteria (QA/dev)
+
+| Condition | Age | Key rule |
+|-----------|-----|----------|
+| UTI | Female 16-64 | Lower uncomplicated only |
+| Sore Throat | 5+ | Use FeverPAIN |
+| Sinusitis | 12+ | Symptoms >= 10 days |
+| Otitis Media | 1-17 | Children only |
+| Infected Bite | 1+ | Worse after 48h |
+| Impetigo | 1+ | Localized only |
+| Shingles | 18+ | Rash within 7 days |
 
 ### Questionnaire structure (branching)
 
@@ -189,6 +215,19 @@ Disclaimers are **deliberately layered** so no single string has to carry the en
 
 Together these layers form a **complete** disclaimer model for phase 1; the pathway field closes the gap where stakeholders asked for an explicit **per-condition** CDS line rather than only generic UI text.
 
+### Safety-oriented triage UX patterns
+
+The patient interface should present safety logic in a way that matches the engine order and improves patient comprehension:
+
+- **Progress stepper:** clear stage and progress visibility across demographics, context, and clinical phases.  
+- **Red-flag emphasis:** enhanced warning treatment on `redFlagHint` questions before submission.  
+- **Severity signalling:** visible low/moderate/urgent/emergency badges on question/result states.  
+- **Emergency banners:** persistent high-acuity banners for `urgent_care` and `emergency_999` outcomes.  
+- **Referral summary cards:** structured “what to do now” guidance with actions and escalation safety-net.  
+
+Phase 2 note: scoring systems are now config-driven via pathway `scoring.modules` declarations and executed by named engine modules in `backend/engine/scoring/` (current live module: FeverPAIN for sore throat).
+Phase 3 note: operational delivery endpoints now include feature-flagged NHS integration scaffolding (`/api/nhs/*`), PDF referral summary export (`/api/summary/:id/pdf`), and pharmacist note capture (`/api/summary/:id/notes*`) with audit events for each action.
+
 ---
 
 ## 4. Safety features & boundaries
@@ -196,6 +235,19 @@ Together these layers form a **complete** disclaimer model for phase 1; the path
 - **Safety-net advice** on every outcome (when to seek further help).  
 - **Governance:** rules should reference guideline sources; changes need clinical process (see handbook Epic E-07).  
 - **CDS only:** supports decision-making; **does not** prescribe; pharmacist/GP remains accountable.  
+
+### Compliance Guardrails (must not be bypassed)
+
+The implementation must enforce these non-negotiable controls:
+
+- Never auto-recommend or auto-prescribe antibiotics.  
+- Never skip pathway exclusion criteria.  
+- Never ignore pregnancy checks where clinically relevant.  
+- Never ignore recurrence gates when the pathway marks recurrence as non-pharmacy.  
+- Never ignore red flags; safety escalation must override routine routing.  
+- Never allow pharmacy outcomes outside pathway age limits.  
+
+**Operational expectation:** red flags first, exclusions second, then eligibility and outcome rules. If required safety data is missing or a rule cannot be evaluated, apply conservative escalation rather than pharmacy or self-care.
 
 ### The platform does **not**
 
@@ -469,6 +521,7 @@ This supports **regulatory defensibility** (DCB0129-style: explainable baseline 
 | 1.7 | 2026-04-23 | §2 — patient consultation workflow (implementation truth vs generic 10-step spec; outcome code table) |
 | 1.8 | 2026-04-23 | §2 — stakeholder/sales footnote (symptom-first router vs pathway-first MVP) |
 | 1.9 | 2026-04-23 | §5 — Security and data protection (expectation vs repo; frontend implemented vs backlog) |
+| 2.0 | 2026-05-05 | §3 updated with NHS Pharmacy First alignment detail across all seven pathways (inclusion/exclusion/red flags, timing gates, lesion thresholds, referral logic) |
 
 **Clinical questions:** Clinical Safety Officer. **Technical:** engineering per [PLATFORM-HANDBOOK.md](./PLATFORM-HANDBOOK.md).
 

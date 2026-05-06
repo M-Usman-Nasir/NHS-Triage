@@ -1,5 +1,5 @@
 {
-  "_comment": "Clinical decision pathway for Impetigo. Based on NICE CKS Impetigo guidance.",
+  "_comment": "Clinical decision pathway for Impetigo aligned to NHS Pharmacy First criteria with localized lesion threshold logic.",
   "pathway": "impetigo",
   "label": "Impetigo",
   "applicableGenders": ["Male", "Female", "Other"],
@@ -29,33 +29,34 @@
     },
     {
       "id": "q4",
-      "text": "Are there any fluid-filled blisters?",
+      "text": "Are there fluid-filled blisters (bullous lesions)?",
       "type": "boolean",
       "required": true,
       "clinicalNote": "Blisters suggest bullous impetigo — requires assessment"
     },
     {
       "id": "q5",
-      "text": "Do you have a fever (temperature above 38°C)?",
+      "text": "Do you feel systemically unwell or have fever (38°C or above)?",
       "type": "boolean",
       "required": true
     },
     {
       "id": "q6",
-      "text": "Is the affected area rapidly spreading or getting larger quickly?",
+      "text": "Are lesions rapidly spreading or worsening quickly?",
       "type": "boolean",
       "required": true
     },
     {
       "id": "q7",
-      "text": "Do you have any conditions that affect your immune system (e.g. diabetes, cancer, HIV, on steroids)?",
+      "text": "Do you have recurrent impetigo episodes?",
       "type": "boolean",
       "required": true
     },
     {
       "id": "q8",
-      "text": "Are you pregnant?",
-      "type": "boolean",
+      "text": "Roughly how many lesion clusters do you have?",
+      "type": "select",
+      "options": ["1", "2", "3", "4", "More than 4"],
       "required": true
     }
   ],
@@ -63,16 +64,16 @@
     {
       "code": "RF_IMP_001",
       "condition": "q5 === true && q6 === true",
-      "description": "Rapidly spreading impetigo with fever — possible ecthyma or systemic infection",
+      "description": "Rapidly spreading impetigo with systemic illness",
       "outcome": "urgent_care",
       "message": "Spreading skin infection with fever needs same-day urgent medical care."
     },
     {
       "code": "RF_IMP_002",
-      "condition": "q7 === true",
-      "description": "Immunocompromised patient — higher risk of complications",
-      "outcome": "gp",
-      "message": "Skin infections in people with immune conditions require GP review."
+      "condition": "q5 === true && q6 === false",
+      "description": "Systemically unwell with skin infection",
+      "outcome": "urgent_care",
+      "message": "Fever or systemic illness with skin infection needs urgent same-day assessment."
     }
   ],
   "eligibilityRules": [
@@ -86,21 +87,75 @@
       "id": "elig_2",
       "condition": "q7 === true",
       "eligible": false,
-      "reason": "Immunocompromised — requires GP management"
+      "reason": "Recurrent impetigo requires GP review"
     },
     {
       "id": "elig_3",
-      "condition": "q8 === true",
+      "condition": "q6 === true",
       "eligible": false,
-      "reason": "Pregnancy — certain antibiotics not suitable, requires GP assessment"
+      "reason": "Rapidly spreading lesions require GP or urgent care assessment"
     },
     {
       "id": "elig_4",
-      "condition": "q3 === true && q4 === false && q7 === false",
+      "condition": "Array.isArray(q2) && q2.includes('Widespread across multiple areas')",
+      "eligible": false,
+      "reason": "Widespread lesion distribution is outside pharmacy pathway"
+    },
+    {
+      "id": "elig_5",
+      "condition": "lesionClusterCount > 4",
+      "eligible": false,
+      "reason": "More than 4 lesion clusters requires GP assessment"
+    },
+    {
+      "id": "elig_6",
+      "condition": "q5 === true",
+      "eligible": false,
+      "reason": "Systemically unwell patient should not be managed through pharmacy impetigo pathway"
+    },
+    {
+      "id": "elig_7",
+      "condition": "q3 === true && q4 === false && q7 === false && q6 === false && q5 === false && lesionClusterCount <= 4 && !(Array.isArray(q2) && q2.includes('Widespread across multiple areas'))",
       "eligible": true,
-      "reason": "Non-bullous impetigo without complicating factors — pharmacy eligible"
+      "reason": "Localized non-bullous impetigo meets pharmacy eligibility"
     }
   ],
+  "scoring": {
+    "modules": [
+      {
+        "id": "lesionClusterCount",
+        "module": "lesionClusterCount",
+        "outputKey": "lesionClusterCount",
+        "factors": [
+          {
+            "id": "clusters_1",
+            "condition": "q8 === '1'",
+            "points": 1
+          },
+          {
+            "id": "clusters_2",
+            "condition": "q8 === '2'",
+            "points": 2
+          },
+          {
+            "id": "clusters_3",
+            "condition": "q8 === '3'",
+            "points": 3
+          },
+          {
+            "id": "clusters_4",
+            "condition": "q8 === '4'",
+            "points": 4
+          },
+          {
+            "id": "clusters_gt4",
+            "condition": "q8 === 'More than 4'",
+            "points": 5
+          }
+        ]
+      }
+    ]
+  },
   "outcomeRules": [
     {
       "priority": 1,
@@ -115,15 +170,21 @@
     },
     {
       "priority": 3,
-      "condition": "q2_areas_count <= 1 && pharmacyEligible === true",
+      "condition": "pharmacyEligible === true && lesionClusterCount <= 4",
       "outcome": "pharmacy",
       "reason": "Localised non-bullous impetigo — topical treatment appropriate"
     },
     {
       "priority": 4,
-      "condition": "q2_areas_count > 1 && pharmacyEligible === true",
-      "outcome": "pharmacy",
-      "reason": "Widespread non-bullous impetigo — oral antibiotic treatment via pharmacy"
+      "condition": "q3 === false && q4 === false && q5 === false",
+      "outcome": "self_care",
+      "reason": "Current symptoms do not clearly match impetigo criteria"
+    },
+    {
+      "priority": 5,
+      "condition": "true",
+      "outcome": "gp",
+      "reason": "Requires GP assessment based on exclusion or uncertain criteria"
     }
   ],
   "selfCareAdvice": "Keep sores clean. Do not share towels or clothing. Avoid school/work until 48 hours after starting treatment or until sores have crusted over.",

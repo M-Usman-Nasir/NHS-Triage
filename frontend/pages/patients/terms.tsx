@@ -1,7 +1,7 @@
 import Head from 'next/head';
 import Link from 'next/link';
-import { LegalLayout } from '../components/LegalLayout';
-import { PRIVACY_LINK_LABEL } from '../lib/complianceContent';
+import { LegalLayout } from '../../components/LegalLayout';
+import { PRIVACY_LINK_LABEL } from '../../lib/complianceContent';
 
 export default function TermsPage() {
   return (

@@ -19,6 +19,8 @@ import Link from 'next/link';
 import type { LucideIcon } from 'lucide-react';
 import { ArrowLeft, CheckCircle2, Clock, ListChecks, Pill, Printer, Stethoscope } from 'lucide-react';
 import { apiFetch, apiUrl } from '../../lib/api';
+import ProviderLayout from '../../components/ProviderLayout';
+import { formatUtcLabel, PROVIDER_CASES } from '../../lib/providerPortalData';
 
 type PharmacistSummary = {
   id: string;
@@ -91,8 +93,6 @@ const MOCK_CASES: PharmacistSummary[] = [
     pharmacyTreatmentOptions: ['Aciclovir 800mg 5x daily x 7 days', 'Valaciclovir 1g TDS x 7 days'],
   },
 ];
-
-// ─── Component ────────────────────────────────────────────────────────────────
 
 export default function PharmacistDashboard() {
   const [cases, setCases] = useState<PharmacistSummary[]>(MOCK_CASES);
@@ -199,9 +199,9 @@ export default function PharmacistDashboard() {
   );
 
   const STATUS_META: Record<string, { Icon: LucideIcon; label: string }> = {
-    pending:  { Icon: Clock, label: 'Pending Review' },
+    pending: { Icon: Clock, label: 'Pending Review' },
     reviewed: { Icon: CheckCircle2, label: 'Reviewed' },
-    treated:  { Icon: Pill, label: 'Treated' },
+    treated: { Icon: Pill, label: 'Treated' },
     referred: { Icon: Stethoscope, label: 'Referred to GP' },
   };
 
@@ -217,43 +217,18 @@ export default function PharmacistDashboard() {
     );
   };
 
+  const routedPharmacyCases = PROVIDER_CASES.filter((c) => c.referral.type === 'pharmacy');
+
   return (
-    <div className="min-h-screen bg-background">
-      <header className="bg-brand-header text-primary-foreground py-4 px-6 shadow-card-md">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <div>
-            <h1 className="font-bold text-lg">Aegis Health AI</h1>
-            <p className="text-brand-header-subtle text-xs">Pharmacist Dashboard — Priya Sharma</p>
-          </div>
-          <div className="text-right">
-            <p className="text-sm font-medium">Lloyds Pharmacy, London</p>
-            <p className="text-brand-header-subtle text-xs">21 April 2026</p>
-          </div>
-        </div>
-      </header>
-
-      <div className="max-w-6xl mx-auto mb-3 px-4 pt-4">
-        <Link
-          href="/"
-          className="inline-flex items-center gap-1.5 rounded-lg border border-input bg-card px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
-        >
-          <ArrowLeft className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
-          Back
-        </Link>
-      </div>
-
-      <div className="max-w-6xl mx-auto px-4 py-8 flex gap-6">
-
-        {/* Case List */}
+    <ProviderLayout title="Pharmacist Referrals" subtitle="Review pharmacy-routed triage referrals">
+      <div className="max-w-6xl mx-auto flex gap-6">
         <div className="w-1/2 space-y-3">
           <h2 className="text-lg font-bold text-foreground mb-4">
             Pharmacy Referrals <span className="text-sm font-normal text-muted-foreground ml-1">({cases.length} cases)</span>
           </h2>
 
           {loadError ? (
-            <div className="bg-amber-50 border border-amber-200 text-amber-900 text-xs rounded-lg px-3 py-2">
-              {loadError}
-            </div>
+            <div className="bg-amber-50 border border-amber-200 text-amber-900 text-xs rounded-lg px-3 py-2">{loadError}</div>
           ) : null}
 
           {cases.map((c) => (
@@ -272,16 +247,16 @@ export default function PharmacistDashboard() {
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-foreground">{c.patient.fullName}</span>
-                    {urgencyForCase(c) === 'urgent' && (
+                    {urgencyForCase(c) === 'urgent' ? (
                       <span className="bg-orange-100 text-orange-700 text-xs px-2 py-0.5 rounded-full font-medium">URGENT</span>
-                    )}
+                    ) : null}
                   </div>
                   <p className="text-muted-foreground text-xs mt-0.5">{c.patient?.age}y {c.patient?.gender} · {c.pathwayLabel || c.pathway}</p>
                   <p className="text-muted-foreground text-xs mt-1">Referred: {referredAtLabel(c)}</p>
                 </div>
                 <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                  c.status === 'pending'  ? 'bg-yellow-100 text-yellow-700' :
-                  c.status === 'treated'  ? 'bg-green-100 text-green-700' :
+                  c.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                  c.status === 'treated' ? 'bg-green-100 text-green-700' :
                   c.status === 'referred' ? 'bg-primary/10 text-primary' :
                   'bg-muted text-muted-foreground'
                 }`}>
@@ -291,15 +266,14 @@ export default function PharmacistDashboard() {
             </div>
           ))}
 
-          {cases.length === 0 && (
+          {cases.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <CheckCircle2 className="h-12 w-12 mx-auto mb-2 text-green-500/80" strokeWidth={1.5} aria-hidden />
               <p>No pending referrals</p>
             </div>
-          )}
+          ) : null}
         </div>
 
-        {/* Case Detail Panel */}
         <div className="w-1/2">
           {selectedCase ? (
             <div className="bg-card rounded-2xl shadow-card-md border border-border p-6 sticky top-6 space-y-5">
@@ -308,9 +282,9 @@ export default function PharmacistDashboard() {
                   <h3 className="text-xl font-bold text-foreground">{selectedCase.patient?.fullName || 'Unknown patient'}</h3>
                   <p className="text-muted-foreground text-sm">{selectedCase.patient?.age}y · {selectedCase.patient?.gender} · {selectedCase.pathwayLabel || selectedCase.pathway}</p>
                 </div>
-                {urgencyForCase(selectedCase) === 'urgent' && (
+                {urgencyForCase(selectedCase) === 'urgent' ? (
                   <span className="bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-sm font-bold">URGENT</span>
-                )}
+                ) : null}
               </div>
 
               <div className="grid grid-cols-2 gap-3 text-sm">
@@ -339,7 +313,6 @@ export default function PharmacistDashboard() {
                 </div>
               </div>
 
-              {/* Summary */}
               <div>
                 <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Consultation Summary</h4>
                 <p className="text-sm text-foreground bg-muted p-3 rounded-lg">{selectedCase.summaryText}</p>
@@ -351,9 +324,7 @@ export default function PharmacistDashboard() {
                   {(selectedCase.symptoms || []).map((symptom) => (
                     <span key={symptom} className="bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-full">{symptom}</span>
                   ))}
-                  {(selectedCase.symptoms || []).length === 0 ? (
-                    <span className="text-xs text-muted-foreground">No symptom list available.</span>
-                  ) : null}
+                  {(selectedCase.symptoms || []).length === 0 ? <span className="text-xs text-muted-foreground">No symptom list available.</span> : null}
                 </div>
               </div>
 
@@ -364,9 +335,7 @@ export default function PharmacistDashboard() {
                     {answerEntries.map(([key, value]) => (
                       <div key={key} className="px-3 py-2 text-xs flex items-start justify-between gap-3">
                         <span className="text-muted-foreground font-mono">{key}</span>
-                        <span className="text-foreground text-right break-all">
-                          {typeof value === 'string' ? value : JSON.stringify(value)}
-                        </span>
+                        <span className="text-foreground text-right break-all">{typeof value === 'string' ? value : JSON.stringify(value)}</span>
                       </div>
                     ))}
                   </div>
@@ -375,23 +344,21 @@ export default function PharmacistDashboard() {
                 )}
               </div>
 
-              {/* Treatment options */}
               {selectedCase.pharmacyTreatmentOptions && selectedCase.pharmacyTreatmentOptions.length > 0 ? (
                 <div>
-                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Suggested Treatments</h4>
-                <ul className="space-y-1">
+                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Suggested Treatments</h4>
+                  <ul className="space-y-1">
                     {selectedCase.pharmacyTreatmentOptions.map((t) => (
-                    <li key={t} className="flex items-start gap-2 text-sm text-foreground">
-                      <span className="text-primary mt-0.5">•</span>
-                      {t}
-                    </li>
-                  ))}
-                </ul>
-                <p className="text-xs text-muted-foreground mt-1">Subject to clinical assessment by pharmacist.</p>
+                      <li key={t} className="flex items-start gap-2 text-sm text-foreground">
+                        <span className="text-primary mt-0.5">•</span>
+                        {t}
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="text-xs text-muted-foreground mt-1">Subject to clinical assessment by pharmacist.</p>
                 </div>
               ) : null}
 
-              {/* Override system decision */}
               <div className="border border-border rounded-xl p-3 space-y-3 bg-muted/40">
                 <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Override System Decision</h4>
                 <div className="grid grid-cols-2 gap-2">
@@ -444,7 +411,6 @@ export default function PharmacistDashboard() {
                 ) : null}
               </div>
 
-              {/* Action buttons */}
               <div>
                 <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Update Status</h4>
                 <div className="grid grid-cols-2 gap-2">
@@ -481,6 +447,45 @@ export default function PharmacistDashboard() {
           )}
         </div>
       </div>
-    </div>
+
+      <div className="max-w-6xl mx-auto mt-5">
+        <div className="bg-card rounded-2xl border border-border p-4">
+          <h3 className="text-sm font-bold text-foreground mb-3">Pharmacy Referral Routing</h3>
+          <div className="space-y-2">
+            {routedPharmacyCases.map((c) => (
+              <div key={c.id} className="rounded-lg border border-border p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">{c.patient.fullName}</p>
+                    <p className="text-xs text-muted-foreground">{c.id} · {c.pathwayLabel}</p>
+                  </div>
+                  <span className={`text-xs px-2 py-1 rounded-full ${
+                    c.referral.status === 'routed' ? 'bg-primary/10 text-primary' :
+                    c.referral.status === 'completed' ? 'bg-green-100 text-green-700' :
+                    'bg-yellow-100 text-yellow-700'
+                  }`}>
+                    {c.referral.status}
+                  </span>
+                </div>
+                <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
+                  <div className="bg-muted rounded-lg p-2">
+                    <p className="text-muted-foreground">System triage</p>
+                    <p className="font-semibold text-foreground mt-1">{c.triageOutcome}</p>
+                  </div>
+                  <div className="bg-muted rounded-lg p-2">
+                    <p className="text-muted-foreground">Routed to</p>
+                    <p className="font-semibold text-foreground mt-1">{c.referral.routedTo}</p>
+                  </div>
+                  <div className="bg-muted rounded-lg p-2">
+                    <p className="text-muted-foreground">Routed at</p>
+                    <p className="font-semibold text-foreground mt-1">{formatUtcLabel(c.referral.routedAt)}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </ProviderLayout>
   );
 }

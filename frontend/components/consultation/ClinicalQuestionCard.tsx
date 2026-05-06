@@ -1,6 +1,7 @@
 import { Check, ChevronRight, X } from 'lucide-react';
 import type { AnswerValue } from '../../types/consultation';
 import type { PathwayQuestion } from '../../lib/pathwayQuestions';
+import StatusBadge from '../StatusBadge';
 
 interface ClinicalQuestionCardProps {
   question: PathwayQuestion;
@@ -11,6 +12,8 @@ interface ClinicalQuestionCardProps {
   onMultiselectToggle: (value: string) => void;
   onTextAnswer: (value: string) => void;
   onNext: () => void;
+  severityLabel: string;
+  severityTone: 'neutral' | 'info' | 'success' | 'warning' | 'danger';
 }
 
 export default function ClinicalQuestionCard({
@@ -22,9 +25,15 @@ export default function ClinicalQuestionCard({
   onMultiselectToggle,
   onTextAnswer,
   onNext,
+  severityLabel,
+  severityTone,
 }: ClinicalQuestionCardProps) {
   return (
     <div className="rounded-2xl border border-sky-200/60 bg-white/90 p-4 shadow-xl shadow-sky-900/10 backdrop-blur-sm sm:rounded-3xl sm:p-7">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">Clinical question</p>
+        <StatusBadge label={severityLabel} tone={severityTone} className="text-[10px] font-semibold uppercase tracking-wide" />
+      </div>
       <h2 className="text-balance text-lg font-bold leading-snug text-slate-900 sm:text-xl">{question.text}</h2>
 
       <div className="mt-6">

@@ -8,7 +8,9 @@ import { useSummaryFetch } from '../../hooks/useSummaryFetch';
 import { CDS_DISCLAIMER, TERMS_LINK_LABEL, PRIVACY_LINK_LABEL } from '../../lib/complianceContent';
 import SafetyPanel from '../../components/SafetyPanel';
 import InlineNotice from '../../components/InlineNotice';
+import StatusBadge from '../../components/StatusBadge';
 import { getNearbyOptionsForOutcome } from '../../lib/referralDirectory';
+import { apiFetch, apiUrl } from '../../lib/api';
 
 function PatientsMobileShell({ children }: { children: ReactNode }) {
   return (
@@ -169,6 +171,15 @@ const EXPLANATION_SOURCE_LABEL: Record<string, string> = {
   pharmacist_override: 'Pharmacist override',
 };
 
+function severityBadgeForOutcome(outcome: string): { label: string; tone: 'success' | 'info' | 'warning' | 'danger' | 'neutral' } {
+  if (outcome === 'self_care') return { label: 'Self-Care Pathway', tone: 'success' };
+  if (outcome === 'pharmacy') return { label: 'Pharmacy Pathway', tone: 'info' };
+  if (outcome === 'gp') return { label: 'GP Pathway', tone: 'warning' };
+  if (outcome === 'urgent_care') return { label: 'Urgent Care Pathway', tone: 'danger' };
+  if (outcome === 'emergency_999') return { label: 'Emergency Pathway', tone: 'danger' };
+  return { label: 'Clinical Review', tone: 'neutral' };
+}
+
 const MOCK_RESULT: TriageResultView = {
   consultationId: 'c0000001-0000-0000-0000-000000000001',
   patient: { fullName: 'Sarah Mitchell', age: 33, gender: 'Female' },
@@ -275,12 +286,19 @@ export default function ResultPage() {
         ? postcode[0]
         : '';
   const [postcodeFilter, setPostcodeFilter] = useState(queryPostcode);
+  const [noteInput, setNoteInput] = useState('');
+  const [notesSaving, setNotesSaving] = useState(false);
+  const [pharmacistNotes, setPharmacistNotes] = useState(result?.pharmacistNotes || []);
 
   useEffect(() => {
     if (queryPostcode && queryPostcode !== postcodeFilter) {
       setPostcodeFilter(queryPostcode);
     }
   }, [queryPostcode, postcodeFilter]);
+
+  useEffect(() => {
+    setPharmacistNotes(result?.pharmacistNotes || []);
+  }, [result]);
 
   const nearbyOptions = result?.nearbyOptions ?? [];
   const outcomeForNearbyFilter = result?.referralRecommendation?.service || result?.outcome || 'pharmacy';
@@ -350,6 +368,47 @@ export default function ResultPage() {
   const decisionTitle = result.decision?.title || config.title;
   const decisionUrgency = result.decision?.urgency;
   const explanationSource = result.explanation?.source || '';
+  const severityBadge = severityBadgeForOutcome(result.outcome);
+
+  const downloadPdfSummary = () => {
+    void (async () => {
+      const url = apiUrl(`/api/summary/${encodeURIComponent(result.consultationId)}/pdf`);
+      const response = await apiFetch(url);
+      if (!response.ok) return;
+      const blob = await response.blob();
+      const href = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = href;
+      a.download = `consultation-summary-${result.consultationId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(href);
+    })();
+  };
+
+  const savePharmacistNote = () => {
+    if (!noteInput.trim()) return;
+    setNotesSaving(true);
+    void (async () => {
+      try {
+        const response = await apiFetch(apiUrl(`/api/summary/${encodeURIComponent(result.consultationId)}/notes`), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            pharmacist_id: 'pharmacist_demo',
+            note: noteInput.trim(),
+          }),
+        });
+        if (!response.ok) return;
+        const data = (await response.json()) as { notes?: typeof pharmacistNotes };
+        setPharmacistNotes(data.notes || []);
+        setNoteInput('');
+      } finally {
+        setNotesSaving(false);
+      }
+    })();
+  };
 
   return (
     <PatientsMobileShell>
@@ -384,6 +443,14 @@ export default function ResultPage() {
           </div>
         ) : null}
 
+        {(result.outcome === 'urgent_care' || result.outcome === 'emergency_999') && (
+          <InlineNotice title={result.outcome === 'emergency_999' ? 'Emergency Action Required' : 'Urgent Action Required'} tone="danger">
+            {result.outcome === 'emergency_999'
+              ? 'Call 999 now. Do not delay care if symptoms are severe or rapidly worsening.'
+              : 'Arrange same-day urgent assessment. Call NHS 111 if you need help finding the right urgent service.'}
+          </InlineNotice>
+        )}
+
         {/* Outcome hero card */}
         <div className="overflow-hidden rounded-2xl border border-sky-200/60 shadow-xl shadow-sky-900/10">
           <div className={`bg-gradient-to-br ${config.gradient} p-5 text-white`}>
@@ -396,12 +463,17 @@ export default function ResultPage() {
                 <h2 className="text-xl font-extrabold leading-tight">{decisionTitle}</h2>
               </div>
             </div>
+            <div className="mb-2 flex flex-wrap items-center gap-2">
+              <StatusBadge label={severityBadge.label} tone={severityBadge.tone} className="bg-white/90 text-[10px] font-semibold uppercase tracking-wide text-slate-900" />
+              {decisionUrgency ? (
+                <StatusBadge
+                  label={`Urgency: ${decisionUrgency.replaceAll('_', ' ').replace('immediate', 'immediate ').trim()}`}
+                  tone={result.outcome === 'urgent_care' || result.outcome === 'emergency_999' ? 'danger' : 'info'}
+                  className="bg-white/90 text-[10px] font-semibold uppercase tracking-wide text-slate-900"
+                />
+              ) : null}
+            </div>
             <p className="text-white/90 text-sm leading-relaxed">{config.instructions}</p>
-            {decisionUrgency ? (
-              <p className="mt-2 inline-flex rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide">
-                Urgency: {decisionUrgency}
-              </p>
-            ) : null}
           </div>
           {result.patient && (
             <div className="flex items-center gap-3 border-t border-sky-100/80 bg-white/95 px-5 py-3 backdrop-blur-sm">
@@ -472,13 +544,40 @@ export default function ResultPage() {
           </ul>
         </div>
 
+        {result.scoreBreakdown && result.scoreBreakdown.length > 0 ? (
+          <div className="rounded-2xl border border-sky-200/60 bg-white/90 p-5 shadow-xl shadow-sky-900/10 backdrop-blur-sm">
+            <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">Scoring modules</p>
+            <div className="space-y-2">
+              {result.scoreBreakdown.map((entry) => (
+                <div key={`${entry.module}-${entry.outputKey || 'score'}`} className="rounded-xl border border-sky-100/80 bg-sky-50/40 px-3 py-2">
+                  <p className="text-sm font-semibold text-slate-900">
+                    {entry.module} {typeof entry.score === 'number' ? `- score ${entry.score}` : ''}
+                  </p>
+                  {entry.outputKey ? <p className="text-xs text-slate-600">Output key: {entry.outputKey}</p> : null}
+                  {entry.error ? <p className="text-xs text-red-700">{entry.error}</p> : null}
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
         {referralRecommendation ? (
           <div className="space-y-4 rounded-2xl border border-sky-200/60 bg-white/90 p-5 shadow-xl shadow-sky-900/10 backdrop-blur-sm">
-            <div>
-              <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">What you should do now</p>
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Referral summary</p>
+              <StatusBadge
+                label={(referralRecommendation.service || result.outcome).replaceAll('_', ' ')}
+                tone={result.outcome === 'emergency_999' || result.outcome === 'urgent_care' ? 'danger' : result.outcome === 'gp' ? 'warning' : 'info'}
+                className="text-[10px] font-semibold uppercase tracking-wide"
+              />
+            </div>
+            <div className="rounded-xl border border-sky-100/80 bg-sky-50/40 px-3 py-3">
+              <p className="mb-1 text-[11px] font-bold uppercase tracking-wide text-slate-500">What You Should Do Now</p>
               <p className="text-sm leading-relaxed text-slate-800">{referralRecommendation.instruction}</p>
             </div>
             {referralRecommendation.actions?.length ? (
+              <div>
+                <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-500">Immediate Actions</p>
               <ul className="space-y-2">
                 {referralRecommendation.actions.map((action) => (
                   <li key={action} className="text-sm leading-relaxed text-slate-800">
@@ -486,10 +585,11 @@ export default function ResultPage() {
                   </li>
                 ))}
               </ul>
+              </div>
             ) : null}
             {referralRecommendation.escalationSafetyNet?.length ? (
               <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-3">
-                <p className="text-[11px] font-bold text-amber-700 uppercase tracking-wide mb-1">Safety advice</p>
+                <p className="text-[11px] font-bold text-amber-700 uppercase tracking-wide mb-1">Safety Advice</p>
                 <ul className="space-y-1">
                   {referralRecommendation.escalationSafetyNet.map((item) => (
                     <li key={item} className="text-amber-800 text-xs leading-relaxed">- {item}</li>
@@ -583,11 +683,11 @@ export default function ResultPage() {
           <div className="mt-4 grid grid-cols-2 gap-3">
             <button
               type="button"
-              onClick={() => window.print()}
+              onClick={downloadPdfSummary}
               className="touch-manipulation flex items-center justify-center gap-2 rounded-xl border-2 border-sky-200/80 bg-white py-3 text-sm font-medium text-slate-700 shadow-sm transition-all hover:bg-sky-50 active:scale-[0.98]"
             >
               <Printer className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
-              Print
+              PDF
             </button>
             <button
               type="button"
@@ -597,6 +697,37 @@ export default function ResultPage() {
               Email
             </button>
           </div>
+        </div>
+
+        <div className="rounded-2xl border border-sky-200/60 bg-white/90 p-5 shadow-xl shadow-sky-900/10 backdrop-blur-sm">
+          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">Pharmacist notes</p>
+          <div className="mb-3 space-y-2">
+            {pharmacistNotes.length > 0 ? (
+              pharmacistNotes.map((item) => (
+                <div key={item.id} className="rounded-xl border border-sky-100/80 bg-sky-50/40 px-3 py-2">
+                  <p className="text-sm text-slate-800">{item.note}</p>
+                  <p className="text-[11px] text-slate-500">{item.pharmacistId} - {item.createdAt}</p>
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-slate-600">No pharmacist notes recorded yet.</p>
+            )}
+          </div>
+          <textarea
+            value={noteInput}
+            onChange={(event) => setNoteInput(event.target.value)}
+            placeholder="Add pharmacist note"
+            rows={3}
+            className="w-full resize-none rounded-xl border border-sky-200/90 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+          />
+          <button
+            type="button"
+            onClick={savePharmacistNote}
+            disabled={notesSaving || !noteInput.trim()}
+            className="mt-2 touch-manipulation inline-flex min-h-[40px] items-center justify-center rounded-xl border-2 border-primary/25 bg-white/90 px-3 py-2 text-xs font-semibold text-primary shadow-sm transition-all hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {notesSaving ? 'Saving...' : 'Save note'}
+          </button>
         </div>
 
         {result.regulatoryContext ? (

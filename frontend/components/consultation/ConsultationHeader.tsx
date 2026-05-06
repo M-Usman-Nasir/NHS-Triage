@@ -1,4 +1,5 @@
 import { ArrowLeft, ChevronRight, ClipboardList, Stethoscope } from 'lucide-react';
+import StatusBadge from '../StatusBadge';
 
 interface ConsultationHeaderProps {
   titlePathwayText: string;
@@ -12,6 +13,7 @@ interface ConsultationHeaderProps {
   clinicalProgressLabel: string;
   prefaceProgressPct: number;
   clinicalProgressPct: number;
+  branchModeLabel?: string;
   onGoBack: () => void;
 }
 
@@ -27,6 +29,7 @@ export default function ConsultationHeader({
   clinicalProgressLabel,
   prefaceProgressPct,
   clinicalProgressPct,
+  branchModeLabel,
   onGoBack,
 }: ConsultationHeaderProps) {
   return (
@@ -74,6 +77,15 @@ export default function ConsultationHeader({
       </div>
 
       <div className="mx-auto w-full max-w-5xl px-3 pb-2.5 sm:px-4">
+        {wizardStep === 'clinical' && branchModeLabel ? (
+          <div className="mb-2 flex justify-end">
+            <StatusBadge
+              label={branchModeLabel}
+              tone={branchModeLabel === 'NHS Pathway Logic' ? 'info' : 'warning'}
+              className="text-[10px] font-semibold uppercase tracking-wide"
+            />
+          </div>
+        ) : null}
         <div className="flex gap-1.5 sm:gap-2">
           <div
             className={`flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl border px-2 py-2 text-[10px] font-semibold transition-colors sm:text-xs ${

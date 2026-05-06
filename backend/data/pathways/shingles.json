@@ -1,5 +1,5 @@
 {
-  "_comment": "Clinical decision pathway for Shingles (Herpes Zoster). Based on NICE CKS Shingles guidance.",
+  "_comment": "Clinical decision pathway for Shingles aligned to NHS Pharmacy First criteria with strict eye-risk and timing logic.",
   "pathway": "shingles",
   "label": "Shingles (Herpes Zoster)",
   "applicableGenders": ["Male", "Female", "Other"],
@@ -10,9 +10,9 @@
       "id": "q1",
       "text": "When did the rash first appear?",
       "type": "select",
-      "options": ["Today (within 24 hours)", "1–2 days ago", "3 days ago", "More than 3 days ago"],
+      "options": ["Today (within 24 hours)", "1–2 days ago", "3 days ago", "4–7 days ago", "More than 7 days ago"],
       "required": true,
-      "clinicalNote": "Antiviral treatment is most effective within 72 hours of rash onset"
+      "clinicalNote": "Assessment is highest priority in the first 72 hours and still clinically relevant up to 7 days"
     },
     {
       "id": "q2",
@@ -36,7 +36,7 @@
     },
     {
       "id": "q5",
-      "text": "Do you have any pain or changes in or around your eye?",
+      "text": "Is the rash near or around your eye?",
       "type": "boolean",
       "required": true,
       "redFlagHint": true
@@ -92,9 +92,9 @@
     {
       "code": "RF_SHG_001",
       "condition": "q5 === true || q3 === 'Around one eye'",
-      "description": "Ophthalmic zoster — shingles involving the eye, risk of vision loss",
-      "outcome": "emergency_999",
-      "message": "Shingles affecting your eye is a medical emergency. Go to A&E immediately to protect your sight."
+      "description": "Ophthalmic zoster risk due to rash near eye",
+      "outcome": "urgent_care",
+      "message": "Shingles symptoms near the eye need urgent same-day assessment."
     },
     {
       "code": "RF_SHG_002",
@@ -107,8 +107,8 @@
       "code": "RF_SHG_003",
       "condition": "q7 === true",
       "description": "Immunocompromised patient — higher risk of complications, possible IV antiviral needed",
-      "outcome": "gp",
-      "message": "Shingles in people with immune conditions requires urgent GP assessment today."
+      "outcome": "urgent_care",
+      "message": "Shingles in immunocompromised patients needs urgent same-day assessment."
     },
     {
       "code": "RF_SHG_004",
@@ -121,9 +121,9 @@
   "eligibilityRules": [
     {
       "id": "elig_1",
-      "condition": "q1 === 'More than 3 days ago'",
+      "condition": "q1 === 'More than 7 days ago'",
       "eligible": false,
-      "reason": "Rash onset beyond 72-hour window — antiviral treatment may not be effective, GP review needed"
+      "reason": "Rash onset beyond 7 days is outside pharmacy treatment window"
     },
     {
       "id": "elig_2",
@@ -139,9 +139,9 @@
     },
     {
       "id": "elig_4",
-      "condition": "q2 === true && q1 !== 'More than 3 days ago' && q7 === false && q8 === false",
+      "condition": "q2 === true && (q1 === 'Today (within 24 hours)' || q1 === '1–2 days ago' || q1 === '3 days ago' || q1 === '4–7 days ago') && q5 === false && q6 === false && q7 === false && q8 === false",
       "eligible": true,
-      "reason": "Uncomplicated shingles within treatment window — pharmacy eligible"
+      "reason": "Uncomplicated shingles in treatment window without high-risk features"
     }
   ],
   "outcomeRules": [
@@ -158,15 +158,15 @@
     },
     {
       "priority": 3,
-      "condition": "pharmacyEligible === false && q1 !== 'More than 3 days ago'",
+      "condition": "pharmacyEligible === false && q1 !== 'More than 7 days ago'",
       "outcome": "gp",
       "reason": "Requires GP assessment"
     },
     {
       "priority": 4,
-      "condition": "q1 === 'More than 3 days ago'",
+      "condition": "q1 === 'More than 7 days ago'",
       "outcome": "gp",
-      "reason": "Outside antiviral window — GP to assess need for treatment and pain management"
+      "reason": "Outside treatment window — GP to assess symptom control and complications"
     },
     {
       "priority": 5,

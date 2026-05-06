@@ -46,7 +46,7 @@ const NAV_CARDS: NavCard[] = [
   {
     title: 'Provider',
     description: 'Go to provider dashboard and actions.',
-    href: '/providers/dashboard',
+    href: '/providers',
     Icon: Stethoscope,
     topBar: 'from-teal-400 via-emerald-500 to-cyan-600',
     iconWrap:

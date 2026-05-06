@@ -1,5 +1,5 @@
 {
-  "_comment": "Clinical decision pathway for Infected Insect Bites. Based on NICE CKS and Pharmacy First criteria.",
+  "_comment": "Clinical decision pathway for Infected Insect Bites aligned to NHS Pharmacy First criteria including 48-hour worsening gate.",
   "pathway": "insect_bites",
   "label": "Infected Insect Bites",
   "applicableGenders": ["Male", "Female", "Other"],
@@ -8,14 +8,14 @@
   "questions": [
     {
       "id": "q1",
-      "text": "When were you bitten?",
+      "text": "When did the bite or sting happen?",
       "type": "select",
       "options": ["Within the last 24 hours", "1–3 days ago", "4–7 days ago", "More than 7 days ago"],
       "required": true
     },
     {
       "id": "q2",
-      "text": "Is the bite area red, swollen, warm, or oozing?",
+      "text": "Is the bite area red, warm, swollen, painful, or oozing?",
       "type": "boolean",
       "required": true
     },
@@ -28,7 +28,7 @@
     },
     {
       "id": "q4",
-      "text": "Do you have a fever (temperature above 38°C) or feel generally unwell?",
+      "text": "Do you have fever (38°C or above) or feel systemically unwell?",
       "type": "boolean",
       "required": true
     },
@@ -48,59 +48,72 @@
     },
     {
       "id": "q7",
-      "text": "Were you bitten while abroad (possible exotic tick or insect bite)?",
+      "text": "Did symptoms clearly worsen 48 hours after the bite or sting?",
       "type": "boolean",
       "required": true
     },
     {
       "id": "q8",
-      "text": "Do you have any known allergies to antibiotics?",
-      "type": "text",
-      "required": false
+      "text": "Do you have confusion, severe shivering, very fast breathing, or other sepsis warning signs?",
+      "type": "boolean",
+      "required": true,
+      "redFlagHint": true
     }
   ],
   "redFlags": [
     {
       "code": "RF_IB_001",
       "condition": "q6 === true",
-      "description": "Anaphylaxis — breathing difficulty, facial/throat swelling, widespread rash",
+      "description": "Anaphylaxis features",
       "outcome": "emergency_999",
-      "message": "These symptoms could be anaphylaxis — a life-threatening allergic reaction. Call 999 immediately."
+      "message": "These symptoms may indicate anaphylaxis. Call 999 immediately."
     },
     {
       "code": "RF_IB_002",
       "condition": "q5 === true",
-      "description": "Red line tracking from bite — possible lymphangitis (blood poisoning)",
+      "description": "Red line tracking from bite suggests lymphangitis",
       "outcome": "emergency_999",
-      "message": "A red line spreading from a bite is a medical emergency. Go to A&E or call 999 immediately."
+      "message": "A red line spreading from a bite needs emergency assessment. Call 999."
     },
     {
       "code": "RF_IB_003",
       "condition": "q4 === true && q3 === true",
-      "description": "Spreading cellulitis with systemic infection signs",
+      "description": "Spreading infection with systemic illness",
       "outcome": "urgent_care",
       "message": "Spreading infection with fever needs same-day medical assessment."
     },
     {
       "code": "RF_IB_004",
-      "condition": "q7 === true",
-      "description": "Bite from abroad — possible tick-borne illness or tropical disease",
-      "outcome": "gp",
-      "message": "Bites from abroad may carry tropical diseases. Please see your GP today."
+      "condition": "q8 === true",
+      "description": "Possible sepsis warning features",
+      "outcome": "emergency_999",
+      "message": "Possible sepsis symptoms need emergency care now. Call 999."
     }
   ],
   "eligibilityRules": [
     {
       "id": "elig_1",
-      "condition": "q2 === true && q3 === false && q4 === false",
+      "condition": "age >= 1 && q2 === true && q7 === true && q3 === false && q4 === false && q5 === false && q6 === false && q8 === false",
       "eligible": true,
-      "reason": "Localised bite infection without spreading or systemic signs — pharmacy eligible"
+      "reason": "Localised worsening infected bite (after 48 hours) without systemic or red-flag features"
     },
     {
       "id": "elig_2",
-      "condition": "q7 === true",
+      "condition": "age < 1",
       "eligible": false,
-      "reason": "Travel-associated bite — requires GP review"
+      "reason": "Under 1 year old requires GP review"
+    },
+    {
+      "id": "elig_3",
+      "condition": "q7 === false",
+      "eligible": false,
+      "reason": "Pharmacy infected-bite pathway requires clear worsening after 48 hours"
+    },
+    {
+      "id": "elig_4",
+      "condition": "q3 === true || q4 === true",
+      "eligible": false,
+      "reason": "Spreading redness or systemic features require GP or urgent review"
     }
   ],
   "outcomeRules": [
@@ -125,7 +138,7 @@
       "priority": 4,
       "condition": "pharmacyEligible === false",
       "outcome": "gp",
-      "reason": "Requires GP assessment"
+      "reason": "Outside infected bite pharmacy criteria or exclusion factors present"
     }
   ],
   "selfCareAdvice": "Clean the area with soap and water. Apply a cold compress. Avoid scratching. Antihistamine cream or oral antihistamine for itching. Monitor for spreading redness.",

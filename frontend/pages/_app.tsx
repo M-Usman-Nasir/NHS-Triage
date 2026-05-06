@@ -15,6 +15,7 @@ export default function App({ Component, pageProps }: AppProps) {
       <Head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="theme-color" content="#1d4ed8" />
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         <title>Aegis Health AI</title>
       </Head>
       <div className={`${inter.variable} min-h-screen font-sans`}>
