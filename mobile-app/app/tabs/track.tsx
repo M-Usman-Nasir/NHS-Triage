@@ -1,0 +1,21 @@
+import { StyleSheet, Text, View } from "react-native";
+import { Screen } from "../../components/Screen";
+
+export default function TrackPage() {
+  return (
+    <Screen>
+      <View style={s.card}>
+        <Text style={s.title}>Track</Text>
+        <Text style={s.body}>
+          Monitor progress over time, including symptoms and next review points.
+        </Text>
+      </View>
+    </Screen>
+  );
+}
+
+const s = StyleSheet.create({
+  card: { backgroundColor: "#fff", borderRadius: 14, borderWidth: 1, borderColor: "#e2e8f0", padding: 16, gap: 8 },
+  title: { fontSize: 24, fontWeight: "700", color: "#0f172a" },
+  body: { fontSize: 14, color: "#334155", lineHeight: 20 },
+});

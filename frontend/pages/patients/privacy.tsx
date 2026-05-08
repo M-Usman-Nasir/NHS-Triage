@@ -7,7 +7,7 @@ export default function PrivacyPage() {
   return (
     <>
       <Head>
-        <title>Privacy — Aegis Health AI</title>
+        <title>Privacy — Care Path</title>
       </Head>
       <LegalLayout
         title="Privacy notice"
@@ -22,7 +22,7 @@ export default function PrivacyPage() {
 
           <h2 className="mt-8 text-base">Who we are</h2>
           <p>
-            <strong className="text-foreground">Aegis Health AI</strong> provides this website as a demonstration of
+            <strong className="text-foreground">Care Path</strong> provides this website as a demonstration of
             structured, rule-based clinical triage (clinical decision support). The data controller for any live deployment
             will be the commissioning organisation — this notice describes the <em>intended</em> processing pattern.
           </p>

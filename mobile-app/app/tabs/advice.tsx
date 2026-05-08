@@ -1,0 +1,105 @@
+import { useNavigation } from "@react-navigation/native";
+import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { SPACING } from "../../lib/spacing";
+
+export default function AdvicePage() {
+  const navigation = useNavigation<any>();
+
+  return (
+    <SafeAreaView style={s.root}>
+      <View style={s.container}>
+        <View style={s.statusSpacer}>
+          <View style={s.iconWrap}>
+            <MaterialCommunityIcons name="check" size={34} color="#16a34a" />
+          </View>
+        </View>
+
+        <Text style={s.heroTitle}>Pharmacy consultation recommended</Text>
+        <Text style={s.heroBody}>
+          Your symptoms suggest this is likely suitable for treatment at a pharmacy.
+        </Text>
+
+        <View style={s.card}>
+          <Text style={s.cardTitle}>Why this recommendation?</Text>
+          <Text style={s.cardSubtle}>Based on your answers:</Text>
+          <View style={s.bulletList}>
+            <View style={s.bulletRow}>
+              <MaterialCommunityIcons name="check" size={16} color="#16a34a" />
+              <Text style={s.bullet}>Symptoms present for 1-3 days</Text>
+            </View>
+            <View style={s.bulletRow}>
+              <MaterialCommunityIcons name="check" size={16} color="#16a34a" />
+              <Text style={s.bullet}>No red flag symptoms</Text>
+            </View>
+            <View style={s.bulletRow}>
+              <MaterialCommunityIcons name="check" size={16} color="#16a34a" />
+              <Text style={s.bullet}>You are 18+ and otherwise well</Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={s.card}>
+          <View style={s.findRow}>
+            <MaterialCommunityIcons name="storefront-outline" size={30} color="#2563eb" />
+            <View style={s.findCopy}>
+              <Text style={s.cardTitle}>What to do next</Text>
+              <Text style={s.cardSubtle}>Visit a local pharmacy for advice and treatment.</Text>
+            </View>
+          </View>
+          <Pressable style={s.cta} onPress={() => navigation.navigate("Home", { screen: "FindPharmacy" })}>
+            <Text style={s.ctaText}>Find a pharmacy</Text>
+          </Pressable>
+        </View>
+
+        <Text style={s.important}>Important</Text>
+        <Text style={s.importantBody}>
+          If your symptoms worsen or you develop new symptoms, seek medical help.
+        </Text>
+      </View>
+    </SafeAreaView>
+  );
+}
+
+const s = StyleSheet.create({
+  root: { flex: 1, backgroundColor: "#f8fafc", paddingHorizontal: SPACING.sm, paddingVertical: SPACING.sm },
+  container: { flex: 1, paddingHorizontal: SPACING.sm, paddingTop: SPACING.xs, paddingBottom: SPACING.xs },
+  statusSpacer: { alignItems: "center", marginTop: 4, marginBottom: 10 },
+  iconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "#ecfdf3",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  heroTitle: { color: "#0f172a", fontSize: 38, lineHeight: 41, fontWeight: "800" },
+  heroBody: { marginTop: 8, color: "#475569", fontSize: 18, lineHeight: 23 },
+  card: {
+    marginTop: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#dbe3ef",
+    backgroundColor: "#ffffff",
+    padding: 12,
+    gap: 8,
+  },
+  cardTitle: { color: "#0f172a", fontSize: 18, fontWeight: "700" },
+  cardSubtle: { color: "#64748b", fontSize: 14, lineHeight: 19 },
+  bulletList: { gap: 6, marginTop: 2 },
+  bulletRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  bullet: { color: "#334155", fontSize: 14, lineHeight: 18 },
+  findRow: { flexDirection: "row", gap: 10, alignItems: "center" },
+  findCopy: { flex: 1, gap: 2 },
+  cta: {
+    borderRadius: 10,
+    backgroundColor: "#2563eb",
+    paddingVertical: 12,
+    alignItems: "center",
+    marginTop: 6,
+  },
+  ctaText: { color: "#fff", fontSize: 17, fontWeight: "700" },
+  important: { marginTop: 14, color: "#1e293b", fontWeight: "700", fontSize: 16 },
+  importantBody: { marginTop: 4, color: "#475569", fontSize: 14, lineHeight: 19 },
+});

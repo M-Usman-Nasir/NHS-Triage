@@ -1,6 +1,6 @@
 /**
  * redFlagDetector.js
- * Aegis Health AI — Red Flag Detection System
+ * Care Path — Red Flag Detection System
  *
  * Purpose:
  *   Evaluates patient answers against a clinical pathway's red-flag rules.

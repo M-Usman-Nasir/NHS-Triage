@@ -1,6 +1,6 @@
 /**
  * crm/cases.tsx — Cases Pipeline (Kanban Board)
- * Aegis Health AI CRM
+ * Care Path CRM
  *
  * Visual Kanban board with 5 columns:
  *   New → In Review → Treated → Escalated → Closed

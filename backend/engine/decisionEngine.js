@@ -1,6 +1,6 @@
 /**
  * decisionEngine.js
- * Aegis Health AI — Clinical Decision Engine
+ * Care Path — Clinical Decision Engine
  *
  * Purpose:
  *   Orchestrates the full triage decision process for a patient consultation.

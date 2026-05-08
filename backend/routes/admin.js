@@ -1,6 +1,6 @@
 /**
  * admin.js — API Route
- * Aegis Health AI
+ * Care Path
  *
  * Administration endpoints for managing clinical rules, viewing analytics,
  * and monitoring platform performance.

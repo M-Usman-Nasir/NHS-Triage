@@ -8,7 +8,6 @@ import {
   ChevronRight,
   ListChecks,
   Shield,
-  Sparkles,
   X,
 } from 'lucide-react';
 import { apiFetch, apiUrl } from '../../lib/api';
@@ -43,24 +42,24 @@ interface PatientInfo {
 
 function PatientsShellFallbackHeader() {
   return (
-    <header className="sticky top-0 z-30 border-b border-sky-200/70 bg-white/80 text-foreground shadow-sm backdrop-blur-xl supports-[backdrop-filter]:bg-white/65">
+    <header className="sticky top-0 z-30 border-b border-slate-200 bg-white text-foreground">
       <div className="mx-auto flex w-full max-w-5xl items-center gap-2 px-3 pb-3 pt-[max(0.5rem,env(safe-area-inset-top))] sm:gap-3 sm:px-4 sm:pb-3 sm:pt-3">
         <Link
           href="/patients"
           aria-label="Back to triage"
-          className="touch-manipulation inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 border-primary/25 bg-white/90 text-primary shadow-sm transition active:scale-95 hover:border-primary/40 hover:bg-sky-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+          className="touch-manipulation inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 transition active:scale-95 hover:border-slate-400 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
         >
           <ArrowLeft className="h-5 w-5" strokeWidth={2.2} aria-hidden />
         </Link>
         <div
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-black text-primary-foreground shadow-md ring-2 ring-primary/20 sm:h-11 sm:w-11"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-black text-primary-foreground sm:h-11 sm:w-11"
           aria-hidden
         >
-          A
+          C
         </div>
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-bold leading-tight tracking-tight text-slate-900 sm:text-base">
-            Aegis Health AI
+            Care Path
           </p>
           <p className="truncate text-[11px] font-medium leading-tight text-slate-500 sm:text-xs">Consultation</p>
         </div>
@@ -71,23 +70,12 @@ function PatientsShellFallbackHeader() {
 
 function PatientsMobileShell({ children }: { children: ReactNode }) {
   return (
-    <div className="flex min-h-[100dvh] min-h-screen flex-col items-center justify-center bg-gradient-to-br from-slate-300 via-slate-200 to-slate-400 px-2 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:px-4 sm:py-4 md:px-6 md:py-6">
-      <div className="relative flex h-[min(52rem,calc(100dvh-1rem))] w-full max-w-[min(calc(100vw-1rem),24rem)] flex-col overflow-hidden rounded-2xl border-[5px] border-slate-900 bg-gradient-to-b from-sky-50 via-[#e8f2ff] to-slate-50 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.45)] ring-1 ring-white/10 sm:rounded-[1.75rem] sm:border-[6px] sm:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.55)] sm:ring-white/15 md:max-w-[24rem] md:rounded-[1.875rem]">
-        <div
-          className="pointer-events-none absolute inset-0 opacity-[0.55]"
-          style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Cg fill='%232563eb' fill-opacity='0.06'%3E%3Cpath d='M22 10h4v12h12v4H26v12h-4V26H10v-4h12V10z'/%3E%3C/g%3E%3C/svg%3E")`,
-          }}
-          aria-hidden
-        />
-        <div
-          className="pointer-events-none absolute inset-x-0 top-0 h-[min(52vh,28rem)] bg-[radial-gradient(ellipse_85%_70%_at_50%_-5%,rgba(37,99,235,0.14),transparent_65%)]"
-          aria-hidden
-        />
+    <div className="flex min-h-[100dvh] min-h-screen flex-col items-center justify-center bg-white px-2 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:px-4 sm:py-4 md:px-6 md:py-6">
+      <div className="relative flex h-[min(52rem,calc(100dvh-1rem))] w-full max-w-[min(calc(100vw-1rem),24rem)] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white sm:rounded-[1.75rem] md:max-w-[24rem] md:rounded-[1.875rem]">
         <div className="relative z-0 flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden overscroll-y-contain [-webkit-overflow-scrolling:touch]">
           <a
             href="#main-content"
-            className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-slate-900 focus:shadow-lg focus:ring-2 focus:ring-primary"
+            className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-slate-900 focus:ring-2 focus:ring-primary"
           >
             Skip to main content
           </a>
@@ -140,6 +128,14 @@ export default function ConsultationPage() {
   const [clinicalProgressMax, setClinicalProgressMax] = useState(1);
   const [useServerFlow, setUseServerFlow] = useState(true);
   const [clinicalSchemaLoading, setClinicalSchemaLoading] = useState(false);
+
+  const routeToEmergencyScreen = (questionText: string) => {
+    const query = new URLSearchParams({
+      from: activePathwayCode || 'unknown',
+      question: questionText,
+    });
+    void router.push(`/patients/emergency?${query.toString()}`);
+  };
 
   const prefaceQuestions = CONSULTATION_PREFACE_QUESTIONS;
   const prefaceCount = prefaceQuestions.length;
@@ -308,6 +304,10 @@ export default function ConsultationPage() {
 
   const handleClinicalAnswer = (value: string | boolean) => {
     if (!clinicalQuestion) return;
+    if (clinicalQuestion.redFlagHint && value === true) {
+      routeToEmergencyScreen(clinicalQuestion.text);
+      return;
+    }
     const qId = clinicalQuestion.id;
     const merged = { ...answers, [qId]: value };
     setAnswers(merged);
@@ -503,7 +503,7 @@ export default function ConsultationPage() {
           id="main-content"
           className="relative mx-auto w-full min-w-0 max-w-5xl flex-1 px-3 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-5 sm:px-4 sm:py-8"
         >
-          <div className="rounded-2xl border border-sky-200/60 bg-white/90 p-5 text-center shadow-xl shadow-sky-900/10 backdrop-blur-sm sm:p-6">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 text-center sm:p-6">
             <p className="text-sm text-slate-600">No clinical pathway was selected.</p>
             <Link
               href="/patients"
@@ -526,7 +526,7 @@ export default function ConsultationPage() {
           id="main-content"
           className="relative mx-auto w-full min-w-0 max-w-5xl flex-1 px-3 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-5 sm:px-4 sm:py-8"
         >
-          <div className="rounded-2xl border border-sky-200/60 bg-white/90 p-5 text-center shadow-xl shadow-sky-900/10 backdrop-blur-sm sm:p-6">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 text-center sm:p-6">
             <p className="font-semibold text-slate-900">Unknown pathway</p>
             <p className="mt-2 text-sm text-slate-600">
               &quot;{unknownCode}&quot; is not a recognised pathway. Choose a symptom from triage.
@@ -573,8 +573,7 @@ export default function ConsultationPage() {
         {wizardStep === 'demographics' && (
           <div>
             <div className="mb-5 text-center sm:mb-6 sm:text-left">
-              <p className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-sky-200/80 bg-white/80 px-3 py-1 text-[11px] font-semibold text-primary shadow-sm backdrop-blur-md sm:text-xs">
-                <Sparkles className="h-3.5 w-3.5 shrink-0" strokeWidth={2} aria-hidden />
+              <p className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-3 py-1 text-[11px] font-semibold text-primary sm:text-xs">
                 Step 1 — About you
               </p>
               <h2 className="text-balance text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
@@ -587,7 +586,7 @@ export default function ConsultationPage() {
               </p>
             </div>
 
-            <div className="mb-4 flex items-start gap-3 rounded-2xl border border-sky-200/70 bg-white/80 px-4 py-3 text-left shadow-sm backdrop-blur-sm">
+            <div className="mb-4 flex items-start gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left">
               <Shield className="mt-0.5 h-5 w-5 shrink-0 text-primary" strokeWidth={1.75} aria-hidden />
               <p className="text-xs leading-relaxed text-slate-600">
                 <span className="font-semibold text-slate-900">Rules-based triage</span>
@@ -597,7 +596,7 @@ export default function ConsultationPage() {
             </div>
 
             <div className="space-y-4">
-              <div className="space-y-4 rounded-2xl border border-sky-200/60 bg-white/90 p-4 shadow-xl shadow-sky-900/10 backdrop-blur-sm sm:rounded-3xl sm:p-6">
+              <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 sm:rounded-3xl sm:p-6">
                 <div>
                   <label className="mb-1.5 block text-sm font-semibold text-slate-900">Full name</label>
                   <input
@@ -605,7 +604,7 @@ export default function ConsultationPage() {
                     placeholder="e.g. Sarah Mitchell"
                     value={patient.fullName}
                     onChange={(e) => setPatient({ ...patient, fullName: e.target.value })}
-                    className="w-full rounded-2xl border border-sky-200/90 bg-white px-4 py-3.5 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/30"
                   />
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -619,7 +618,7 @@ export default function ConsultationPage() {
                       inputMode="numeric"
                       value={patient.age}
                       onChange={(e) => setPatient({ ...patient, age: e.target.value })}
-                      className="w-full rounded-2xl border border-sky-200/90 bg-white px-4 py-3.5 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                      className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/30"
                     />
                   </div>
                   <div>
@@ -627,7 +626,7 @@ export default function ConsultationPage() {
                     <select
                       value={patient.gender}
                       onChange={(e) => setPatient({ ...patient, gender: e.target.value })}
-                      className="w-full rounded-2xl border border-sky-200/90 bg-white px-4 py-3.5 text-sm text-slate-900 shadow-sm focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                      className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3.5 text-sm text-slate-900 focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/30"
                     >
                       <option value="">Select</option>
                       <option>Female</option>
@@ -646,13 +645,13 @@ export default function ConsultationPage() {
                     placeholder="e.g. burning when passing urine, fever"
                     value={symptoms}
                     onChange={(e) => setSymptoms(e.target.value)}
-                    className="w-full rounded-2xl border border-sky-200/90 bg-white px-4 py-3.5 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/30"
                   />
                 </div>
               </div>
 
               {error && (
-                <div className="rounded-2xl border border-red-200/90 bg-rose-50/95 px-4 py-3 text-sm text-red-800 shadow-sm" role="alert">
+                <div className="rounded-2xl border border-red-200 bg-rose-50 px-4 py-3 text-sm text-red-800" role="alert">
                   {error}
                 </div>
               )}
@@ -660,7 +659,7 @@ export default function ConsultationPage() {
               <button
                 type="button"
                 onClick={handleDemographicsSubmit}
-                className="touch-manipulation group flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl bg-primary py-4 text-base font-bold text-primary-foreground shadow-lg shadow-primary/25 ring-offset-white transition-all hover:bg-primary/90 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 motion-reduce:transition-none motion-reduce:active:scale-100"
+                className="touch-manipulation group flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl bg-primary py-4 text-base font-bold text-primary-foreground ring-offset-white transition-all hover:bg-primary/90 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 motion-reduce:transition-none motion-reduce:active:scale-100"
               >
                 Continue to questions
                 <ChevronRight className="h-5 w-5 transition-transform group-hover:translate-x-0.5 motion-reduce:transform-none" strokeWidth={2} aria-hidden />
@@ -671,12 +670,12 @@ export default function ConsultationPage() {
 
         {wizardStep === 'preface' && prefaceQuestion && (
           <div>
-            <p className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-sky-200/80 bg-white/80 px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-slate-600 shadow-sm backdrop-blur-md sm:text-[11px]">
+            <p className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-slate-600 sm:text-[11px]">
               <Activity className="h-3.5 w-3.5 shrink-0" strokeWidth={2} aria-hidden />
               Quick context ({prefaceIndex + 1}/{prefaceCount})
             </p>
 
-            <div className="rounded-2xl border border-sky-200/60 bg-white/90 p-4 shadow-xl shadow-sky-900/10 backdrop-blur-sm sm:rounded-3xl sm:p-7">
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:rounded-3xl sm:p-7">
               <h2 className="text-balance text-lg font-bold leading-snug text-slate-900 sm:text-xl">
                 {prefaceQuestion.text}
               </h2>
@@ -755,7 +754,7 @@ export default function ConsultationPage() {
                   <button
                     type="button"
                     onClick={advancePrefaceManual}
-                    className="touch-manipulation flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl bg-primary py-4 text-base font-bold text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:bg-primary/90 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 motion-reduce:transition-none motion-reduce:active:scale-100"
+                    className="touch-manipulation flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl bg-primary py-4 text-base font-bold text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 motion-reduce:transition-none motion-reduce:active:scale-100"
                   >
                     {prefaceIndex === prefaceCount - 1 ? 'Continue to clinical questions' : 'Next'}
                     <ChevronRight className="h-5 w-5" strokeWidth={2} aria-hidden />
@@ -770,7 +769,7 @@ export default function ConsultationPage() {
         )}
 
         {wizardStep === 'clinical' && clinicalSchemaLoading && (
-          <div className="flex flex-col items-center justify-center rounded-2xl border border-sky-200/60 bg-white/90 py-16 shadow-inner backdrop-blur-sm">
+          <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white py-16">
             <div className="h-10 w-10 rounded-full border-4 border-primary border-t-transparent motion-safe:animate-spin" aria-hidden />
             <p className="mt-4 text-sm text-slate-600">Loading clinical pathway…</p>
           </div>
@@ -795,7 +794,7 @@ export default function ConsultationPage() {
               </SafetyPanel>
             )}
 
-            <p className="mb-3 inline-flex flex-wrap items-center gap-1.5 rounded-full border border-sky-200/80 bg-white/80 px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-primary shadow-sm backdrop-blur-md sm:text-[11px]">
+            <p className="mb-3 inline-flex flex-wrap items-center gap-1.5 rounded-full border border-slate-300 bg-white px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-primary sm:text-[11px]">
               <ListChecks className="h-3.5 w-3.5 shrink-0" strokeWidth={2} aria-hidden />
               Clinical pathway ({Math.min(clinicalHistory.length + 1, clinicalProgressMax)}/{clinicalProgressMax})
             </p>
@@ -832,7 +831,7 @@ export default function ConsultationPage() {
         )}
 
         {wizardStep === 'submitting' && (
-          <div className="rounded-2xl border border-sky-200/60 bg-white/90 p-8 text-center shadow-xl shadow-sky-900/10 backdrop-blur-sm sm:rounded-3xl sm:p-12">
+          <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center sm:rounded-3xl sm:p-12">
             <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
               <div className="h-10 w-10 rounded-full border-4 border-primary border-t-transparent motion-safe:animate-spin" aria-hidden />
             </div>

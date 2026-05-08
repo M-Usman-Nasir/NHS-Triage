@@ -3,7 +3,7 @@ import CRMLayout from '../../components/CRMLayout';
 
 export default function AdminProfilePage() {
   return (
-    <CRMLayout title="Admin Profile" subtitle="Aegis Health AI administration">
+    <CRMLayout title="Admin Profile" subtitle="Care Path administration">
       <div className="mx-auto max-w-4xl">
 
         <section className="rounded-2xl border border-border bg-card p-4 shadow-card sm:p-5">
@@ -22,7 +22,7 @@ export default function AdminProfilePage() {
               <dt className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">Email</dt>
               <dd className="inline-flex items-center gap-1.5 text-foreground">
                 <Mail className="h-4 w-4 text-primary" strokeWidth={1.75} aria-hidden />
-                admin@aegishealth.local
+                admin@carepath.local
               </dd>
             </div>
 

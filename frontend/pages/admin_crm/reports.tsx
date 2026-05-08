@@ -1,6 +1,6 @@
 /**
  * crm/reports.tsx — CRM Analytics & Reports
- * Aegis Health AI CRM
+ * Care Path CRM
  *
  * Comprehensive reporting page with:
  * - Consultation volume trends

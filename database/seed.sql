@@ -1,5 +1,5 @@
 -- ============================================================
--- Aegis Health AI — Seed Data (Mock / Development Only)
+-- Care Path — Seed Data (Mock / Development Only)
 -- DO NOT use in production. For local dev and demos only.
 -- ============================================================
 

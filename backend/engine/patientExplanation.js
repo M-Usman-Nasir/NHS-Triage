@@ -1,6 +1,6 @@
 /**
  * patientExplanation.js
- * Aegis Health AI — Lay-language patient explanation (separate from clinical summaryText)
+ * Care Path — Lay-language patient explanation (separate from clinical summaryText)
  */
 
 'use strict';

@@ -1,6 +1,6 @@
 /**
  * crm/patients/[id].tsx — Patient Profile Page
- * Aegis Health AI CRM
+ * Care Path CRM
  *
  * Full patient profile with:
  * - Demographics and contact info

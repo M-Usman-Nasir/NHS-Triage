@@ -1,6 +1,6 @@
 /**
  * server.js
- * Aegis Health AI — Backend API Server
+ * Care Path — Backend API Server
  *
  * Express.js application entry point.
  * Mounts all API routes and starts the HTTP server.
@@ -59,7 +59,7 @@ app.use((req, res, next) => {
 app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
-    service: 'Aegis Health AI API',
+    service: 'Care Path API',
     version: '0.1.0',
     timestamp: new Date().toISOString(),
   });
@@ -71,7 +71,7 @@ app.get('/health', (req, res) => {
  */
 app.get('/', (req, res) => {
   res.json({
-    service: 'Aegis Health AI — Clinical Triage API',
+    service: 'Care Path — Clinical Triage API',
     version: '0.1.0',
     environment: process.env.NODE_ENV || 'development',
     endpoints: {
@@ -130,7 +130,7 @@ if (require.main === module) {
   app.listen(PORT, () => {
     console.log('');
     console.log('  ╔══════════════════════════════════════════╗');
-    console.log('  ║     Aegis Health AI — API Server         ║');
+    console.log('  ║     Care Path — API Server         ║');
     console.log(`  ║     Running on http://localhost:${PORT}     ║`);
     console.log('  ║     Environment: ' + (process.env.NODE_ENV || 'development').padEnd(23) + '║');
     console.log('  ╚══════════════════════════════════════════╝');

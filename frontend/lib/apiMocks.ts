@@ -507,7 +507,7 @@ endobj
 4 0 obj
 << /Length 140 >>
 stream
-BT /F1 12 Tf 50 740 Td (Aegis Health AI Mock Referral Summary) Tj T* (${summary.pathwayLabel}) Tj T* (${summary.outcomeLabel}) Tj ET
+BT /F1 12 Tf 50 740 Td (Care Path Mock Referral Summary) Tj T* (${summary.pathwayLabel}) Tj T* (${summary.outcomeLabel}) Tj ET
 endstream
 endobj
 trailer

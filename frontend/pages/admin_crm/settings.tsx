@@ -1,6 +1,6 @@
 /**
  * admin_crm/settings.tsx — Admin settings (analytics, pathways, rules, question coverage)
- * Aegis Health AI
+ * Care Path
  *
  * Platform administration and analytics dashboard.
  *

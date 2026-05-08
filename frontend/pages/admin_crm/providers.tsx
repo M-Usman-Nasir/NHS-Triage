@@ -1,6 +1,6 @@
 /**
  * crm/providers.tsx — Provider Directory
- * Aegis Health AI CRM
+ * Care Path CRM
  *
  * Lists all healthcare providers (pharmacists, GPs) with:
  * - Performance metrics (cases, response time)

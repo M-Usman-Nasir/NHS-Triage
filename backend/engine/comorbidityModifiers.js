@@ -1,6 +1,6 @@
 /**
  * comorbidityModifiers.js
- * Aegis Health AI — Comorbidity / risk modifier layer
+ * Care Path — Comorbidity / risk modifier layer
  *
  * Runs after base pharmacy eligibility rules. Can block pharmacy for
  * combinations not covered by a single eligibility row, and appends

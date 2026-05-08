@@ -7,7 +7,7 @@ export default function TermsPage() {
   return (
     <>
       <Head>
-        <title>Terms of Use — Aegis Health AI</title>
+        <title>Terms of Use — Care Path</title>
       </Head>
       <LegalLayout
         title="Terms of Use"
@@ -18,7 +18,7 @@ export default function TermsPage() {
 
           <h2 className="mt-8 text-base">Nature of the service</h2>
           <p>
-            Aegis Health AI provides <strong className="text-foreground">clinical decision support</strong> only: structured
+            Care Path provides <strong className="text-foreground">clinical decision support</strong> only: structured
             questions and deterministic rules to suggest an appropriate <em>next step</em> (self-care, pharmacy, GP, urgent
             care, or 999). It is not a medical device diagnosis and not a prescribing service.
           </p>

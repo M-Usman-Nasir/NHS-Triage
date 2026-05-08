@@ -8,6 +8,20 @@ import type { PathwayQuestion } from './pathwayQuestions';
 
 export const CONSULTATION_PREFACE_QUESTIONS: PathwayQuestion[] = [
   {
+    id: '_ctx_duration',
+    text: 'How long have you had symptoms?',
+    type: 'select',
+    options: ['Less than 24 hours', '1-3 days', '4-7 days', 'More than 7 days', 'Prefer not to say'],
+    required: false,
+  },
+  {
+    id: '_ctx_severity',
+    text: 'How severe are your symptoms right now?',
+    type: 'select',
+    options: ['Mild', 'Moderate', 'Severe', 'Very severe', 'Prefer not to say'],
+    required: false,
+  },
+  {
     id: '_ctx_impact',
     text: 'How much are your symptoms affecting what you can do today?',
     type: 'select',
@@ -44,6 +58,8 @@ export function stripContextAnswers(answers: Record<string, unknown>): Record<st
 }
 
 const PREFACE_LABELS: Record<string, string> = {
+  _ctx_duration: 'Symptom duration',
+  _ctx_severity: 'Symptom severity',
   _ctx_impact: 'Impact on day',
   _ctx_first_episode: 'Previous episodes',
   _ctx_prior_advice: 'Prior advice',

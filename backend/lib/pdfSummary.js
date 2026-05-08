@@ -15,7 +15,7 @@ function buildSummaryPdfBuffer(summary) {
     doc.on('end', () => resolve(Buffer.concat(chunks)));
     doc.on('error', reject);
 
-    doc.fontSize(18).text('Aegis Health AI - Referral Summary');
+    doc.fontSize(18).text('Care Path - Referral Summary');
     doc.moveDown(0.6);
     doc.fontSize(10).fillColor('#555555').text(`Generated: ${new Date().toISOString()}`);
     doc.moveDown();

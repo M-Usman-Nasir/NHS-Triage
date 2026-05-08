@@ -1,6 +1,6 @@
 /**
  * crm/tasks.tsx — Tasks & Follow-ups
- * Aegis Health AI CRM
+ * Care Path CRM
  *
  * Task management page with:
  * - Priority-sorted task list

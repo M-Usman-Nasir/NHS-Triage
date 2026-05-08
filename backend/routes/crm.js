@@ -1,6 +1,6 @@
 /**
  * crm.js — CRM API Routes
- * Aegis Health AI
+ * Care Path
  *
  * Provides full CRUD endpoints for the CRM module.
  *

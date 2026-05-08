@@ -1,6 +1,6 @@
 /**
  * pharmacist/dashboard.tsx — Pharmacist Review Panel
- * Aegis Health AI
+ * Care Path
  *
  * Shows pharmacists a list of patients referred to pharmacy.
  * Each row links to the full consultation summary.

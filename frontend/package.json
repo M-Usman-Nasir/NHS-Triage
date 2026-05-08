@@ -1,7 +1,7 @@
 {
-  "name": "aegis-health-ai-frontend",
+  "name": "care-path-frontend",
   "version": "0.1.0",
-  "description": "Aegis Health AI — Patient Consultation Frontend",
+  "description": "Care Path — Patient Consultation Frontend",
   "scripts": {
     "dev": "cross-env NEXT_IGNORE_INCORRECT_LOCKFILE=1 next dev",
     "build": "cross-env NEXT_IGNORE_INCORRECT_LOCKFILE=1 next build",

@@ -1,6 +1,6 @@
 # Clinical & Governance — Stakeholder Source of Truth
 
-**Aegis Health AI — rule-based triage (not generative AI diagnosis)**  
+**Care Path — rule-based triage (not generative AI diagnosis)**  
 **Companion:** [PLATFORM-HANDBOOK.md](./PLATFORM-HANDBOOK.md) (technical implementation, phases, repo map, **built vs gap** table)
 
 ---

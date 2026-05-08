@@ -5,7 +5,7 @@ export default function AccessibilityPage() {
   return (
     <>
       <Head>
-        <title>Accessibility — Aegis Health AI</title>
+        <title>Accessibility — Care Path</title>
       </Head>
       <LegalLayout
         title="Accessibility statement"

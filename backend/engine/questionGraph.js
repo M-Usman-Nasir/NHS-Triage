@@ -1,6 +1,6 @@
 /**
  * questionGraph.js
- * Aegis Health AI — Server-driven clinical question flow
+ * Care Path — Server-driven clinical question flow
  *
  * Resolves the next question from pathway.questionGraph (or a linear fallback
  * derived from pathway.questions). Used by POST /api/consultation/question/next.

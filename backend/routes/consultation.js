@@ -1,6 +1,6 @@
 /**
  * consultation.js — API Route
- * Aegis Health AI
+ * Care Path
  *
  * Handles patient consultation submissions.
  *

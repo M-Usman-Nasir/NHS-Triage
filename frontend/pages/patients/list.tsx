@@ -1,6 +1,6 @@
 /**
  * crm/patients/index.tsx — Patient List
- * Aegis Health AI CRM
+ * Care Path CRM
  *
  * Full patient management list with:
  * - Live search by name, email, NHS number

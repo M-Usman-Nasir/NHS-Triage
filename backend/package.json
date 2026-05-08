@@ -1,7 +1,7 @@
 {
-  "name": "aegis-health-ai-backend",
+  "name": "care-path-backend",
   "version": "0.1.0",
-  "description": "Aegis Health AI — Clinical Triage API Server",
+  "description": "Care Path — Clinical Triage API Server",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

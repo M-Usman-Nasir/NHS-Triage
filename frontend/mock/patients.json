@@ -1,5 +1,5 @@
 {
-  "_comment": "Mock patient records for Aegis Health AI — development and demo use only",
+  "_comment": "Mock patient records for Care Path — development and demo use only",
   "patients": [
     {
       "id": "p0000001-0000-0000-0000-000000000001",

@@ -1,6 +1,6 @@
 # Platform Handbook — Single Source of Truth (Engineering & Product)
 
-**Aegis Health AI — NHS-aligned digital triage**  
+**Care Path — NHS-aligned digital triage**  
 **Canonical:** Use this document to align scope, trace what is built, and record what is still required. When behaviour or scope changes, update the relevant section here (and reference the PR / ticket).
 
 **Companion (clinical & compliance depth):** [CLINICAL-GOVERNANCE.md](./CLINICAL-GOVERNANCE.md) — includes **[§2 — patient app journey vs engine order](./CLINICAL-GOVERNANCE.md#patient-consultation-workflow-as-implemented)**, **[§3 — pathway matrix, branching vs linear, layered disclaimers](./CLINICAL-GOVERNANCE.md#clinical-scope-matrix)**, **[§5 — Security & data protection](./CLINICAL-GOVERNANCE.md#security-and-data-protection)**, **[§5.1–5.3 regulatory & market positioning](./CLINICAL-GOVERNANCE.md#51-regulatory--compliance-positioning-product-statement)**, **[§8 — Planned NHS integration tiers (later)](./CLINICAL-GOVERNANCE.md#8-planned-nhs-integration-strategy-later)**, and **[§9 — Future ML augmentation (backlog)](./CLINICAL-GOVERNANCE.md#9-future-ml-augmentation-backlog)** (not phase 1).

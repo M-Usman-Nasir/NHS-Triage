@@ -1,5 +1,5 @@
 {
-  "_comment": "Aegis Health AI — CRM Mock Data. Dev/demo use only.",
+  "_comment": "Care Path — CRM Mock Data. Dev/demo use only.",
 
   "patients": [
     {
@@ -421,7 +421,7 @@
       "channel": "email",
       "direction": "outbound",
       "subject": "Your pharmacy consultation summary — UTI",
-      "body": "Dear Sarah, please find attached your consultation summary. Your pharmacist Priya Sharma dispensed Nitrofurantoin 100mg MR. Take twice daily for 5 days. Return if no improvement within 48 hours. Aegis Health AI.",
+      "body": "Dear Sarah, please find attached your consultation summary. Your pharmacist Priya Sharma dispensed Nitrofurantoin 100mg MR. Take twice daily for 5 days. Return if no improvement within 48 hours. Care Path.",
       "status": "delivered",
       "sentAt": "2026-04-19T14:35:00Z",
       "sentBy": "system"
@@ -434,7 +434,7 @@
       "channel": "sms",
       "direction": "outbound",
       "subject": null,
-      "body": "URGENT: Aegis Health AI — Based on your symptoms, we advised calling 999. Please ensure you or a carer confirms this was actioned. If you need further help, reply HELP.",
+      "body": "URGENT: Care Path — Based on your symptoms, we advised calling 999. Please ensure you or a carer confirms this was actioned. If you need further help, reply HELP.",
       "status": "delivered",
       "sentAt": "2026-04-16T14:08:00Z",
       "sentBy": "system"
@@ -486,7 +486,7 @@
       "channel": "sms",
       "direction": "outbound",
       "subject": null,
-      "body": "Aegis Health AI: Your consultation has been reviewed. Due to your medical history, we have referred you to your GP, Dr. Leila Thompson. Please contact Bristol Central Surgery to book an urgent appointment.",
+      "body": "Care Path: Your consultation has been reviewed. Due to your medical history, we have referred you to your GP, Dr. Leila Thompson. Please contact Bristol Central Surgery to book an urgent appointment.",
       "status": "delivered",
       "sentAt": "2026-04-21T13:05:00Z",
       "sentBy": "system"

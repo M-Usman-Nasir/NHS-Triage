@@ -1,5 +1,5 @@
 -- ============================================================
--- Aegis Health AI — PostgreSQL Database Schema
+-- Care Path — PostgreSQL Database Schema
 -- Version: V0.1
 -- Description: Core tables for patient consultations, triage
 --              outcomes, clinical rules, and audit logging.

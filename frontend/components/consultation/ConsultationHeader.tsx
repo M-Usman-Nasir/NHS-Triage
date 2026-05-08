@@ -52,7 +52,7 @@ export default function ConsultationHeader({
           </div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-bold leading-tight tracking-tight text-slate-900 sm:text-base">
-              Aegis Health AI
+              Care Path
             </p>
             <p className="truncate text-[11px] font-medium leading-tight text-slate-500 sm:text-xs">{titlePathwayText}</p>
           </div>

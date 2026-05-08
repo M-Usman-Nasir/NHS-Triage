@@ -1,6 +1,6 @@
 /**
  * summary.js — API Route
- * Aegis Health AI
+ * Care Path
  *
  * Consultation summaries read from the shared consultation store
  * (same source as POST /api/consultation + seeded demo rows).

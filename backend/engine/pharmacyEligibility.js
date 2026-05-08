@@ -1,6 +1,6 @@
 /**
  * pharmacyEligibility.js
- * Aegis Health AI — Pharmacy Eligibility Module
+ * Care Path — Pharmacy Eligibility Module
  *
  * Purpose:
  *   Determines whether a patient is eligible for pharmacy-led treatment
