@@ -3,6 +3,7 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { StatusBar } from "react-native";
+import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 import AccessibilityPage from "./app/patients/accessibility";
 import ConsultationPage from "./app/patients/consultation";
 import FindPharmacyPage from "./app/patients/findPharmacy";
@@ -16,6 +17,7 @@ import TermsPage from "./app/patients/terms";
 import AdvicePage from "./app/tabs/advice";
 import ChecksPage from "./app/tabs/checks";
 import TrackPage from "./app/tabs/track";
+import { BOTTOM_NAV_ITEMS, BOTTOM_TAB_BAR, bottomTabBarWithInsets, type BottomNavRoute } from "./components/BottomNavItems";
 
 export type RootStackParamList = {
   Patients: undefined;
@@ -23,7 +25,6 @@ export type RootStackParamList = {
   Consultation: { pathways?: string };
   FindPharmacy: undefined;
   Result: undefined;
-  Profile: undefined;
   Privacy: undefined;
   Terms: undefined;
   Accessibility: undefined;
@@ -54,7 +55,6 @@ function HomeStack() {
       <Stack.Screen name="Consultation" component={ConsultationPage} />
       <Stack.Screen name="FindPharmacy" component={FindPharmacyPage} />
       <Stack.Screen name="Result" component={ResultPage} />
-      <Stack.Screen name="Profile" component={ProfilePage} />
       <Stack.Screen name="Privacy" component={PrivacyPage} />
       <Stack.Screen name="Terms" component={TermsPage} />
       <Stack.Screen name="Accessibility" component={AccessibilityPage} />
@@ -63,30 +63,32 @@ function HomeStack() {
 }
 
 function RootTabs() {
+  const { bottom: bottomInset } = useSafeAreaInsets();
+  const tabBarStyle = bottomTabBarWithInsets(bottomInset);
+
   return (
     <Tabs.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarIcon: ({ color, size, focused }) => {
-          const iconNameByRoute: Record<keyof RootTabParamList, string> = {
-            Home: focused ? "home" : "home-outline",
-            Checks: focused ? "clipboard-check" : "clipboard-check-outline",
-            Track: focused ? "chart-line" : "chart-line",
-            Advice: focused ? "shield-check" : "shield-check-outline",
-            Profile: focused ? "account" : "account-outline",
-          };
+        tabBarLabel: BOTTOM_NAV_ITEMS[route.name as BottomNavRoute].label,
+        tabBarIcon: ({ color, focused }) => {
+          const item = BOTTOM_NAV_ITEMS[route.name as BottomNavRoute];
+          const name = focused ? item.iconFocused : item.icon;
           return (
             <MaterialCommunityIcons
-              name={iconNameByRoute[route.name as keyof RootTabParamList]}
-              size={size}
+              name={name}
+              size={BOTTOM_TAB_BAR.iconSize}
               color={color}
             />
           );
         },
         tabBarActiveTintColor: "#2563eb",
         tabBarInactiveTintColor: "#64748b",
-        tabBarStyle: { height: 62, paddingBottom: 8, paddingTop: 8 },
-        tabBarLabelStyle: { fontSize: 12, fontWeight: "700" },
+        tabBarStyle: tabBarStyle,
+        tabBarLabelStyle: {
+          fontSize: BOTTOM_TAB_BAR.labelFontSize,
+          fontWeight: BOTTOM_TAB_BAR.labelFontWeight,
+        },
       })}
     >
       <Tabs.Screen name="Home" component={HomeStack} />
@@ -100,12 +102,14 @@ function RootTabs() {
 
 export default function App() {
   return (
-    <NavigationContainer>
-      <StatusBar barStyle="dark-content" />
-      <AppStack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Splash">
-        <AppStack.Screen name="Splash" component={SplashPage} />
-        <AppStack.Screen name="MainTabs" component={RootTabs} />
-      </AppStack.Navigator>
-    </NavigationContainer>
+    <SafeAreaProvider>
+      <NavigationContainer>
+        <StatusBar barStyle="dark-content" />
+        <AppStack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Splash">
+          <AppStack.Screen name="Splash" component={SplashPage} />
+          <AppStack.Screen name="MainTabs" component={RootTabs} />
+        </AppStack.Navigator>
+      </NavigationContainer>
+    </SafeAreaProvider>
   );
 }

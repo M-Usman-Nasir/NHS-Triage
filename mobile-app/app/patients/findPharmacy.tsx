@@ -1,8 +1,9 @@
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Dimensions, InteractionManager, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+// Android map tiles require GOOGLE_MAPS_API_KEY in android/local.properties (see app build.gradle).
 import MapView, { Marker } from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { RootStackParamList } from "../../App";
@@ -37,9 +38,23 @@ const PHARMACIES = [
   },
 ];
 
+const MAP_MIN_HEIGHT = Math.round(Dimensions.get("window").height * 0.42);
+
 export default function FindPharmacyPage() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [tab, setTab] = useState<ViewTab>("list");
+  const [mapMountReady, setMapMountReady] = useState(false);
+
+  useEffect(() => {
+    if (tab !== "map") {
+      setMapMountReady(false);
+      return;
+    }
+    const task = InteractionManager.runAfterInteractions(() => {
+      setMapMountReady(true);
+    });
+    return () => task.cancel();
+  }, [tab]);
 
   const tabUnderlineLeft = useMemo(() => (tab === "list" ? "0%" : "50%"), [tab]);
 
@@ -95,24 +110,39 @@ export default function FindPharmacyPage() {
           </View>
         ) : (
           <View style={s.mapWrap}>
-            <MapView
-              style={s.map}
-              initialRegion={{
-                latitude: 51.5014,
-                longitude: -0.1419,
-                latitudeDelta: 0.03,
-                longitudeDelta: 0.03,
-              }}
-            >
-              {PHARMACIES.map((p) => (
-                <Marker
-                  key={p.name}
-                  coordinate={{ latitude: p.latitude, longitude: p.longitude }}
-                  title={p.name}
-                  description={`${p.hours} • ${p.address}`}
-                />
-              ))}
-            </MapView>
+            {mapMountReady ? (
+              <View
+                style={[s.mapClip, Platform.OS === "android" && s.mapClipAndroid]}
+                collapsable={false}
+                renderToHardwareTextureAndroid={false}
+              >
+                <MapView
+                  style={s.mapFill}
+                  initialRegion={{
+                    latitude: 51.5014,
+                    longitude: -0.1419,
+                    latitudeDelta: 0.03,
+                    longitudeDelta: 0.03,
+                  }}
+                  toolbarEnabled={Platform.OS === "android" ? false : undefined}
+                  loadingEnabled={Platform.OS !== "android"}
+                  removeClippedSubviews={false}
+                >
+                  {PHARMACIES.map((p) => (
+                    <Marker
+                      key={p.name}
+                      coordinate={{ latitude: p.latitude, longitude: p.longitude }}
+                      title={p.name}
+                      description={`${p.hours} • ${p.address}`}
+                    />
+                  ))}
+                </MapView>
+              </View>
+            ) : (
+              <View style={[s.mapClip, s.mapPlaceholder]}>
+                <Text style={s.mapPlaceholderText}>Loading map…</Text>
+              </View>
+            )}
             <View style={s.mapHint}>
               <MaterialCommunityIcons name="information-outline" size={15} color="#2563eb" />
               <Text style={s.mapHintText}>Tap any pin to view pharmacy details.</Text>
@@ -126,7 +156,8 @@ export default function FindPharmacyPage() {
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: "#f8fafc", paddingHorizontal: SPACING.sm, paddingVertical: SPACING.sm },
-  container: { flex: 1, borderRadius: 12, overflow: "hidden", backgroundColor: "#f8fafc" },
+  // Avoid overflow:hidden here: on Android it wraps MapView and commonly crashes the maps surface (API 31+ / MIUI).
+  container: { flex: 1, borderRadius: 12, backgroundColor: "#f8fafc" },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 10, paddingTop: 4 },
   back: { width: 32, height: 32, alignItems: "center", justifyContent: "center" },
   title: { fontSize: 18, color: "#0f172a", fontWeight: "700" },
@@ -158,7 +189,17 @@ const s = StyleSheet.create({
   badge: { borderRadius: 6, backgroundColor: "#eff6ff", paddingHorizontal: 8, paddingVertical: 4 },
   badgeText: { color: "#2563eb", fontSize: 12, fontWeight: "600" },
   mapWrap: { flex: 1, padding: 12, gap: 10 },
-  map: { flex: 1, borderRadius: 12 },
+  mapClip: {
+    flex: 1,
+    minHeight: MAP_MIN_HEIGHT,
+    borderRadius: 12,
+    backgroundColor: "#e2e8f0",
+    overflow: Platform.OS === "ios" ? "hidden" : "visible",
+  },
+  mapClipAndroid: { borderRadius: 0 },
+  mapFill: { flex: 1, width: "100%" },
+  mapPlaceholder: { alignItems: "center", justifyContent: "center" },
+  mapPlaceholderText: { color: "#64748b", fontSize: 15 },
   mapHint: {
     borderRadius: 10,
     borderWidth: 1,

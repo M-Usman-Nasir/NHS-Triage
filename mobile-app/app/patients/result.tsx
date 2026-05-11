@@ -11,10 +11,11 @@ export default function ResultPage() {
 
   return (
     <SafeAreaView style={s.root}>
+      <View style={s.pageInset}>
       <View style={s.container}>
         <View style={s.statusSpacer}>
           <View style={s.iconWrap}>
-            <MaterialCommunityIcons name="check" size={34} color="#16a34a" />
+            <MaterialCommunityIcons name="check" size={28} color="#16a34a" />
           </View>
         </View>
 
@@ -28,15 +29,15 @@ export default function ResultPage() {
           <Text style={s.cardSubtle}>Based on your answers:</Text>
           <View style={s.bulletList}>
             <View style={s.bulletRow}>
-              <MaterialCommunityIcons name="check" size={16} color="#16a34a" />
+              <MaterialCommunityIcons name="check" size={14} color="#16a34a" />
               <Text style={s.bullet}>Symptoms present for 1-3 days</Text>
             </View>
             <View style={s.bulletRow}>
-              <MaterialCommunityIcons name="check" size={16} color="#16a34a" />
+              <MaterialCommunityIcons name="check" size={14} color="#16a34a" />
               <Text style={s.bullet}>No red flag symptoms</Text>
             </View>
             <View style={s.bulletRow}>
-              <MaterialCommunityIcons name="check" size={16} color="#16a34a" />
+              <MaterialCommunityIcons name="check" size={14} color="#16a34a" />
               <Text style={s.bullet}>You are 18+ and otherwise well</Text>
             </View>
           </View>
@@ -44,7 +45,7 @@ export default function ResultPage() {
 
         <View style={s.card}>
           <View style={s.findRow}>
-            <MaterialCommunityIcons name="storefront-outline" size={30} color="#2563eb" />
+            <MaterialCommunityIcons name="storefront-outline" size={24} color="#2563eb" />
             <View style={s.findCopy}>
               <Text style={s.cardTitle}>What to do next</Text>
               <Text style={s.cardSubtle}>Visit a local pharmacy for advice and treatment.</Text>
@@ -64,58 +65,66 @@ export default function ResultPage() {
           <Text style={s.linkButtonText}>Start a new consultation</Text>
         </Pressable>
       </View>
+      </View>
     </SafeAreaView>
   );
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#f8fafc", paddingHorizontal: SPACING.sm, paddingVertical: SPACING.sm },
-  container: { flex: 1, paddingHorizontal: SPACING.sm, paddingTop: SPACING.xs, paddingBottom: SPACING.xs },
-  statusSpacer: { alignItems: "center", marginTop: 4, marginBottom: 10 },
+  root: { flex: 1, backgroundColor: "#f8fafc" },
+  pageInset: {
+    flex: 1,
+    paddingTop: SPACING.screenInset,
+    paddingBottom: SPACING.screenInset,
+    paddingLeft: SPACING.screenInset,
+    paddingRight: SPACING.screenInset,
+  },
+  container: { flex: 1 },
+  statusSpacer: { alignItems: "center", marginTop: 2, marginBottom: 8 },
   iconWrap: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: "#ecfdf3",
     alignItems: "center",
     justifyContent: "center",
   },
-  heroTitle: { color: "#0f172a", fontSize: 38, lineHeight: 41, fontWeight: "800" },
-  heroBody: { marginTop: 8, color: "#475569", fontSize: 18, lineHeight: 23 },
+  heroTitle: { color: "#0f172a", fontSize: 28, lineHeight: 34, fontWeight: "800" },
+  heroBody: { marginTop: 8, color: "#475569", fontSize: 15, lineHeight: 21 },
   card: {
-    marginTop: 12,
+    marginTop: 10,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: "#dbe3ef",
     backgroundColor: "#ffffff",
-    padding: 12,
-    gap: 8,
+    padding: 10,
+    gap: 6,
   },
-  cardTitle: { color: "#0f172a", fontSize: 18, fontWeight: "700" },
-  cardSubtle: { color: "#64748b", fontSize: 14, lineHeight: 19 },
-  bulletList: { gap: 6, marginTop: 2 },
+  cardTitle: { color: "#0f172a", fontSize: 16, fontWeight: "700" },
+  cardSubtle: { color: "#64748b", fontSize: 13, lineHeight: 18 },
+  bulletList: { gap: 5, marginTop: 2 },
   bulletRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  bullet: { color: "#334155", fontSize: 14, lineHeight: 18 },
+  bullet: { color: "#334155", fontSize: 13, lineHeight: 17 },
   findRow: { flexDirection: "row", gap: 10, alignItems: "center" },
   findCopy: { flex: 1, gap: 2 },
   cta: {
     borderRadius: 10,
     backgroundColor: "#2563eb",
-    paddingVertical: 12,
+    paddingVertical: 11,
     alignItems: "center",
     marginTop: 6,
   },
-  ctaText: { color: "#fff", fontSize: 17, fontWeight: "700" },
-  important: { marginTop: 14, color: "#1e293b", fontWeight: "700", fontSize: 16 },
-  importantBody: { marginTop: 4, color: "#475569", fontSize: 14, lineHeight: 19 },
+  ctaText: { color: "#fff", fontSize: 15, fontWeight: "700" },
+  important: { marginTop: 12, color: "#1e293b", fontWeight: "700", fontSize: 14 },
+  importantBody: { marginTop: 4, color: "#475569", fontSize: 13, lineHeight: 18 },
   linkButton: {
     marginTop: "auto",
     borderRadius: 10,
     borderWidth: 1,
     borderColor: "#cbd5e1",
     backgroundColor: "#fff",
-    paddingVertical: 12,
+    paddingVertical: 11,
     alignItems: "center",
   },
-  linkButtonText: { color: "#1d4ed8", fontSize: 15, fontWeight: "700" },
+  linkButtonText: { color: "#1d4ed8", fontSize: 14, fontWeight: "700" },
 });

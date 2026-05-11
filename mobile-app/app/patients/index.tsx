@@ -1,9 +1,10 @@
 import { useNavigation } from "@react-navigation/native";
+import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Dimensions, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import type { RootStackParamList } from "../../App";
+import type { RootStackParamList, RootTabParamList } from "../../App";
 import { SPACING } from "../../lib/spacing";
 import { PATIENT_PATHWAYS } from "../../lib/patientPathways";
 
@@ -26,9 +27,14 @@ export default function PatientsLanding() {
         <View style={s.centerWrap}>
           <View style={s.topRow}>
             <View />
-            <Pressable style={s.profileLink} onPress={() => navigation.push("Profile")}>
+            <Pressable
+              style={s.profileLink}
+              onPress={() => {
+                navigation.getParent<BottomTabNavigationProp<RootTabParamList>>()?.navigate("Profile");
+              }}
+            >
               <View style={s.profileIcon}>
-                <MaterialCommunityIcons name="account-outline" size={16} color="#2563eb" />
+                <MaterialCommunityIcons name="account-outline" size={14} color="#2563eb" />
               </View>
               <Text style={s.profileText}>Profile</Text>
             </Pressable>
@@ -44,17 +50,23 @@ export default function PatientsLanding() {
           </Pressable>
 
           <Text style={s.section}>Common checks</Text>
-          <View style={s.list}>
-            {PATIENT_PATHWAYS.map((item) => (
+          <ScrollView
+            style={s.list}
+            contentContainerStyle={s.listContent}
+            nestedScrollEnabled
+            showsVerticalScrollIndicator
+            keyboardShouldPersistTaps="handled"
+          >
+            {PATIENT_PATHWAYS.map((item, index) => (
               <Pressable
                 key={item.code}
-                style={s.listItem}
+                style={[s.listItem, index === PATIENT_PATHWAYS.length - 1 && s.listItemLast]}
                 onPress={() => navigation.push("Consultation", { pathways: item.code })}
               >
                 <View style={s.leadingIcon}>
                   <MaterialCommunityIcons
                     name={iconNameByCode[item.code] ?? "stethoscope"}
-                    size={17}
+                    size={18}
                     color="#2563eb"
                   />
                 </View>
@@ -65,7 +77,7 @@ export default function PatientsLanding() {
                 <MaterialCommunityIcons name="chevron-right" size={20} color="#94a3b8" />
               </Pressable>
             ))}
-          </View>
+          </ScrollView>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -80,53 +92,62 @@ const s = StyleSheet.create({
   profileLink: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderRadius: 999,
     borderWidth: 1,
     borderColor: "#cbd5e1",
     backgroundColor: "#ffffff",
   },
   profileIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     backgroundColor: "#eff6ff",
     alignItems: "center",
     justifyContent: "center",
   },
-  profileText: { fontSize: 15, color: "#2563eb", fontWeight: "700" },
-  title: { marginTop: 24, fontSize: 42, lineHeight: 44, letterSpacing: -0.8, fontWeight: "800", color: "#0f172a" },
-  body: { marginTop: 12, fontSize: 22, lineHeight: 28, color: "#475569", maxWidth: 320 },
-  cta: { marginTop: 24, backgroundColor: "#2563eb", borderRadius: 12, paddingVertical: 16, alignItems: "center" },
-  ctaText: { color: "#ffffff", fontSize: 18, fontWeight: "700" },
-  section: { marginTop: 28, marginBottom: 12, fontSize: 16, fontWeight: "700", color: "#1e293b" },
+  profileText: { fontSize: 13, color: "#2563eb", fontWeight: "700" },
+  title: {
+    marginTop: 18,
+    fontSize: 32,
+    lineHeight: 38,
+    letterSpacing: -0.5,
+    fontWeight: "800",
+    color: "#0f172a",
+  },
+  body: { marginTop: 10, fontSize: 17, lineHeight: 24, color: "#475569", maxWidth: 320 },
+  cta: { marginTop: 18, backgroundColor: "#2563eb", borderRadius: 12, paddingVertical: 12, alignItems: "center" },
+  ctaText: { color: "#ffffff", fontSize: 15, fontWeight: "700" },
+  section: { marginTop: 22, marginBottom: SPACING.sm, fontSize: 16, fontWeight: "700", color: "#1e293b" },
   list: {
+    maxHeight: Math.round(Dimensions.get("window").height * 0.42),
     backgroundColor: "#ffffff",
     borderRadius: 12,
     borderWidth: 1,
     borderColor: "#e2e8f0",
-    overflow: "hidden",
   },
+  listContent: { flexGrow: 0 },
   listItem: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 14,
-    paddingVertical: 14,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.md,
     borderBottomWidth: 1,
     borderBottomColor: "#eef2f7",
   },
+  listItemLast: { borderBottomWidth: 0 },
   leadingIcon: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: "#eff6ff",
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 12,
+    marginRight: SPACING.sm,
   },
-  itemCopy: { flex: 1, gap: 3 },
-  itemTitle: { fontSize: 17, color: "#0f172a", fontWeight: "700" },
-  itemSubtitle: { fontSize: 13, color: "#64748b", lineHeight: 18 },
+  itemCopy: { flex: 1, gap: SPACING.xs },
+  itemTitle: { fontSize: 16, color: "#0f172a", fontWeight: "700" },
+  itemSubtitle: { fontSize: 14, color: "#64748b", lineHeight: 20 },
 });

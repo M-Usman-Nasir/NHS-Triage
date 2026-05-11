@@ -5,6 +5,7 @@ import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityI
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { RootStackParamList } from "../../App";
+import { labelForPatientSelectionCode } from "../../lib/patientPathways";
 import { SPACING } from "../../lib/spacing";
 
 type Question = {
@@ -86,10 +87,15 @@ export default function ConsultationPage() {
   const progressPercent = stepNumber / 5;
 
   const pathwayLabel = useMemo(() => {
-    if (selectedPathways.includes("sore_throat")) return "sore throat";
     if (selectedPathways.length === 0) return "symptoms";
-    return selectedPathways[0].replace(/_/g, " ");
+    if (selectedPathways.includes("sore_throat")) return "sore throat";
+    return "symptoms";
   }, [selectedPathways]);
+
+  const selectionSummary = useMemo(
+    () => selectedPathways.map((code) => labelForPatientSelectionCode(code)),
+    [selectedPathways]
+  );
 
   const validateStep = () => {
     for (const q of activeStep.questions) {
@@ -122,6 +128,7 @@ export default function ConsultationPage() {
 
   return (
     <SafeAreaView style={s.root}>
+      <View style={s.pageInset}>
       <View style={s.container}>
         <View style={s.headerRow}>
           <Pressable style={s.backBtn} onPress={onBack}>
@@ -136,6 +143,16 @@ export default function ConsultationPage() {
         <Text style={s.stepText}>Step {stepNumber} of 5</Text>
         <Text style={s.title}>{activeStep.title}</Text>
         <Text style={s.subtitle}>{activeStep.subtitle}</Text>
+
+        {selectionSummary.length > 0 ? (
+          <View
+            style={s.selectionBanner}
+            accessibilityLabel={`From your first step, you selected: ${selectionSummary.join(", ")}`}
+          >
+            <Text style={s.selectionBannerLabel}>From your first step, you selected:</Text>
+            <Text style={s.selectionBannerText}>{selectionSummary.join(" · ")}</Text>
+          </View>
+        ) : null}
 
         <ScrollView contentContainerStyle={s.formArea} showsVerticalScrollIndicator={false}>
           {activeStep.questions.map((q) => (
@@ -170,13 +187,21 @@ export default function ConsultationPage() {
           </Pressable>
         </View>
       </View>
+      </View>
     </SafeAreaView>
   );
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#f8fafc", paddingHorizontal: SPACING.sm, paddingVertical: SPACING.sm },
-  container: { flex: 1, paddingHorizontal: SPACING.sm, paddingTop: SPACING.xs, paddingBottom: SPACING.xs },
+  root: { flex: 1, backgroundColor: "#f8fafc" },
+  pageInset: {
+    flex: 1,
+    paddingTop: SPACING.screenInset,
+    paddingBottom: SPACING.screenInset,
+    paddingLeft: SPACING.screenInset,
+    paddingRight: SPACING.screenInset,
+  },
+  container: { flex: 1 },
   headerRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   backBtn: { width: 28, height: 28, alignItems: "center", justifyContent: "center" },
   progressTrack: { flex: 1, height: 4, borderRadius: 99, backgroundColor: "#e2e8f0", overflow: "hidden" },
@@ -184,6 +209,17 @@ const s = StyleSheet.create({
   stepText: { marginTop: 8, textAlign: "center", fontSize: 11, color: "#64748b", fontWeight: "600" },
   title: { marginTop: 10, fontSize: 38, lineHeight: 42, color: "#0f172a", fontWeight: "800" },
   subtitle: { marginTop: 6, fontSize: 18, color: "#64748b" },
+  selectionBanner: {
+    marginTop: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#bfdbfe",
+    backgroundColor: "#eff6ff",
+  },
+  selectionBannerLabel: { fontSize: 12, fontWeight: "700", color: "#1d4ed8", textTransform: "uppercase", letterSpacing: 0.4 },
+  selectionBannerText: { marginTop: 6, fontSize: 16, lineHeight: 22, color: "#0f172a", fontWeight: "600" },
   formArea: { paddingTop: 12, paddingBottom: 12, gap: 10 },
   qCard: {
     borderRadius: 12,

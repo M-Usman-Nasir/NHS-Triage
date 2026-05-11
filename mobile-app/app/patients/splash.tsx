@@ -24,29 +24,29 @@ export default function SplashPage() {
 
           <View style={s.featureList}>
             <View style={s.featureRow}>
-              <MaterialCommunityIcons name="shield-check-outline" size={18} color="#2563eb" />
+              <MaterialCommunityIcons name="shield-check-outline" size={16} color="#2563eb" />
               <Text style={s.featureText}>NHS-aligned pathways</Text>
             </View>
             <View style={s.featureRow}>
-              <MaterialCommunityIcons name="shield-check-outline" size={18} color="#2563eb" />
+              <MaterialCommunityIcons name="shield-check-outline" size={16} color="#2563eb" />
               <Text style={s.featureText}>Clinically reviewed workflows</Text>
             </View>
             <View style={s.featureRow}>
-              <MaterialCommunityIcons name="shield-check-outline" size={18} color="#2563eb" />
+              <MaterialCommunityIcons name="shield-check-outline" size={16} color="#2563eb" />
               <Text style={s.featureText}>Your data is private and secure</Text>
             </View>
           </View>
-        </View>
 
-        <View style={s.bottomArea}>
-          <View style={s.infoCard}>
-            <MaterialCommunityIcons name="lock-outline" size={17} color="#2563eb" />
-            <Text style={s.infoText}>Your data is encrypted and handled in line with UK GDPR.</Text>
+          <View style={s.bottomArea}>
+            <View style={s.infoCard}>
+              <MaterialCommunityIcons name="lock-outline" size={15} color="#2563eb" />
+              <Text style={s.infoText}>Your data is encrypted and handled in line with UK GDPR.</Text>
+            </View>
+
+            <Pressable style={s.cta} onPress={() => navigation.replace("MainTabs")}>
+              <Text style={s.ctaText}>Tap to continue</Text>
+            </Pressable>
           </View>
-
-          <Pressable style={s.cta} onPress={() => navigation.replace("MainTabs")}>
-            <Text style={s.ctaText}>Tap to continue</Text>
-          </Pressable>
         </View>
       </View>
     </SafeAreaView>
@@ -54,29 +54,47 @@ export default function SplashPage() {
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#f1f5f9", paddingHorizontal: SPACING.sm, paddingVertical: SPACING.sm },
-  container: { flex: 1, paddingHorizontal: SPACING.md, paddingVertical: SPACING.md, justifyContent: "center" },
+  root: {
+    flex: 1,
+    backgroundColor: "#f1f5f9",
+    paddingTop: SPACING.lg,
+    paddingBottom: SPACING.lg,
+    paddingLeft: SPACING.lg,
+    paddingRight: SPACING.lg,
+  },
+  container: {
+    flex: 1,
+    justifyContent: "center",
+    paddingHorizontal: SPACING.xs,
+    paddingVertical: SPACING.xs,
+  },
   contentWrap: { width: "100%", maxWidth: 360, alignSelf: "center" },
-  brand: { fontSize: 44, lineHeight: 48, fontWeight: "800", color: "#0f2258" },
-  subtitle: { marginTop: 8, fontSize: 36, lineHeight: 41, color: "#1e325f", fontWeight: "500" },
-  accentLine: { marginTop: 16, width: 52, height: 4, borderRadius: 999, backgroundColor: "#2563eb" },
-  lead: { marginTop: 28, fontSize: 34, lineHeight: 40, color: "#1e325f", fontWeight: "500" },
-  featureList: { marginTop: 26, gap: 16 },
-  featureRow: { flexDirection: "row", alignItems: "flex-start", gap: 10, paddingRight: 28 },
-  featureText: { flex: 1, color: "#163264", fontSize: 20, lineHeight: 26, fontWeight: "500" },
-  bottomArea: { gap: 14, marginTop: 28 },
+  brand: { fontSize: 34, lineHeight: 38, fontWeight: "800", color: "#0f2258" },
+  subtitle: { marginTop: 6, fontSize: 22, lineHeight: 28, color: "#1e325f", fontWeight: "500" },
+  accentLine: { marginTop: 12, width: 44, height: 3, borderRadius: 999, backgroundColor: "#2563eb" },
+  lead: { marginTop: 20, fontSize: 24, lineHeight: 30, color: "#1e325f", fontWeight: "500" },
+  featureList: { marginTop: SPACING.xl, gap: SPACING.md },
+  featureRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.md,
+    paddingVertical: SPACING.sm,
+    paddingRight: SPACING.xxl,
+  },
+  featureText: { flex: 1, color: "#163264", fontSize: 16, lineHeight: 22, fontWeight: "500" },
+  bottomArea: { width: "100%", marginTop: SPACING.xl, gap: SPACING.md },
   infoCard: {
     flexDirection: "row",
     alignItems: "flex-start",
-    gap: 10,
+    gap: SPACING.md,
     borderWidth: 1,
     borderColor: "#c6d4f7",
     backgroundColor: "#eaf1ff",
     borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
   },
-  infoText: { flex: 1, fontSize: 16, lineHeight: 21, color: "#163264", fontWeight: "600" },
-  cta: { backgroundColor: "#2563eb", borderRadius: 12, paddingVertical: 14, alignItems: "center" },
-  ctaText: { color: "#ffffff", fontSize: 17, fontWeight: "700" },
+  infoText: { flex: 1, fontSize: 14, lineHeight: 19, color: "#163264", fontWeight: "600" },
+  cta: { backgroundColor: "#2563eb", borderRadius: 12, paddingVertical: 12, alignItems: "center" },
+  ctaText: { color: "#ffffff", fontSize: 15, fontWeight: "700" },
 });

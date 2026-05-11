@@ -69,3 +69,5 @@ mobile-app/.react-native/
 mobile-app/.env
 mobile-app/.env.*
 !mobile-app/.env.example
+
+frontend/CarePathTemp/

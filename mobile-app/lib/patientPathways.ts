@@ -14,3 +14,21 @@ export const PATIENT_PATHWAYS: PatientPathwayMeta[] = [
   { code: "impetigo", label: "Impetigo", fullLabel: "Impetigo", description: "Crusty, golden sores on skin" },
   { code: "shingles", label: "Shingles", fullLabel: "Shingles", description: "Painful rash on one side" },
 ];
+
+/** Symptom-step codes from `symptomSelection` that are not full pathway rows on the home list */
+const SYMPTOM_STEP_LABELS: Record<string, string> = {
+  cough: "Cough",
+  fever: "Fever",
+  blocked_nose: "Blocked nose",
+  ear_pain: "Ear pain",
+  other: "Other",
+};
+
+/** Human-readable label for a home pathway code or symptom-selection id */
+export function labelForPatientSelectionCode(code: string): string {
+  const pathway = PATIENT_PATHWAYS.find((p) => p.code === code);
+  if (pathway) return pathway.fullLabel;
+  const symptom = SYMPTOM_STEP_LABELS[code];
+  if (symptom) return symptom;
+  return code.replace(/_/g, " ").replace(/\b\w/g, (ch) => ch.toUpperCase());
+}
