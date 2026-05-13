@@ -16,7 +16,7 @@ import { Check, ListChecks, MessageSquare } from 'lucide-react';
 import { useRouter } from 'next/router';
 import CRMLayout from '../../components/CRMLayout';
 import Link from 'next/link';
-import { apiUrl, safeFetchJson } from '../../lib/api';
+import { apiFetch, apiUrl, safeFetchJson } from '../../lib/api';
 import { ChannelIcon } from '../../lib/channelIcons';
 import InlineNotice from '../../components/InlineNotice';
 import StatusBadge from '../../components/StatusBadge';
@@ -127,7 +127,7 @@ export default function PatientProfile() {
   }, [id]);
 
   const handleSaveNotes = async () => {
-    await fetch(apiUrl(`/api/crm/patients/${id}/notes`), {
+    await apiFetch(apiUrl(`/api/crm/patients/${id}/notes`), {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ notes }),
     }).catch(() => {});

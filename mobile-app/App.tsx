@@ -6,6 +6,7 @@ import { StatusBar } from "react-native";
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 import AccessibilityPage from "./app/patients/accessibility";
 import ConsultationPage from "./app/patients/consultation";
+import EmergencyPage from "./app/patients/emergency";
 import FindPharmacyPage from "./app/patients/findPharmacy";
 import PatientsLanding from "./app/patients";
 import PrivacyPage from "./app/patients/privacy";
@@ -21,10 +22,11 @@ import { BOTTOM_NAV_ITEMS, BOTTOM_TAB_BAR, bottomTabBarWithInsets, type BottomNa
 
 export type RootStackParamList = {
   Patients: undefined;
-  SymptomSelection: undefined;
+  SymptomSelection: { initialCodes?: string };
   Consultation: { pathways?: string };
+  Emergency: { question?: string; from?: string };
   FindPharmacy: undefined;
-  Result: undefined;
+  Result: { id?: string; ids?: string };
   Privacy: undefined;
   Terms: undefined;
   Accessibility: undefined;
@@ -53,6 +55,7 @@ function HomeStack() {
       <Stack.Screen name="Patients" component={PatientsLanding} />
       <Stack.Screen name="SymptomSelection" component={SymptomSelectionPage} />
       <Stack.Screen name="Consultation" component={ConsultationPage} />
+      <Stack.Screen name="Emergency" component={EmergencyPage} />
       <Stack.Screen name="FindPharmacy" component={FindPharmacyPage} />
       <Stack.Screen name="Result" component={ResultPage} />
       <Stack.Screen name="Privacy" component={PrivacyPage} />

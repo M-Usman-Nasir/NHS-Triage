@@ -13,6 +13,12 @@ import { PATHWAY_QUESTIONS, pathwayClinicalQuestionsForPatient, type PathwayQues
 import { getNearbyOptionsForOutcome } from './referralDirectory';
 import { applyMockPathwayScoring } from './mockScoring';
 import { listMockPathwayCodes, validateMockPathwayMaster } from './mockPathwayMaster';
+import {
+  getMockCrmPatientDetail,
+  MOCK_CRM_DASHBOARD,
+  MOCK_CRM_PATIENTS_ITEMS,
+  MOCK_SUMMARY_LIST_FOR_PHARMACY,
+} from './crmAdminMockResponses';
 
 export function isApiMocksEnabled(): boolean {
   return process.env.NEXT_PUBLIC_USE_API_MOCKS !== 'false';
@@ -258,9 +264,20 @@ function jsonResponse(body: unknown, status = 200): Response {
 
 function parseUrl(input: RequestInfo | URL): URL | null {
   try {
-    if (typeof input === 'string') return new URL(input);
+    if (typeof input === 'string') {
+      if (input.startsWith('http://') || input.startsWith('https://')) return new URL(input);
+      if (typeof window !== 'undefined' && input.startsWith('/')) {
+        return new URL(input, window.location.origin);
+      }
+      return new URL(input);
+    }
     if (input instanceof URL) return input;
-    return new URL(input.url);
+    const raw = input.url;
+    if (raw.startsWith('http://') || raw.startsWith('https://')) return new URL(raw);
+    if (typeof window !== 'undefined' && raw.startsWith('/')) {
+      return new URL(raw, window.location.origin);
+    }
+    return new URL(raw);
   } catch {
     return null;
   }
@@ -399,6 +416,29 @@ function buildMockSummary(
   };
 }
 
+function pharmacistListShape(s: SummaryApiResponse) {
+  return {
+    id: s.id,
+    patient: s.patient,
+    pathway: s.pathway,
+    pathwayLabel: s.pathwayLabel,
+    outcome: s.outcome,
+    outcomeLabel: s.outcomeLabel,
+    outcomeReason: s.outcomeReason,
+    explanation: {
+      decision: s.outcome,
+      reason: s.outcomeReason || '',
+      source: 'rule_engine' as const,
+    },
+    createdAt: s.createdAt,
+    status: 'pending' as const,
+    symptoms: s.symptoms,
+    answers: s.answers,
+    summaryText: s.summaryText,
+    pharmacyTreatmentOptions: s.pharmacyTreatmentOptions,
+  };
+}
+
 /**
  * Returns a Response for recognised API paths when mocks are enabled, or null to use the network.
  */
@@ -488,6 +528,113 @@ export async function tryMockApiResponse(input: RequestInfo | URL, init?: Reques
     );
   }
 
+  if (method === 'GET' && path === '/api/summary') {
+    const seen = new Set<string>();
+    const summaries: unknown[] = [];
+    for (const row of MOCK_SUMMARY_LIST_FOR_PHARMACY) {
+      summaries.push(row);
+      seen.add(row.id);
+    }
+    for (const s of Array.from(mockSummaryById.values())) {
+      if (s.outcome === 'pharmacy' && !seen.has(s.id)) {
+        summaries.push(pharmacistListShape(s));
+        seen.add(s.id);
+      }
+    }
+    for (const id of Object.keys(getStoredMockSummaryMap())) {
+      const s = loadPersistedMockSummary(id);
+      if (s && s.outcome === 'pharmacy' && !seen.has(s.id)) {
+        summaries.push(pharmacistListShape(s));
+        seen.add(s.id);
+      }
+    }
+    return jsonResponse({ summaries });
+  }
+
+  if (method === 'GET' && path === '/api/crm/dashboard') {
+    return jsonResponse(MOCK_CRM_DASHBOARD);
+  }
+
+  if (method === 'GET' && path === '/api/crm/patients') {
+    return jsonResponse({ items: MOCK_CRM_PATIENTS_ITEMS });
+  }
+
+  const crmPatientGet = path.match(/^\/api\/crm\/patients\/([^/]+)$/);
+  if (method === 'GET' && crmPatientGet) {
+    const patientId = decodeURIComponent(crmPatientGet[1] || '');
+    const detail = getMockCrmPatientDetail(patientId);
+    if (!detail) return jsonResponse({ error: 'Patient not found.' }, 404);
+    return jsonResponse(detail);
+  }
+
+  const crmPatientNotes = path.match(/^\/api\/crm\/patients\/([^/]+)\/notes$/);
+  if (method === 'PUT' && crmPatientNotes) {
+    return jsonResponse({ success: true, patientId: decodeURIComponent(crmPatientNotes[1] || '') });
+  }
+
+  if (method === 'POST' && path === '/api/crm/tasks') {
+    return jsonResponse({ success: true, id: `TASK-MOCK-${Date.now()}` }, 201);
+  }
+
+  const crmTaskPut = path.match(/^\/api\/crm\/tasks\/([^/]+)$/);
+  if (method === 'PUT' && crmTaskPut) {
+    return jsonResponse({ success: true, id: decodeURIComponent(crmTaskPut[1] || '') });
+  }
+
+  if (method === 'PUT' && /^\/api\/crm\/cases\/[^/]+\/stage$/.test(path)) {
+    return jsonResponse({ success: true });
+  }
+
+  if (method === 'POST' && path === '/api/crm/communications') {
+    return jsonResponse({ success: true }, 201);
+  }
+
+  if (method === 'GET' && path === '/api/admin/pathways') {
+    return jsonResponse({
+      pathways: PATIENT_PATHWAYS.map((p) => ({ code: p.code, label: p.label })),
+    });
+  }
+
+  const adminRulesMatch = path.match(/^\/api\/admin\/rules\/([^/]+)$/);
+  if (method === 'GET' && adminRulesMatch) {
+    const pathwayCode = decodeURIComponent(adminRulesMatch[1] || '');
+    const base = PATHWAY_QUESTIONS[pathwayCode];
+    if (!base) {
+      return jsonResponse({ error: `Unknown pathway: "${pathwayCode}".` }, 404);
+    }
+    const meta = PATIENT_PATHWAYS.find((p) => p.code === pathwayCode);
+    const redFlags = base
+      .filter((q) => q.redFlagHint)
+      .map((q) => ({
+        code: `RF_${pathwayCode}_${q.id}`,
+        condition: `${q.id} === true`,
+        outcome: 'urgent_care',
+      }));
+    return jsonResponse({
+      pathway: pathwayCode,
+      label: meta?.label ?? pathwayCode,
+      questions: base.map((q) => ({ id: q.id, text: q.text, type: q.type, required: q.required })),
+      redFlags,
+    });
+  }
+
+  const adminQuestionPut = path.match(
+    /^\/api\/admin\/pathways\/([^/]+)\/questions\/([^/]+)$/,
+  );
+  if (method === 'PUT' && adminQuestionPut) {
+    return jsonResponse({ success: true });
+  }
+
+  const adminQuestionPost = path.match(/^\/api\/admin\/pathways\/([^/]+)\/questions$/);
+  if (method === 'POST' && adminQuestionPost) {
+    return jsonResponse({ success: true }, 201);
+  }
+
+  const adminQuestionDelete = path.match(/^\/api\/admin\/pathways\/([^/]+)\/questions\/([^/]+)$/);
+  if (method === 'DELETE' && adminQuestionDelete) {
+    return jsonResponse({ success: true });
+  }
+
   if (method === 'GET' && /^\/api\/summary\/[^/]+\/pdf$/.test(path)) {
     const id = decodeURIComponent(path.replace(/^\/api\/summary\//, '').replace(/\/pdf$/, '') || '');
     const summary = mockSummaryById.get(id) || loadPersistedMockSummary(id);
@@ -555,6 +702,64 @@ trailer
     mockSummaryById.set(id, nextSummary);
     persistMockSummary(nextSummary);
     return jsonResponse({ success: true, note: created, notes: nextNotes }, 201);
+  }
+
+  if (method === 'POST' && /^\/api\/summary\/[^/]+\/override$/.test(path)) {
+    const id = decodeURIComponent(path.replace(/^\/api\/summary\//, '').replace(/\/override$/, '') || '');
+    const body = readJsonBody(init);
+    const overridden_decision = typeof body.overridden_decision === 'string' ? body.overridden_decision : 'gp';
+    const reason = typeof body.reason === 'string' ? body.reason : '';
+    const pharmacist_id = typeof body.pharmacist_id === 'string' ? body.pharmacist_id : 'demo_pharmacist';
+    const original_decision =
+      typeof body.original_decision === 'string' ? body.original_decision : 'pharmacy';
+
+    const fromMap = mockSummaryById.get(id) || loadPersistedMockSummary(id);
+    const listEntry = MOCK_SUMMARY_LIST_FOR_PHARMACY.find((x) => x.id === id);
+
+    const overrideBlock = {
+      original_decision,
+      overridden_decision,
+      pharmacist_id,
+      reason,
+      timestamp: new Date().toISOString(),
+    };
+
+    if (fromMap) {
+      const nextOutcome = overridden_decision as SummaryApiResponse['outcome'];
+      const updatedSummary: SummaryApiResponse = {
+        ...fromMap,
+        outcome: nextOutcome,
+        outcomeLabel: outcomeLabelFromCode(nextOutcome),
+        outcomeReason: reason || fromMap.outcomeReason,
+      };
+      mockSummaryById.set(id, updatedSummary);
+      persistMockSummary(updatedSummary);
+      const summaryOut = {
+        ...pharmacistListShape(updatedSummary),
+        outcome: overridden_decision,
+        outcomeLabel: outcomeLabelFromCode(overridden_decision),
+        explanation: { decision: overridden_decision, reason, source: 'pharmacist_override' as const },
+        pharmacistOverride: overrideBlock,
+      };
+      return jsonResponse({ summary: summaryOut });
+    }
+
+    if (listEntry) {
+      const summaryOut = {
+        ...listEntry,
+        outcome: overridden_decision,
+        outcomeLabel: outcomeLabelFromCode(overridden_decision),
+        explanation: {
+          decision: overridden_decision,
+          reason,
+          source: 'pharmacist_override' as const,
+        },
+        pharmacistOverride: overrideBlock,
+      };
+      return jsonResponse({ summary: summaryOut });
+    }
+
+    return jsonResponse({ error: `No consultation summary found for ID: ${id}` }, 404);
   }
 
   if (method === 'GET' && path.startsWith('/api/summary/')) {

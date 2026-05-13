@@ -5,3 +5,6 @@ export const PRIVACY_LINK_LABEL = "Privacy notice";
 export const TERMS_LINK_LABEL = "Terms";
 export const CDS_DISCLAIMER =
   "Clinical decision support only. Always follow advice from a qualified healthcare professional.";
+
+export const MOCK_DATA_DISCLOSURE =
+  "You are viewing demo/offline data because the live API is unavailable in this browser session.";

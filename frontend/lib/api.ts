@@ -1,6 +1,19 @@
 import { isApiMocksEnabled, tryMockApiResponse } from './apiMocks';
 
 /**
+ * If the browser gave a URL tryMock could not parse, rebuild with pathname only (host is ignored by mocks).
+ */
+function mockRetryUrl(input: RequestInfo | URL): URL | null {
+  try {
+    const raw = typeof input === 'string' ? input : input instanceof Request ? input.url : `${input}`;
+    const u = new URL(raw, 'http://localhost');
+    return new URL(u.pathname + u.search, 'http://localhost');
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Browser-side API base URL. Set NEXT_PUBLIC_API_URL in .env for non-default hosts.
  */
 export function getApiBaseUrl(): string {
@@ -21,7 +34,7 @@ export function apiUrl(path: string): string {
  */
 export async function safeFetchJson<T>(url: string, fallback: T, init?: RequestInit): Promise<T> {
   try {
-    const res = await fetch(url, init);
+    const res = await (isApiMocksEnabled() ? apiFetch(url, init) : fetch(url, init));
     if (!res.ok) return fallback;
     const text = await res.text();
     if (!text.trim()) return fallback;
@@ -36,25 +49,35 @@ export async function safeFetchJson<T>(url: string, fallback: T, init?: RequestI
 export { isApiMocksEnabled };
 
 /**
- * Consultation/summary fetch: when mocks are allowed (default), tries in-browser mocks first, then the network.
- * If the network fails (e.g. backend not running), tries mocks again so offline demos still work.
+ * When `NEXT_PUBLIC_USE_API_MOCKS` is not `false`, all requests go through in-browser mocks only (no network).
+ * Set `NEXT_PUBLIC_USE_API_MOCKS=false` to use a real backend.
  */
 export async function apiFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
   const allowMock = isApiMocksEnabled();
   if (allowMock) {
     const mockFirst = await tryMockApiResponse(input, init);
     if (mockFirst) return mockFirst;
+    const retryInput = mockRetryUrl(input);
+    if (retryInput) {
+      const mockSecond = await tryMockApiResponse(retryInput, init);
+      if (mockSecond) return mockSecond;
+    }
+    const path = (retryInput ?? mockRetryUrl(input))?.pathname ?? 'unknown';
+    const method = (init?.method || 'GET').toUpperCase();
+    return new Response(
+      JSON.stringify({
+        ok: false,
+        error: 'Demo mode: no mock for this endpoint.',
+        path,
+        method,
+      }),
+      { status: 503, headers: { 'Content-Type': 'application/json' } },
+    );
   }
   try {
     return await fetch(input, init);
   } catch {
-    if (allowMock) {
-      const mockRetry = await tryMockApiResponse(input, init);
-      if (mockRetry) return mockRetry;
-    }
-    throw new Error(
-      'Failed to fetch. Start the backend or leave NEXT_PUBLIC_USE_API_MOCKS unset so offline mocks handle consultation APIs.',
-    );
+    throw new Error('Failed to fetch. Start the backend or enable API mocks (default in dev).');
   }
 }
 

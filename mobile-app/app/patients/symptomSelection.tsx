@@ -1,35 +1,62 @@
-import { useNavigation } from "@react-navigation/native";
+import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { RootStackParamList } from "../../App";
+import {
+  CONSENT_CHECKBOX_LABEL,
+  CONSENT_COPY_VERSION,
+  PRIVACY_LINK_LABEL,
+  TERMS_LINK_LABEL,
+} from "../../lib/complianceContent";
+import { PATIENT_PATHWAYS } from "../../lib/patientPathways";
 import { SPACING } from "../../lib/spacing";
 
-type SymptomOption = {
-  id: string;
-  label: string;
-  icon: string;
+const iconNameByCode: Record<string, string> = {
+  uti: "water-outline",
+  sore_throat: "thermometer",
+  sinusitis: "weather-windy",
+  otitis_media: "ear-hearing",
+  insect_bites: "ladybug",
+  impetigo: "bandage",
+  shingles: "flash-outline",
 };
-
-const SYMPTOMS: SymptomOption[] = [
-  { id: "uti", label: "UTI", icon: "water-outline" },
-  { id: "sore_throat", label: "Sore throat", icon: "head-heart-outline" },
-  { id: "sinusitis", label: "Sinusitis", icon: "weather-windy" },
-  { id: "cough", label: "Cough", icon: "lungs" },
-  { id: "fever", label: "Fever", icon: "thermometer" },
-  { id: "blocked_nose", label: "Blocked nose", icon: "nose" },
-  { id: "ear_pain", label: "Ear pain", icon: "ear-hearing" },
-  // { id: "other", label: "Other", icon: "dots-horizontal" },
-];
 
 export default function SymptomSelectionPage() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const [selected, setSelected] = useState<string[]>(["sore_throat"]);
+  const route = useRoute<RouteProp<RootStackParamList, "SymptomSelection">>();
+  const initialCodes = route.params?.initialCodes;
 
-  const canContinue = selected.length > 0;
+  const [selectedPathways, setSelectedPathways] = useState<string[]>(() => {
+    if (!initialCodes) return [];
+    return initialCodes
+      .split(",")
+      .map((c) => c.trim())
+      .filter((c) => PATIENT_PATHWAYS.some((p) => p.code === c));
+  });
+  const [consentGiven, setConsentGiven] = useState(false);
+
+  useEffect(() => {
+    if (selectedPathways.length === 0) {
+      setConsentGiven(false);
+    }
+  }, [selectedPathways.length]);
+
+  const selectedPathwayLabels = useMemo(
+    () => PATIENT_PATHWAYS.filter((p) => selectedPathways.includes(p.code)).map((p) => p.fullLabel),
+    [selectedPathways],
+  );
+
+  const canContinue = consentGiven && selectedPathways.length > 0;
   const progressPercent = useMemo(() => 1 / 5, []);
+
+  const togglePathway = (code: string) => {
+    setSelectedPathways((current) =>
+      current.includes(code) ? current.filter((c) => c !== code) : [...current, code],
+    );
+  };
 
   return (
     <SafeAreaView style={s.root}>
@@ -53,20 +80,19 @@ export default function SymptomSelectionPage() {
 
           <Text style={s.step}>Step 1 of 5</Text>
           <Text style={s.title}>What problem are you having?</Text>
-          <Text style={s.subtitle}>Select all that apply.</Text>
+          <Text style={s.subtitle}>Tap one or more pathways to select. Tap again to remove.</Text>
 
           <View style={s.grid}>
-            {SYMPTOMS.map((item) => {
-              const active = selected.includes(item.id);
+            {PATIENT_PATHWAYS.map((p) => {
+              const active = selectedPathways.includes(p.code);
               return (
                 <Pressable
-                  key={item.id}
+                  key={p.code}
                   style={[s.card, active && s.cardActive]}
-                  onPress={() =>
-                    setSelected((prev) =>
-                      prev.includes(item.id) ? prev.filter((x) => x !== item.id) : [...prev, item.id]
-                    )
-                  }
+                  onPress={() => togglePathway(p.code)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active }}
+                  accessibilityLabel={`${p.fullLabel}. ${p.description}`}
                 >
                   {active ? (
                     <View style={s.checkBadge}>
@@ -74,20 +100,67 @@ export default function SymptomSelectionPage() {
                     </View>
                   ) : null}
                   <MaterialCommunityIcons
-                    name={item.icon}
+                    name={iconNameByCode[p.code] ?? "stethoscope"}
                     size={30}
                     color={active ? "#1d4ed8" : "#1e3a8a"}
                   />
-                  <Text style={[s.cardLabel, active && s.cardLabelActive]}>{item.label}</Text>
+                  <Text style={[s.cardLabel, active && s.cardLabelActive]}>{p.label}</Text>
                 </Pressable>
               );
             })}
           </View>
 
+          {selectedPathwayLabels.length > 0 ? (
+            <View style={s.selectedBanner}>
+              <Text style={s.selectedBannerLabel}>Selected</Text>
+              <Text style={s.selectedBannerText}>{selectedPathwayLabels.join(", ")}</Text>
+            </View>
+          ) : null}
+
+          {selectedPathways.length > 0 ? (
+            <View style={s.consentBox}>
+              <View style={s.consentTitleRow}>
+                <MaterialCommunityIcons name="alert-outline" size={20} color="#b45309" />
+                <Text style={s.consentTitle}>Important — Please Read</Text>
+              </View>
+              <Text style={s.consentBullet}>{"\u2022"} Guidance only — not a substitute for professional advice.</Text>
+              <Text style={s.consentBullet}>
+                {"\u2022"} Life-threatening emergency? Call <Text style={s.consentBold}>999</Text> immediately.
+              </Text>
+              <Text style={s.consentBullet}>{"\u2022"} Your data is processed under UK GDPR.</Text>
+
+              <Pressable
+                style={s.checkboxRow}
+                onPress={() => setConsentGiven((v) => !v)}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: consentGiven }}
+              >
+                <View style={[s.checkboxOuter, consentGiven && s.checkboxOuterOn]}>
+                  {consentGiven ? (
+                    <MaterialCommunityIcons name="check" size={16} color="#fff" />
+                  ) : null}
+                </View>
+                <Text style={s.checkboxLabel}>{CONSENT_CHECKBOX_LABEL}</Text>
+              </Pressable>
+
+              <Text style={s.consentFooter}>
+                By continuing, you agree to our{" "}
+                <Text style={s.link} onPress={() => navigation.push("Privacy")}>
+                  {PRIVACY_LINK_LABEL}
+                </Text>{" "}
+                and{" "}
+                <Text style={s.link} onPress={() => navigation.push("Terms")}>
+                  {TERMS_LINK_LABEL}
+                </Text>
+                . Consent text version: {CONSENT_COPY_VERSION}.
+              </Text>
+            </View>
+          ) : null}
+
           <Pressable
             style={[s.cta, !canContinue && s.ctaDisabled]}
             disabled={!canContinue}
-            onPress={() => navigation.push("Consultation", { pathways: selected.join(",") })}
+            onPress={() => navigation.push("Consultation", { pathways: selectedPathways.join(",") })}
           >
             <Text style={s.ctaText}>Continue</Text>
           </Pressable>
@@ -152,6 +225,45 @@ const s = StyleSheet.create({
   },
   cardLabel: { fontSize: 16, color: "#0f172a", fontWeight: "700" },
   cardLabelActive: { color: "#1d4ed8" },
+  selectedBanner: {
+    marginTop: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#bfdbfe",
+    backgroundColor: "#eff6ff",
+  },
+  selectedBannerLabel: { fontSize: 12, fontWeight: "700", color: "#64748b" },
+  selectedBannerText: { marginTop: 6, fontSize: 15, color: "#1d4ed8", fontWeight: "600" },
+  consentBox: {
+    marginTop: 14,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#fcd34d",
+    backgroundColor: "#fffbeb",
+  },
+  consentTitleRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 },
+  consentTitle: { fontSize: 15, fontWeight: "700", color: "#92400e", flex: 1 },
+  consentBullet: { fontSize: 13, color: "#78350f", lineHeight: 20, marginBottom: 4 },
+  consentBold: { fontWeight: "700" },
+  checkboxRow: { flexDirection: "row", alignItems: "flex-start", gap: 12, marginTop: 12 },
+  checkboxOuter: {
+    width: 22,
+    height: 22,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: "#94a3b8",
+    marginTop: 2,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#fff",
+  },
+  checkboxOuterOn: { backgroundColor: "#2563eb", borderColor: "#2563eb" },
+  checkboxLabel: { flex: 1, fontSize: 14, fontWeight: "600", color: "#451a03", lineHeight: 20 },
+  consentFooter: { marginTop: 10, fontSize: 12, color: "#78350f", lineHeight: 18 },
+  link: { fontWeight: "700", textDecorationLine: "underline", color: "#1d4ed8" },
   cta: {
     marginTop: SPACING.xl,
     borderRadius: 10,

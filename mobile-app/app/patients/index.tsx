@@ -44,7 +44,7 @@ export default function PatientsLanding() {
           <Text style={s.body}>Answer a few questions to find the right care.</Text>
           <Pressable
             style={s.cta}
-            onPress={() => navigation.push("SymptomSelection")}
+            onPress={() => navigation.push("SymptomSelection", {})}
           >
             <Text style={s.ctaText}>Start a check</Text>
           </Pressable>
@@ -61,7 +61,7 @@ export default function PatientsLanding() {
               <Pressable
                 key={item.code}
                 style={[s.listItem, index === PATIENT_PATHWAYS.length - 1 && s.listItemLast]}
-                onPress={() => navigation.push("Consultation", { pathways: item.code })}
+                onPress={() => navigation.push("SymptomSelection", { initialCodes: item.code })}
               >
                 <View style={s.leadingIcon}>
                   <MaterialCommunityIcons

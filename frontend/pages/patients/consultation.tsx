@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import {
@@ -26,6 +26,7 @@ import {
 } from '../../lib/pathwayQuestions';
 import type { AnswerValue, ConsultationSubmitPayload } from '../../types/consultation';
 import { useMultiConditionFlow } from '../../hooks/useMultiConditionFlow';
+import { useConsultationViewportLayout } from '../../hooks/useConsultationViewportLayout';
 import InlineNotice from '../../components/InlineNotice';
 import { MOCK_DATA_DISCLOSURE } from '../../lib/complianceContent';
 import SafetyPanel from '../../components/SafetyPanel';
@@ -69,10 +70,22 @@ function PatientsShellFallbackHeader() {
 }
 
 function PatientsMobileShell({ children }: { children: ReactNode }) {
+  const { shellHeightPx, scrollPadBottomPx } = useConsultationViewportLayout();
+
   return (
-    <div className="flex min-h-[100dvh] min-h-screen flex-col items-center justify-center bg-white px-2 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:px-4 sm:py-4 md:px-6 md:py-6">
-      <div className="relative flex h-[min(52rem,calc(100dvh-1rem))] w-full max-w-[min(calc(100vw-1rem),24rem)] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white sm:rounded-[1.75rem] md:max-w-[24rem] md:rounded-[1.875rem]">
-        <div className="relative z-0 flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden overscroll-y-contain [-webkit-overflow-scrolling:touch]">
+    <div className="flex min-h-[100dvh] min-h-screen flex-col items-center justify-start bg-white px-2 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:justify-center sm:px-4 sm:py-4 md:px-6 md:py-6">
+      <div
+        className="relative flex w-full min-h-0 max-w-[min(calc(100vw-1rem),24rem)] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white sm:rounded-[1.75rem] md:max-w-[24rem] md:rounded-[1.875rem]"
+        style={{ height: shellHeightPx, maxHeight: shellHeightPx }}
+      >
+        <div
+          className="relative z-0 flex min-h-0 flex-1 flex-col scroll-pb-32 overflow-y-auto overflow-x-hidden overscroll-y-contain [-webkit-overflow-scrolling:touch]"
+          style={
+            scrollPadBottomPx > 0
+              ? { paddingBottom: scrollPadBottomPx }
+              : undefined
+          }
+        >
           <a
             href="#main-content"
             className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-slate-900 focus:ring-2 focus:ring-primary"
@@ -121,6 +134,7 @@ export default function ConsultationPage() {
   const [answers, setAnswers] = useState<Record<string, AnswerValue>>({});
   const [symptoms, setSymptoms] = useState('');
   const [error, setError] = useState('');
+  const symptomsFieldRef = useRef<HTMLInputElement>(null);
 
   const [questionsById, setQuestionsById] = useState<Record<string, PathwayQuestion>>({});
   const [clinicalCurrentId, setClinicalCurrentId] = useState<string | null>(null);
@@ -449,12 +463,18 @@ export default function ConsultationPage() {
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Submission failed';
       setWizardStep('clinical');
-      const apiHint =
-        message.includes('Failed to fetch') || message.includes('backend')
+      const unreachable =
+        /failed to fetch|network request failed|networkerror|fetch failed|aborted/i.test(message);
+      const displayMessage = unreachable
+        ? 'We could not reach the care service from this browser session.'
+        : message;
+      const apiHint = unreachable
+        ? ' For a real backend, set NEXT_PUBLIC_API_URL and NEXT_PUBLIC_USE_API_MOCKS=false in frontend/.env.local.'
+        : message.includes('backend')
           ? ' For a real backend, set NEXT_PUBLIC_API_URL and NEXT_PUBLIC_USE_API_MOCKS=false in frontend/.env.local.'
           : '';
       setError(
-        `${message} You can try again or go back and check your answers.${apiHint}`,
+        `${displayMessage} You can try again or go back and check your answers.${apiHint}`,
       );
     }
   };
@@ -563,7 +583,9 @@ export default function ConsultationPage() {
 
       <main
         id="main-content"
-        className="relative mx-auto w-full min-w-0 max-w-5xl flex-1 px-3 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-4 sm:px-4 sm:py-6 lg:py-6"
+        className={`relative mx-auto w-full min-w-0 max-w-5xl flex-1 px-3 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-4 sm:px-4 sm:py-6 lg:py-6 ${
+          wizardStep === 'demographics' ? 'scroll-pb-[min(45vh,22rem)]' : ''
+        }`}
       >
         {!useServerFlow && wizardStep === 'clinical' && !clinicalSchemaLoading ? (
           <InlineNotice title="Offline pathway mode" tone="warning" className="mb-4">
@@ -607,6 +629,33 @@ export default function ConsultationPage() {
                     className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/30"
                   />
                 </div>
+                <div>
+                  <label htmlFor="patient-symptoms-free-text" className="mb-1.5 block text-sm font-semibold text-slate-900">
+                    Describe your symptoms <span className="font-normal text-slate-500">(optional)</span>
+                  </label>
+                  <input
+                    id="patient-symptoms-free-text"
+                    ref={symptomsFieldRef}
+                    type="text"
+                    placeholder="e.g. burning when passing urine, fever"
+                    value={symptoms}
+                    onChange={(e) => setSymptoms(e.target.value)}
+                    enterKeyHint="done"
+                    autoComplete="off"
+                    onFocus={(e) => {
+                      const el = e.currentTarget;
+                      const scrollInto = () => {
+                        el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                      };
+                      window.requestAnimationFrame(() => {
+                        window.requestAnimationFrame(scrollInto);
+                      });
+                      window.setTimeout(scrollInto, 120);
+                      window.setTimeout(scrollInto, 400);
+                    }}
+                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  />
+                </div>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
                     <label className="mb-1.5 block text-sm font-semibold text-slate-900">Age</label>
@@ -635,18 +684,6 @@ export default function ConsultationPage() {
                       <option>Prefer not to say</option>
                     </select>
                   </div>
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-slate-900">
-                    Describe your symptoms <span className="font-normal text-slate-500">(optional)</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. burning when passing urine, fever"
-                    value={symptoms}
-                    onChange={(e) => setSymptoms(e.target.value)}
-                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/30"
-                  />
                 </div>
               </div>
 

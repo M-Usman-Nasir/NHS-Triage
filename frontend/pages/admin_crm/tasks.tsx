@@ -14,7 +14,7 @@ import { useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { AlarmClock, ArrowRight, Calendar, Check, ClipboardList, Phone, Stethoscope, User, X } from 'lucide-react';
 import CRMLayout from '../../components/CRMLayout';
-import { apiUrl } from '../../lib/api';
+import { apiFetch, apiUrl } from '../../lib/api';
 
 const TYPE_ICON: Record<string, LucideIcon> = {
   follow_up: Phone,
@@ -57,7 +57,7 @@ export default function TasksPage() {
 
   const markComplete = async (id: string) => {
     setTasks((prev) => prev.map((t) => t.id === id ? { ...t, status: 'completed' } : t));
-    await fetch(apiUrl(`/api/crm/tasks/${id}`), {
+    await apiFetch(apiUrl(`/api/crm/tasks/${id}`), {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: 'completed' }),
     }).catch(() => {});
@@ -72,7 +72,7 @@ export default function TasksPage() {
     };
     setTasks((prev) => [newTask, ...prev]);
     setCreated(true);
-    await fetch(apiUrl('/api/crm/tasks'), {
+    await apiFetch(apiUrl('/api/crm/tasks'), {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form),
     }).catch(() => {});

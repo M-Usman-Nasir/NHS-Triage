@@ -1,4 +1,4 @@
-import { useNavigation } from "@react-navigation/native";
+import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { Pressable, StyleSheet, Text, View } from "react-native";
@@ -8,6 +8,9 @@ import { SPACING } from "../../lib/spacing";
 
 export default function ResultPage() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const route = useRoute<RouteProp<RootStackParamList, "Result">>();
+  const refId = route.params?.id;
+  const refIds = route.params?.ids;
 
   return (
     <SafeAreaView style={s.root}>
@@ -23,6 +26,12 @@ export default function ResultPage() {
         <Text style={s.heroBody}>
           Your symptoms suggest this is likely suitable for treatment at a pharmacy.
         </Text>
+
+        {refId ? (
+          <Text style={s.refLine} accessibilityLabel="Consultation reference">
+            Reference: {refIds ?? refId}
+          </Text>
+        ) : null}
 
         <View style={s.card}>
           <Text style={s.cardTitle}>Why this recommendation?</Text>
@@ -91,6 +100,7 @@ const s = StyleSheet.create({
   },
   heroTitle: { color: "#0f172a", fontSize: 28, lineHeight: 34, fontWeight: "800" },
   heroBody: { marginTop: 8, color: "#475569", fontSize: 15, lineHeight: 21 },
+  refLine: { marginTop: 10, fontSize: 12, color: "#64748b", fontWeight: "600" },
   card: {
     marginTop: 10,
     borderRadius: 12,
