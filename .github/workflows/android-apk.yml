@@ -1,0 +1,56 @@
+# Builds a release APK with all native ABIs on Linux (short paths; avoids Windows MAX_PATH).
+name: Android APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  release-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: mobile-app/package-lock.json
+
+      - name: Install JS dependencies
+        run: npm ci
+        working-directory: mobile-app
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          packages: >-
+            tools platform-tools platforms;android-36 build-tools;36.0.0 ndk;27.1.12297006
+
+      - name: Write local.properties
+        working-directory: mobile-app
+        env:
+          MAPS_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+        run: |
+          SDK="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          echo "sdk.dir=$SDK" > android/local.properties
+          echo "GOOGLE_MAPS_API_KEY=${MAPS_KEY:-CI_BUILD}" >> android/local.properties
+
+      - name: Assemble release
+        working-directory: mobile-app/android
+        run: chmod +x gradlew && ./gradlew assembleRelease --no-daemon
+        env:
+          GRADLE_OPTS: -Xmx4g
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: carepathnative-release-apk
+          path: mobile-app/android/app/build/outputs/apk/release/*.apk
