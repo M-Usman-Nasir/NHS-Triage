@@ -43,6 +43,14 @@ jobs:
           echo "sdk.dir=$SDK" > android/local.properties
           echo "GOOGLE_MAPS_API_KEY=${MAPS_KEY:-CI_BUILD}" >> android/local.properties
 
+      # release signingConfig uses debug.keystore (see app/build.gradle); keystore files are gitignored.
+      - name: Generate debug keystore for CI signing
+        working-directory: mobile-app/android/app
+        run: |
+          keytool -genkey -v -keystore debug.keystore -storepass android \
+            -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 \
+            -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+
       - name: Assemble release
         working-directory: mobile-app/android
         run: chmod +x gradlew && ./gradlew assembleRelease --no-daemon
