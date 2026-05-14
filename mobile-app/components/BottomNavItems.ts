@@ -18,11 +18,11 @@ export const BOTTOM_NAV_ITEMS: Record<BottomNavRoute, BottomNavItem> = {
 /** Tab bar layout — keep in sync with `RootTabs` in `App.tsx`. */
 export const BOTTOM_TAB_BAR = {
   /** Content height excluding OS home-indicator / gesture inset (see `bottomTabBarWithInsets`). */
-  height: 76,
-  paddingTop: 10,
-  paddingBottom: 10,
-  iconSize: 28,
-  labelFontSize: 14,
+  height: 62,
+  paddingTop: 6,
+  paddingBottom: 6,
+  iconSize: 24,
+  labelFontSize: 12,
   labelFontWeight: "700" as const,
 };
 

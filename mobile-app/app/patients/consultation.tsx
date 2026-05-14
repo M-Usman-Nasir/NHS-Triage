@@ -1,9 +1,12 @@
 import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import {
   ActivityIndicator,
+  InteractionManager,
+  Keyboard,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -11,7 +14,7 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import type { RootStackParamList } from "../../App";
 import { useMultiConditionFlow } from "../../hooks/useMultiConditionFlow";
 import { augmentAnswersForPathway } from "../../lib/augmentConsultationAnswers";
@@ -72,6 +75,7 @@ export default function ConsultationPage() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, "Consultation">>();
   const pathwaysParam = route.params?.pathways ?? "";
+  const insets = useSafeAreaInsets();
 
   const {
     pathwayCodes,
@@ -98,7 +102,9 @@ export default function ConsultationPage() {
   const [clinicalProgressMax, setClinicalProgressMax] = useState(1);
   const [useServerFlow, setUseServerFlow] = useState(true);
   const [clinicalSchemaLoading, setClinicalSchemaLoading] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
+  const scrollRef = useRef<ScrollView>(null);
   const prefaceQuestions = CONSULTATION_PREFACE_QUESTIONS;
   const prefaceCount = prefaceQuestions.length;
   const prefaceQuestion = prefaceQuestions[prefaceIndex];
@@ -169,6 +175,23 @@ export default function ConsultationPage() {
       cancelled = true;
     };
   }, [wizardStep, activePathwayCode, patient.gender]);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+    const onShow = Keyboard.addListener(showEvent, (e) => setKeyboardHeight(e.endCoordinates.height));
+    const onHide = Keyboard.addListener(hideEvent, () => setKeyboardHeight(0));
+    return () => {
+      onShow.remove();
+      onHide.remove();
+    };
+  }, []);
+
+  const scrollToBottomAfterKeyboard = () => {
+    InteractionManager.runAfterInteractions(() => {
+      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 200);
+    });
+  };
 
   const handleDemographicsSubmit = () => {
     if (!patient.fullName || !patient.age || !patient.gender) {
@@ -483,15 +506,25 @@ export default function ConsultationPage() {
           <View style={s.backBtn} />
         </View>
 
-        <ScrollView contentContainerStyle={s.scrollContent} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          ref={scrollRef}
+          style={s.scroll}
+          contentContainerStyle={[
+            s.scrollContent,
+            { paddingBottom: SPACING.lg + keyboardHeight + (keyboardHeight > 0 ? insets.bottom : 0) },
+          ]}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+        >
           {wizardStep === "demographics" && (
             <View>
-              <Text style={s.stepPill}>Step 1 — About you</Text>
+              <View style={s.step1Hero}>
+                <Text style={s.stepPill}>Step 1: About you</Text>
+              </View>
               <Text style={s.screenTitle}>Before we begin</Text>
               <Text style={s.screenBody}>
-                A few details so we can tailor safety checks and your summary. Clinical questions follow a
-                server-driven pathway (including branching rules) so the same logic is used in the app and the triage
-                engine.
+                We ask for basic details to tailor safety checks and your summary. Clinical questions use the same
+                server-driven pathway rules here as in the triage engine.
               </Text>
               <View style={s.infoRow}>
                 <MaterialCommunityIcons name="shield-check-outline" size={20} color="#2563eb" />
@@ -544,6 +577,7 @@ export default function ConsultationPage() {
                   placeholderTextColor="#94a3b8"
                   value={symptoms}
                   onChangeText={setSymptoms}
+                  onFocus={scrollToBottomAfterKeyboard}
                 />
               </View>
 
@@ -562,9 +596,24 @@ export default function ConsultationPage() {
 
           {wizardStep === "preface" && prefaceQuestion && (
             <View>
-              <Text style={s.stepPillMuted}>
-                Quick context ({prefaceIndex + 1}/{prefaceCount})
-              </Text>
+              <View style={s.prefaceProgressBlock}>
+                <View style={s.prefaceProgressHeader}>
+                  <Text style={s.prefaceProgressTitle}>Quick context</Text>
+                  <Text style={s.prefaceProgressCount}>
+                    {prefaceIndex + 1} / {prefaceCount}
+                  </Text>
+                </View>
+                <View style={s.prefaceProgressTrack}>
+                  <View
+                    style={[
+                      s.prefaceProgressFill,
+                      {
+                        width: `${((prefaceIndex + 1) / Math.max(prefaceCount, 1)) * 100}%`,
+                      },
+                    ]}
+                  />
+                </View>
+              </View>
               <View style={s.card}>
                 <Text style={s.qTitle}>{prefaceQuestion.text}</Text>
                 {prefaceQuestion.type === "boolean" && (
@@ -655,10 +704,24 @@ export default function ConsultationPage() {
                   <Text style={s.warnBody}>{MOCK_DATA_DISCLOSURE}</Text>
                 </View>
               ) : null}
-              <Text style={s.stepPillMuted}>
-                Clinical pathway ({Math.min(clinicalHistory.length + 1, clinicalProgressMax)}/
-                {clinicalProgressMax})
-              </Text>
+              <View style={s.prefaceProgressBlock}>
+                <View style={s.prefaceProgressHeader}>
+                  <Text style={s.prefaceProgressTitle}>Clinical pathway</Text>
+                  <Text style={s.prefaceProgressCount}>
+                    {Math.min(clinicalHistory.length + 1, clinicalProgressMax)} / {clinicalProgressMax}
+                  </Text>
+                </View>
+                <View style={s.prefaceProgressTrack}>
+                  <View
+                    style={[
+                      s.prefaceProgressFill,
+                      {
+                        width: `${(Math.min(clinicalHistory.length + 1, clinicalProgressMax) / Math.max(clinicalProgressMax, 1)) * 100}%`,
+                      },
+                    ]}
+                  />
+                </View>
+              </View>
               <Text style={s.modeBadge}>{useServerFlow ? "NHS Pathway Logic" : "Offline Fallback Order"}</Text>
 
               <View style={s.card}>
@@ -735,6 +798,7 @@ export default function ConsultationPage() {
                     placeholderTextColor="#94a3b8"
                     value={typeof answers[clinicalQuestion.id] === "string" ? (answers[clinicalQuestion.id] as string) : ""}
                     onChangeText={(t) => setAnswers({ ...answers, [clinicalQuestion.id]: t })}
+                    onFocus={scrollToBottomAfterKeyboard}
                   />
                 )}
                 {error ? <Text style={s.errorInline}>{error}</Text> : null}
@@ -774,19 +838,23 @@ const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: "#f8fafc" },
   pageInset: {
     flex: 1,
-    paddingTop: SPACING.screenInset,
-    paddingBottom: SPACING.screenInset,
-    paddingHorizontal: SPACING.screenInset,
+    paddingTop: SPACING.lg,
+    paddingBottom: SPACING.lg,
+    paddingHorizontal: SPACING.lg,
   },
-  headerRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  headerRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   backBtn: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
   headerTitles: { flex: 1, minWidth: 0 },
   headerTitle: { fontSize: 15, fontWeight: "700", color: "#0f172a" },
   headerSub: { fontSize: 12, color: "#64748b", marginTop: 2 },
-  scrollContent: { paddingBottom: 32, flexGrow: 1 },
+  scroll: { flex: 1 },
+  scrollContent: { paddingTop: SPACING.md, flexGrow: 1 },
+  step1Hero: {
+    width: "100%",
+    alignItems: "center",
+    marginBottom: SPACING.sm,
+  },
   stepPill: {
-    alignSelf: "flex-start",
-    marginBottom: 8,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 999,
@@ -797,25 +865,29 @@ const s = StyleSheet.create({
     color: "#2563eb",
     overflow: "hidden",
   },
-  stepPillMuted: {
-    alignSelf: "flex-start",
-    marginBottom: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: "#cbd5e1",
-    fontSize: 11,
-    fontWeight: "600",
-    color: "#64748b",
+  prefaceProgressBlock: { marginBottom: SPACING.md },
+  prefaceProgressHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: SPACING.sm,
   },
+  prefaceProgressTitle: { fontSize: 12, fontWeight: "700", color: "#0f172a" },
+  prefaceProgressCount: { fontSize: 12, fontWeight: "600", color: "#64748b" },
+  prefaceProgressTrack: {
+    height: 4,
+    borderRadius: 99,
+    backgroundColor: "#e2e8f0",
+    overflow: "hidden",
+  },
+  prefaceProgressFill: { height: "100%", borderRadius: 99, backgroundColor: "#2563eb" },
   screenTitle: { fontSize: 26, fontWeight: "800", color: "#0f172a" },
-  screenBody: { marginTop: 8, fontSize: 14, lineHeight: 21, color: "#475569" },
+  screenBody: { marginTop: 6, fontSize: 14, lineHeight: 21, color: "#475569" },
   infoRow: {
     flexDirection: "row",
-    gap: 10,
-    marginTop: 14,
-    padding: 12,
+    gap: 8,
+    marginTop: 10,
+    padding: 10,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: "#e2e8f0",
@@ -824,32 +896,32 @@ const s = StyleSheet.create({
   infoText: { flex: 1, fontSize: 12, lineHeight: 18, color: "#64748b" },
   infoBold: { fontWeight: "700", color: "#0f172a" },
   card: {
-    marginTop: 14,
-    padding: 14,
+    marginTop: 10,
+    padding: 12,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: "#e2e8f0",
     backgroundColor: "#fff",
   },
   fieldLabel: { fontSize: 14, fontWeight: "600", color: "#0f172a" },
-  fieldLabelSpaced: { marginTop: 14 },
+  fieldLabelSpaced: { marginTop: 10 },
   optional: { fontWeight: "400", color: "#64748b" },
   input: {
-    marginTop: 6,
+    marginTop: 4,
     borderWidth: 1,
     borderColor: "#cbd5e1",
     borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     fontSize: 16,
     color: "#0f172a",
     backgroundColor: "#fff",
   },
   textArea: { minHeight: 100, textAlignVertical: "top" },
-  genderRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 8 },
+  genderRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 6 },
   genderChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: 999,
     borderWidth: 1,
     borderColor: "#cbd5e1",
@@ -859,31 +931,31 @@ const s = StyleSheet.create({
   genderChipText: { fontSize: 13, fontWeight: "600", color: "#475569" },
   genderChipTextOn: { color: "#1d4ed8" },
   errorBox: {
-    marginTop: 12,
-    padding: 12,
+    marginTop: 8,
+    padding: 10,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: "#fecaca",
     backgroundColor: "#fef2f2",
   },
   errorText: { fontSize: 14, color: "#b91c1c" },
-  errorInline: { marginTop: 12, fontSize: 14, fontWeight: "600", color: "#b91c1c" },
+  errorInline: { marginTop: 10, fontSize: 14, fontWeight: "600", color: "#b91c1c" },
   primaryBtn: {
-    marginTop: 16,
+    marginTop: 12,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
     backgroundColor: "#2563eb",
     borderRadius: 12,
-    paddingVertical: 14,
+    paddingVertical: 12,
   },
   primaryBtnText: { color: "#fff", fontSize: 16, fontWeight: "700" },
   qTitle: { fontSize: 18, fontWeight: "700", color: "#0f172a", lineHeight: 24 },
-  boolRow: { flexDirection: "row", gap: 10, marginTop: 16 },
+  boolRow: { flexDirection: "row", gap: 8, marginTop: 12 },
   boolBtn: {
     flex: 1,
-    paddingVertical: 16,
+    paddingVertical: 12,
     borderRadius: 12,
     borderWidth: 2,
     borderColor: "#bae6fd",
@@ -894,13 +966,13 @@ const s = StyleSheet.create({
   boolNo: { borderColor: "#94a3b8", backgroundColor: "#f1f5f9" },
   boolBtnText: { fontSize: 16, fontWeight: "700", color: "#64748b" },
   boolBtnTextOn: { color: "#0f172a" },
-  optionsBlock: { marginTop: 14, gap: 8 },
+  optionsBlock: { marginTop: 10, gap: 6 },
   optionRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
+    gap: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
     borderRadius: 12,
     borderWidth: 2,
     borderColor: "#e2e8f0",
@@ -929,15 +1001,15 @@ const s = StyleSheet.create({
     justifyContent: "center",
   },
   checkBoxOn: { backgroundColor: "#2563eb", borderColor: "#2563eb" },
-  mt6: { marginTop: 16 },
-  hintCenter: { marginTop: 8, textAlign: "center", fontSize: 12, color: "#64748b" },
-  loadingBox: { paddingVertical: 40, alignItems: "center" },
-  loadingText: { marginTop: 12, fontSize: 14, color: "#64748b" },
+  mt6: { marginTop: 12 },
+  hintCenter: { marginTop: 6, textAlign: "center", fontSize: 12, color: "#64748b" },
+  loadingBox: { paddingVertical: 24, alignItems: "center" },
+  loadingText: { marginTop: 8, fontSize: 14, color: "#64748b" },
   skipBtn: {
     alignSelf: "flex-end",
-    marginBottom: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    marginBottom: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: "#bae6fd",
@@ -945,38 +1017,38 @@ const s = StyleSheet.create({
   },
   skipBtnText: { fontSize: 12, fontWeight: "600", color: "#475569" },
   dangerBanner: {
-    marginBottom: 12,
-    padding: 12,
+    marginBottom: 8,
+    padding: 10,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: "#fecaca",
     backgroundColor: "#fef2f2",
   },
   dangerTitle: { fontSize: 13, fontWeight: "700", color: "#991b1b" },
-  dangerBody: { marginTop: 6, fontSize: 12, lineHeight: 18, color: "#7f1d1d" },
+  dangerBody: { marginTop: 4, fontSize: 12, lineHeight: 18, color: "#7f1d1d" },
   warnBanner: {
-    marginBottom: 12,
-    padding: 12,
+    marginBottom: 8,
+    padding: 10,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: "#fde68a",
     backgroundColor: "#fffbeb",
   },
   warnTitle: { fontSize: 13, fontWeight: "700", color: "#92400e" },
-  warnBody: { marginTop: 6, fontSize: 12, lineHeight: 18, color: "#78350f" },
+  warnBody: { marginTop: 4, fontSize: 12, lineHeight: 18, color: "#78350f" },
   modeBadge: {
     alignSelf: "flex-start",
-    marginBottom: 8,
+    marginBottom: 6,
     fontSize: 10,
     fontWeight: "700",
     color: "#2563eb",
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
-  submitTitle: { marginTop: 16, fontSize: 20, fontWeight: "700", color: "#0f172a" },
-  submitBody: { marginTop: 8, fontSize: 14, color: "#64748b", textAlign: "center", paddingHorizontal: 16 },
+  submitTitle: { marginTop: 10, fontSize: 20, fontWeight: "700", color: "#0f172a" },
+  submitBody: { marginTop: 6, fontSize: 14, color: "#64748b", textAlign: "center", paddingHorizontal: 12 },
   centerText: { fontSize: 15, color: "#64748b", textAlign: "center" },
-  centerTitle: { fontSize: 18, fontWeight: "700", color: "#0f172a", textAlign: "center", marginBottom: 8 },
-  linkBtn: { marginTop: 16, alignSelf: "center", paddingVertical: 8 },
+  centerTitle: { fontSize: 18, fontWeight: "700", color: "#0f172a", textAlign: "center", marginBottom: 6 },
+  linkBtn: { marginTop: 12, alignSelf: "center", paddingVertical: 8 },
   linkBtnText: { fontSize: 15, fontWeight: "600", color: "#2563eb", textDecorationLine: "underline" },
 });

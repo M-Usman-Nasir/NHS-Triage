@@ -1,11 +1,20 @@
-import { useMemo, useState } from "react";
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
-import { Screen } from "../../components/Screen";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { SPACING } from "../../lib/spacing";
 
 const PRIMARY = "#2563eb";
-const RATING_TRACK = "#f2f2f7";
-const BORDER = "#e5e5ea";
 
 const THROAT_LABELS = ["Mild", "Mild", "Moderate", "Severe", "Very severe"];
 const FEVER_LABELS = ["None", "Mild", "Moderate", "Severe", "Very severe"];
@@ -49,93 +58,149 @@ function RatingScale({ label, value, onChange, labels }: RatingScaleProps) {
 }
 
 export default function TrackingScreen() {
+  const tabBarHeight = useBottomTabBarHeight();
+  const insets = useSafeAreaInsets();
+  const scrollRef = useRef<ScrollView>(null);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
   const [soreThroat, setSoreThroat] = useState(3);
   const [fever, setFever] = useState(1);
   const [notes, setNotes] = useState(
-    "Feeling a bit better than yesterday. Still painful when swallowing."
+    "Feeling a bit better than yesterday. Still painful when swallowing.",
   );
 
   const todayLine = useMemo(() => formatTodayLong(new Date()), []);
 
+  useEffect(() => {
+    const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+    const onShow = Keyboard.addListener(showEvent, (e) => setKeyboardHeight(e.endCoordinates.height));
+    const onHide = Keyboard.addListener(hideEvent, () => setKeyboardHeight(0));
+    return () => {
+      onShow.remove();
+      onHide.remove();
+    };
+  }, []);
+
+  /** Avoid double offset: iOS KeyboardAvoidingView shrinks layout; Android needs scroll padding = keyboard. */
+  const scrollBottomPad =
+    keyboardHeight > 0
+      ? (Platform.OS === "android" ? keyboardHeight + SPACING.md : SPACING.md) + insets.bottom
+      : tabBarHeight + SPACING.lg + insets.bottom;
+
+  const nudgeNotesAboveKeyboard = () => {
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), Platform.OS === "ios" ? 280 : 120);
+  };
+
   return (
-    <Screen>
-      <View style={s.wrap}>
-        <Text style={s.pageTitle}>Track your symptoms</Text>
+    <SafeAreaView style={s.safeRoot} edges={["top", "left", "right"]}>
+      <KeyboardAvoidingView
+        style={s.keyboardAvoid}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        enabled={Platform.OS === "ios"}
+        keyboardVerticalOffset={0}
+      >
+        <ScrollView
+          ref={scrollRef}
+          style={s.scroll}
+          contentContainerStyle={[
+            s.scrollInner,
+            { paddingBottom: scrollBottomPad },
+          ]}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          showsVerticalScrollIndicator={false}
+        >
+          <Text style={s.title}>Track your symptoms</Text>
+          <Text style={s.subtitle}>
+            Log how you feel today (demo — not saved to your NHS record). Use this to spot changes over time.
+          </Text>
 
-        <View style={s.dateRow}>
-          <Text style={s.todayLabel}>Today</Text>
-          <Text style={s.dateValue}>{todayLine}</Text>
-        </View>
+          <View style={s.card}>
+            <View style={s.dateRow}>
+              <Text style={s.todayLabel}>Today</Text>
+              <Text style={s.dateValue}>{todayLine}</Text>
+            </View>
+            <Text style={s.prompt}>How are you feeling today?</Text>
+            <RatingScale label="Sore throat" value={soreThroat} onChange={setSoreThroat} labels={THROAT_LABELS} />
+            <RatingScale label="Fever" value={fever} onChange={setFever} labels={FEVER_LABELS} />
+          </View>
 
-        <Text style={s.prompt}>How are you feeling today?</Text>
+          <View style={s.card}>
+            <Text style={s.notesLabel}>Notes (optional)</Text>
+            <TextInput
+              style={s.notesInput}
+              value={notes}
+              onChangeText={setNotes}
+              multiline
+              placeholder="Add any extra detail…"
+              placeholderTextColor="#94a3b8"
+              textAlignVertical="top"
+              accessibilityLabel="Optional notes"
+              onFocus={nudgeNotesAboveKeyboard}
+            />
+          </View>
 
-        <RatingScale label="Sore throat" value={soreThroat} onChange={setSoreThroat} labels={THROAT_LABELS} />
-        <RatingScale label="Fever" value={fever} onChange={setFever} labels={FEVER_LABELS} />
+          <Text style={s.disclaimer}>
+            This is not monitored in real time. If you feel worse, seek medical help.
+          </Text>
 
-        <Text style={s.notesLabel}>Notes (optional)</Text>
-        <TextInput
-          style={s.notesInput}
-          value={notes}
-          onChangeText={setNotes}
-          multiline
-          placeholder="Add any extra detail…"
-          placeholderTextColor="#94a3b8"
-          textAlignVertical="top"
-          accessibilityLabel="Optional notes"
-        />
-
-        <Text style={s.disclaimer}>
-          This is not monitored in real time. If you feel worse, seek medical help.
-        </Text>
-
-        <Pressable style={({ pressed }) => [s.saveBtn, pressed && s.saveBtnPressed]} onPress={() => {}} accessibilityRole="button">
-          <Text style={s.saveBtnText}>Save</Text>
-        </Pressable>
-      </View>
-    </Screen>
+          <Pressable
+            style={({ pressed }) => [s.primaryCta, pressed && s.primaryCtaPressed]}
+            onPress={() => {}}
+            accessibilityRole="button"
+          >
+            <Text style={s.primaryCtaText}>Save</Text>
+          </Pressable>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const s = StyleSheet.create({
-  wrap: {
-    flexGrow: 1,
-    backgroundColor: "#ffffff",
-    borderRadius: 12,
+  safeRoot: { flex: 1, backgroundColor: "#f8fafc", paddingHorizontal: SPACING.sm, paddingVertical: SPACING.sm },
+  keyboardAvoid: { flex: 1 },
+  scroll: { flex: 1 },
+  scrollInner: { flexGrow: 1, paddingHorizontal: SPACING.xs, paddingTop: SPACING.xs },
+  title: { fontSize: 24, fontWeight: "700", color: "#0f172a", marginBottom: SPACING.xs },
+  subtitle: { fontSize: 14, color: "#64748b", lineHeight: 20, marginBottom: SPACING.xs },
+  card: {
+    backgroundColor: "#fff",
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: "#e2e8f0",
-    paddingTop: SPACING.md,
-    paddingBottom: SPACING.xxl,
-    paddingHorizontal: SPACING.screenInset,
-  },
-  pageTitle: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: "#0f172a",
-    textAlign: "center",
-    marginBottom: SPACING.lg,
+    padding: SPACING.lg,
+    gap: SPACING.sm,
+    marginTop: SPACING.sm,
   },
   dateRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: SPACING.lg,
+    paddingBottom: SPACING.sm,
+    marginBottom: SPACING.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "#e2e8f0",
   },
-  todayLabel: { fontSize: 17, fontWeight: "700", color: "#0f172a" },
-  dateValue: { fontSize: 15, color: "#64748b", fontWeight: "400" },
+  todayLabel: { fontSize: 13, fontWeight: "700", color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5 },
+  dateValue: { fontSize: 14, color: "#0f172a", fontWeight: "600" },
   prompt: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: "700",
     color: "#0f172a",
-    marginBottom: SPACING.lg,
+    marginBottom: SPACING.xs,
   },
-  scaleBlock: { marginBottom: SPACING.xl },
-  scaleTitle: { fontSize: 16, fontWeight: "700", color: "#0f172a", marginBottom: SPACING.sm },
+  scaleBlock: { marginTop: SPACING.xs },
+  scaleTitle: { fontSize: 14, fontWeight: "600", color: "#0f172a", marginBottom: SPACING.sm },
   ratingTrack: {
     flexDirection: "row",
-    backgroundColor: RATING_TRACK,
+    backgroundColor: "#f1f5f9",
     borderRadius: 999,
     padding: 4,
     gap: 4,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
   },
   ratingCell: {
     flex: 1,
@@ -150,14 +215,14 @@ const s = StyleSheet.create({
   scaleCaption: {
     marginTop: SPACING.sm,
     textAlign: "center",
-    fontSize: 14,
+    fontSize: 13,
     color: "#64748b",
     fontWeight: "500",
   },
-  notesLabel: { fontSize: 16, fontWeight: "700", color: "#0f172a", marginBottom: SPACING.sm },
+  notesLabel: { fontSize: 14, fontWeight: "600", color: "#0f172a", marginBottom: SPACING.xs },
   notesInput: {
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: "#cbd5e1",
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
@@ -165,21 +230,21 @@ const s = StyleSheet.create({
     fontSize: 16,
     color: "#0f172a",
     lineHeight: 22,
-    marginBottom: SPACING.lg,
     backgroundColor: "#fff",
   },
   disclaimer: {
     fontSize: 13,
     lineHeight: 18,
     color: "#64748b",
-    marginBottom: SPACING.lg,
+    marginTop: SPACING.md,
   },
-  saveBtn: {
-    borderRadius: 12,
+  primaryCta: {
+    marginTop: SPACING.sm,
     backgroundColor: PRIMARY,
-    paddingVertical: 16,
+    borderRadius: 12,
+    paddingVertical: 14,
     alignItems: "center",
   },
-  saveBtnPressed: { opacity: 0.9 },
-  saveBtnText: { color: "#ffffff", fontSize: 17, fontWeight: "700" },
+  primaryCtaPressed: { opacity: 0.92 },
+  primaryCtaText: { color: "#fff", fontSize: 16, fontWeight: "700" },
 });

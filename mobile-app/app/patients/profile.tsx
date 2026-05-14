@@ -4,12 +4,14 @@ import {
   Modal,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Screen } from "../../components/Screen";
 import { PATIENT_PROFILE_MOCK } from "../../lib/patientProfileMock";
 import { SPACING } from "../../lib/spacing";
@@ -19,7 +21,7 @@ export default function ProfilePage() {
   const [personalExpanded, setPersonalExpanded] = useState(false);
   const [consultationExpanded, setConsultationExpanded] = useState(false);
   const [healthDetailsExpanded, setHealthDetailsExpanded] = useState(false);
-  const [nhsConnectionsExpanded, setNhsConnectionsExpanded] = useState(false);
+  const [nhsConnectionsExpanded, setNhsConnectionsExpanded] = useState(true);
   const [connections, setConnections] = useState(PATIENT_PROFILE_MOCK.nhsConnections);
   const [nhsNumber, setNhsNumber] = useState("");
   const [dob, setDob] = useState("");
@@ -45,12 +47,14 @@ export default function ProfilePage() {
   };
 
   return (
-    <Screen>
-      <View style={s.pageInset}>
-      <View style={s.card}>
+    <Screen contentContainerStyle={s.scrollContent}>
+      <View style={s.bottomPad}>
         <Text style={s.title}>My profile</Text>
-        <Text style={s.body}>Your details, consultation history, and NHS connection readiness in one place.</Text>
+        <Text style={s.subtitle}>
+          Your details, consultation history, and NHS connection readiness in one place.
+        </Text>
 
+        <View style={s.card}>
         <Pressable
           style={({ pressed }) => [s.sectionRow, pressed && s.sectionRowPressed]}
           onPress={() => setPersonalExpanded((v) => !v)}
@@ -151,7 +155,7 @@ export default function ProfilePage() {
             })}
           </>
         ) : null}
-      </View>
+        </View>
       </View>
 
       <Modal visible={open} animationType="slide" onRequestClose={() => setOpen(false)}>
@@ -160,8 +164,14 @@ export default function ProfilePage() {
           behavior={Platform.OS === "ios" ? "padding" : undefined}
           keyboardVerticalOffset={Platform.OS === "ios" ? 8 : 0}
         >
-          <Screen>
-            <View style={s.pageInset}>
+          <SafeAreaView style={s.modalSafe} edges={["top", "left", "right", "bottom"]}>
+            <ScrollView
+              style={s.modalScrollView}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+              contentContainerStyle={s.modalScroll}
+              showsVerticalScrollIndicator
+            >
               <View style={s.modalCard}>
                 <View style={s.modalHeader}>
                   <Text style={s.modalTitle} accessibilityRole="header">
@@ -280,8 +290,8 @@ export default function ProfilePage() {
                   </Pressable>
                 </View>
               </View>
-            </View>
-          </Screen>
+            </ScrollView>
+          </SafeAreaView>
         </KeyboardAvoidingView>
       </Modal>
     </Screen>
@@ -289,53 +299,71 @@ export default function ProfilePage() {
 }
 
 const s = StyleSheet.create({
+  scrollContent: { flexGrow: 1 },
+  bottomPad: {
+    paddingBottom: 96,
+    gap: SPACING.sm,
+  },
   modalRoot: { flex: 1 },
+  modalSafe: { flex: 1, backgroundColor: "#f8fafc" },
+  modalScrollView: { flex: 1 },
+  modalScroll: {
+    flexGrow: 1,
+    paddingHorizontal: SPACING.sm,
+    paddingTop: SPACING.sm,
+    paddingBottom: SPACING.xxl,
+  },
   modalCard: {
     backgroundColor: "#ffffff",
     borderRadius: 14,
     borderWidth: 1,
     borderColor: "#e2e8f0",
-    padding: 16,
-    gap: 4,
+    padding: SPACING.lg,
+    gap: SPACING.sm,
   },
   modalHeader: {
     flexDirection: "row",
     alignItems: "flex-start",
     justifyContent: "space-between",
-    gap: 12,
-    marginBottom: 4,
+    gap: SPACING.md,
+    marginBottom: SPACING.xs,
   },
-  modalTitle: { flex: 1, fontSize: 22, fontWeight: "700", color: "#0f172a", lineHeight: 28 },
+  modalTitle: { flex: 1, fontSize: 20, fontWeight: "700", color: "#0f172a", lineHeight: 26 },
   modalClose: { padding: 4, marginTop: -2 },
-  modalIntro: { fontSize: 14, color: "#475569", lineHeight: 20, marginBottom: 12 },
-  fieldBlock: { marginBottom: 4 },
-  fieldLabel: { fontSize: 14, fontWeight: "700", color: "#0f172a", marginBottom: 4 },
-  fieldHint: { fontSize: 12, color: "#64748b", lineHeight: 16, marginBottom: 8 },
-  modalActions: { marginTop: 16, gap: 8 },
-  pageInset: {
-    paddingTop: SPACING.screenInset,
-    paddingBottom: SPACING.screenInset,
-    paddingLeft: SPACING.screenInset,
-    paddingRight: SPACING.screenInset,
+  modalIntro: { fontSize: 14, color: "#64748b", lineHeight: 20, marginBottom: SPACING.sm },
+  fieldBlock: { marginBottom: SPACING.sm },
+  fieldLabel: { fontSize: 14, fontWeight: "600", color: "#0f172a", marginBottom: SPACING.xs },
+  fieldHint: { fontSize: 12, color: "#64748b", lineHeight: 16, marginBottom: SPACING.sm },
+  modalActions: { marginTop: SPACING.md, gap: SPACING.sm },
+  card: {
+    backgroundColor: "#ffffff",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    padding: SPACING.lg,
+    gap: SPACING.sm,
   },
-  card: { backgroundColor: "#ffffff", borderRadius: 14, borderWidth: 1, borderColor: "#e2e8f0", padding: 16, gap: 8 },
-  brand: { fontSize: 22, fontWeight: "800", color: "#0f172a" },
-  subtitle: { fontSize: 12, color: "#475569" },
-  title: { fontSize: 24, fontWeight: "700", color: "#0f172a", marginTop: 8 },
+  title: { fontSize: 24, fontWeight: "700", color: "#0f172a", marginBottom: SPACING.xs },
+  subtitle: { fontSize: 14, color: "#64748b", lineHeight: 20, marginBottom: SPACING.xs },
   sectionRow: {
-    marginTop: 8,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     minHeight: 44,
-    paddingVertical: 4,
+    paddingVertical: SPACING.xs,
   },
   sectionRowPressed: { opacity: 0.7 },
-  sectionRowLabel: { flex: 1, fontSize: 16, fontWeight: "700", color: "#0f172a", paddingRight: 8 },
+  sectionRowLabel: { flex: 1, fontSize: 16, fontWeight: "700", color: "#0f172a", paddingRight: SPACING.sm },
   body: { fontSize: 14, color: "#334155", lineHeight: 20 },
-  box: { borderRadius: 12, borderWidth: 1, borderColor: "#cbd5e1", backgroundColor: "#fff", padding: 10 },
+  box: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    backgroundColor: "#fff",
+    padding: SPACING.md,
+  },
   boxConnected: { borderColor: "#bbf7d0", backgroundColor: "#f0fdf4" },
-  connectionRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
+  connectionRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: SPACING.md },
   connectionText: { flex: 1, minWidth: 0 },
   connectedBody: { fontSize: 14, color: "#15803d", fontWeight: "600", lineHeight: 20 },
   boxTitle: { fontWeight: "700", color: "#0f172a" },
@@ -345,13 +373,25 @@ const s = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: "#fff",
     paddingHorizontal: 14,
-    paddingVertical: 14,
+    paddingVertical: 12,
     fontSize: 16,
     color: "#0f172a",
     minHeight: 48,
   },
-  cta: { borderRadius: 14, backgroundColor: "#2563eb", paddingVertical: 14, alignItems: "center" },
-  ctaText: { color: "#fff", fontWeight: "800" },
-  secondary: { borderRadius: 12, borderWidth: 1, borderColor: "#93c5fd", backgroundColor: "#fff", paddingVertical: 12, alignItems: "center" },
-  secondaryText: { color: "#1d4ed8", fontWeight: "700" },
+  cta: {
+    borderRadius: 12,
+    backgroundColor: "#2563eb",
+    paddingVertical: 14,
+    alignItems: "center",
+  },
+  ctaText: { color: "#fff", fontWeight: "700", fontSize: 16 },
+  secondary: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#bae6fd",
+    backgroundColor: "#fff",
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  secondaryText: { color: "#1d4ed8", fontWeight: "700", fontSize: 15 },
 });

@@ -54,7 +54,7 @@ function HomeStack() {
     <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Patients">
       <Stack.Screen name="Patients" component={PatientsLanding} />
       <Stack.Screen name="SymptomSelection" component={SymptomSelectionPage} />
-      <Stack.Screen name="Consultation" component={ConsultationPage} />
+      <Stack.Screen name="Consultation" component={ConsultationPage} options={{ keyboardHandlingEnabled: true }} />
       <Stack.Screen name="Emergency" component={EmergencyPage} />
       <Stack.Screen name="FindPharmacy" component={FindPharmacyPage} />
       <Stack.Screen name="Result" component={ResultPage} />

@@ -96,12 +96,12 @@ export default function SymptomSelectionPage() {
                 >
                   {active ? (
                     <View style={s.checkBadge}>
-                      <MaterialCommunityIcons name="check" size={12} color="#fff" />
+                      <MaterialCommunityIcons name="check" size={11} color="#fff" />
                     </View>
                   ) : null}
                   <MaterialCommunityIcons
                     name={iconNameByCode[p.code] ?? "stethoscope"}
-                    size={30}
+                    size={26}
                     color={active ? "#1d4ed8" : "#1e3a8a"}
                   />
                   <Text style={[s.cardLabel, active && s.cardLabelActive]}>{p.label}</Text>
@@ -190,40 +190,40 @@ const s = StyleSheet.create({
   progressFill: { height: "100%", borderRadius: 99, backgroundColor: "#2563eb" },
   step: { marginTop: 8, textAlign: "center", fontSize: 11, color: "#64748b", fontWeight: "600" },
   title: {
-    marginTop: 10,
-    fontSize: 32,
-    lineHeight: 38,
+    marginTop: 8,
+    fontSize: 24,
+    lineHeight: 34,
     color: "#0f172a",
     fontWeight: "800",
     flexShrink: 1,
   },
   subtitle: { marginTop: 6, fontSize: 18, color: "#64748b" },
-  grid: { marginTop: 16, flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: 10 },
+  grid: { marginTop: 16, flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: 8 },
   card: {
     width: "48.6%",
-    minHeight: 112,
-    borderRadius: 12,
+    minHeight: 96,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: "#e2e8f0",
     backgroundColor: "#fff",
     alignItems: "center",
     justifyContent: "center",
-    gap: 10,
+    gap: 7,
     position: "relative",
   },
   cardActive: { borderColor: "#2563eb", backgroundColor: "#f8fbff" },
   checkBadge: {
     position: "absolute",
-    top: 8,
-    right: 8,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    top: 6,
+    right: 6,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
     backgroundColor: "#2563eb",
     alignItems: "center",
     justifyContent: "center",
   },
-  cardLabel: { fontSize: 16, color: "#0f172a", fontWeight: "700" },
+  cardLabel: { fontSize: 14, color: "#0f172a", fontWeight: "700" },
   cardLabelActive: { color: "#1d4ed8" },
   selectedBanner: {
     marginTop: 14,

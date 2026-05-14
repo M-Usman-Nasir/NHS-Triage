@@ -26,7 +26,10 @@ export default function PatientsLanding() {
       <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
         <View style={s.centerWrap}>
           <View style={s.topRow}>
-            <View />
+            <View style={s.brandBlock}>
+              <Text style={s.appName}>Care Path</Text>
+              <Text style={s.signature}>NHS-aligned rules-based triage</Text>
+            </View>
             <Pressable
               style={s.profileLink}
               onPress={() => {
@@ -88,11 +91,23 @@ const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: "#f8fafc", paddingHorizontal: SPACING.sm, paddingVertical: SPACING.sm },
   content: { flexGrow: 1, justifyContent: "center", paddingHorizontal: SPACING.xs, paddingVertical: SPACING.md },
   centerWrap: { width: "100%", maxWidth: 360, alignSelf: "center" },
-  topRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  topRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: SPACING.md,
+    paddingBottom: SPACING.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "#e2e8f0",
+  },
+  brandBlock: { flex: 1, minWidth: 0, paddingRight: SPACING.sm },
+  appName: { fontSize: 20, fontWeight: "800", color: "#0f172a", letterSpacing: -0.3 },
+  signature: { marginTop: 4, fontSize: 12, lineHeight: 16, color: "#64748b", fontWeight: "500" },
   profileLink: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
+    flexShrink: 0,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 999,
@@ -110,7 +125,7 @@ const s = StyleSheet.create({
   },
   profileText: { fontSize: 13, color: "#2563eb", fontWeight: "700" },
   title: {
-    marginTop: 18,
+    marginTop: SPACING.lg,
     fontSize: 32,
     lineHeight: 38,
     letterSpacing: -0.5,
