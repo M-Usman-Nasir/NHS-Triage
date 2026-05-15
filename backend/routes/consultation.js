@@ -101,7 +101,7 @@ function ensureStructuredDecision(triageResult) {
  * }
  */
 router.post('/', async (req, res) => {
-  const { pathwayCode, answers, patient, symptoms } = req.body;
+  const { pathwayCode, answers, patient, symptoms, consent } = req.body;
   await logAuditEvent({
     eventType: 'consultation_started',
     requestId: req.requestId,
@@ -189,6 +189,21 @@ router.post('/', async (req, res) => {
   record.regulatoryContext = regulatoryContext;
   record.structuredReport = buildStructuredReport(record);
   consultationStore.set(consultationId, record);
+
+  if (consent && typeof consent === 'object' && consent.version && consent.consentedAt) {
+    await logAuditEvent({
+      eventType: 'patient_consent_recorded',
+      requestId: req.requestId,
+      entityType: 'consultation',
+      entityId: consultationId,
+      ip: clientIp(req),
+      payload: {
+        consentVersion: consent.version,
+        consentedAt: consent.consentedAt,
+        pathwayCode,
+      },
+    });
+  }
 
   if (triageResult.redFlagTriggered) {
     await logAuditEvent({

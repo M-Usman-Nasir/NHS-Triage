@@ -1,4 +1,8 @@
-import { NavigationContainer } from "@react-navigation/native";
+import {
+  getFocusedRouteNameFromRoute,
+  NavigationContainer,
+  type NavigatorScreenParams,
+} from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
@@ -9,6 +13,7 @@ import ConsultationPage from "./app/patients/consultation";
 import EmergencyPage from "./app/patients/emergency";
 import FindPharmacyPage from "./app/patients/findPharmacy";
 import PatientsLanding from "./app/patients";
+import DataPrivacyPage from "./app/patients/dataPrivacy";
 import PrivacyPage from "./app/patients/privacy";
 import ProfilePage from "./app/patients/profile";
 import ResultPage from "./app/patients/result";
@@ -19,16 +24,27 @@ import AdvicePage from "./app/tabs/advice";
 import ChecksPage from "./app/tabs/checks";
 import TrackPage from "./app/tabs/track";
 import { BOTTOM_NAV_ITEMS, BOTTOM_TAB_BAR, bottomTabBarWithInsets, type BottomNavRoute } from "./components/BottomNavItems";
+import { COLORS } from "./lib/theme";
 
 export type RootStackParamList = {
   Patients: undefined;
   SymptomSelection: { initialCodes?: string };
   Consultation: { pathways?: string };
-  Emergency: { question?: string; from?: string };
+  Emergency: { question?: string; from?: string; flags?: string[] };
   FindPharmacy: undefined;
-  Result: { id?: string; ids?: string };
+  Result: {
+    id?: string;
+    ids?: string;
+    outcome?: string;
+    outcomeReason?: string;
+    pathwayCodes?: string;
+    reasoningSteps?: string;
+    actionLine?: string;
+    answersSnapshot?: string;
+  };
   Privacy: undefined;
   Terms: undefined;
+  DataPrivacy: { consultationId?: string };
   Accessibility: undefined;
 };
 
@@ -38,7 +54,7 @@ type RootAppStackParamList = {
 };
 
 export type RootTabParamList = {
-  Home: undefined;
+  Home: NavigatorScreenParams<RootStackParamList> | undefined;
   Checks: undefined;
   Track: undefined;
   Advice: undefined;
@@ -59,6 +75,7 @@ function HomeStack() {
       <Stack.Screen name="FindPharmacy" component={FindPharmacyPage} />
       <Stack.Screen name="Result" component={ResultPage} />
       <Stack.Screen name="Privacy" component={PrivacyPage} />
+      <Stack.Screen name="DataPrivacy" component={DataPrivacyPage} />
       <Stack.Screen name="Terms" component={TermsPage} />
       <Stack.Screen name="Accessibility" component={AccessibilityPage} />
     </Stack.Navigator>
@@ -85,8 +102,8 @@ function RootTabs() {
             />
           );
         },
-        tabBarActiveTintColor: "#2563eb",
-        tabBarInactiveTintColor: "#64748b",
+        tabBarActiveTintColor: COLORS.nhsBlue,
+        tabBarInactiveTintColor: COLORS.textSecondary,
         tabBarStyle: tabBarStyle,
         tabBarLabelStyle: {
           fontSize: BOTTOM_TAB_BAR.labelFontSize,
@@ -94,7 +111,17 @@ function RootTabs() {
         },
       })}
     >
-      <Tabs.Screen name="Home" component={HomeStack} />
+      <Tabs.Screen
+        name="Home"
+        component={HomeStack}
+        options={({ route }) => {
+          const focused = getFocusedRouteNameFromRoute(route) ?? "Patients";
+          const hideTabBar = focused === "Consultation" || focused === "SymptomSelection";
+          return {
+            tabBarStyle: hideTabBar ? { display: "none" } : tabBarStyle,
+          };
+        }}
+      />
       <Tabs.Screen name="Checks" component={ChecksPage} />
       <Tabs.Screen name="Track" component={TrackPage} />
       <Tabs.Screen name="Advice" component={AdvicePage} />

@@ -1,86 +1,86 @@
 import { useNavigation } from "@react-navigation/native";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
-import { Dimensions, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { RootStackParamList, RootTabParamList } from "../../App";
+import { Card } from "../../components/Card";
+import { HowItWorksSteps } from "../../components/HowItWorksSteps";
+import { ListRow } from "../../components/ListRow";
+import { PrimaryButton } from "../../components/PrimaryButton";
 import { SPACING } from "../../lib/spacing";
-import { PATIENT_PATHWAYS } from "../../lib/patientPathways";
+import { pathwayIconName } from "../../lib/pathwayIcons";
+import { pathwaysGroupedByCategory } from "../../lib/patientPathways";
+import { BRAND_NAME, HOME } from "../../lib/patientCopy";
+import { COLORS, TYPOGRAPHY } from "../../lib/theme";
 
 export default function PatientsLanding() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-
-  const iconNameByCode: Record<string, string> = {
-    uti: "water-outline",
-    sore_throat: "thermometer",
-    sinusitis: "weather-windy",
-    otitis_media: "ear-hearing",
-    insect_bites: "ladybug",
-    impetigo: "bandage",
-    shingles: "flash-outline",
-  };
+  const grouped = pathwaysGroupedByCategory();
 
   return (
     <SafeAreaView style={s.root}>
       <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
         <View style={s.centerWrap}>
           <View style={s.topRow}>
-            <View style={s.brandBlock}>
-              <Text style={s.appName}>Care Path</Text>
-              <Text style={s.signature}>NHS-aligned rules-based triage</Text>
-            </View>
+            <Text style={s.appName}>{BRAND_NAME}</Text>
             <Pressable
               style={s.profileLink}
               onPress={() => {
                 navigation.getParent<BottomTabNavigationProp<RootTabParamList>>()?.navigate("Profile");
               }}
+              accessibilityRole="link"
             >
-              <View style={s.profileIcon}>
-                <MaterialCommunityIcons name="account-outline" size={14} color="#2563eb" />
-              </View>
               <Text style={s.profileText}>Profile</Text>
             </Pressable>
           </View>
 
           <Text style={s.title}>Check your symptoms</Text>
-          <Text style={s.body}>Answer a few questions to find the right care.</Text>
-          <Pressable
-            style={s.cta}
+          <Text style={s.body}>What problem are you having?</Text>
+          <Text style={s.durationHint}>{HOME.durationHint}</Text>
+          <HowItWorksSteps hint="This usually takes a few minutes." />
+          <PrimaryButton
+            label="Start a check"
             onPress={() => navigation.push("SymptomSelection", {})}
-          >
-            <Text style={s.ctaText}>Start a check</Text>
-          </Pressable>
+            style={s.cta}
+          />
 
           <Text style={s.section}>Common checks</Text>
-          <ScrollView
-            style={s.list}
-            contentContainerStyle={s.listContent}
-            nestedScrollEnabled
-            showsVerticalScrollIndicator
-            keyboardShouldPersistTaps="handled"
-          >
-            {PATIENT_PATHWAYS.map((item, index) => (
-              <Pressable
-                key={item.code}
-                style={[s.listItem, index === PATIENT_PATHWAYS.length - 1 && s.listItemLast]}
-                onPress={() => navigation.push("SymptomSelection", { initialCodes: item.code })}
-              >
-                <View style={s.leadingIcon}>
-                  <MaterialCommunityIcons
-                    name={iconNameByCode[item.code] ?? "stethoscope"}
-                    size={18}
-                    color="#2563eb"
+          {grouped.map(({ category, pathways }) => (
+            <View key={category.id} style={s.categoryBlock}>
+              <Text style={s.categoryLabel}>{category.title.toUpperCase()}</Text>
+              <Card style={s.listCard}>
+                {pathways.map((item, index) => (
+                  <ListRow
+                    key={item.code}
+                    leadingIcon={pathwayIconName(item.code)}
+                    title={item.fullLabel}
+                    subtitle={item.description}
+                    last={index === pathways.length - 1}
+                    onPress={() => navigation.push("SymptomSelection", { initialCodes: item.code })}
                   />
-                </View>
-                <View style={s.itemCopy}>
-                  <Text style={s.itemTitle}>{item.fullLabel}</Text>
-                  <Text style={s.itemSubtitle}>{item.description}</Text>
-                </View>
-                <MaterialCommunityIcons name="chevron-right" size={20} color="#94a3b8" />
-              </Pressable>
-            ))}
-          </ScrollView>
+                ))}
+              </Card>
+            </View>
+          ))}
+
+          <Text style={s.disclaimer}>{HOME.emergencyLine}</Text>
+          <Text style={s.disclaimerSecondary}>
+            Guidance only. Not a substitute for professional medical advice.
+          </Text>
+          <View style={s.legalRow}>
+            <Pressable onPress={() => navigation.push("Privacy")} accessibilityRole="link">
+              <Text style={s.legalLink}>Privacy</Text>
+            </Pressable>
+            <Text style={s.legalSep}>·</Text>
+            <Pressable onPress={() => navigation.push("Terms")} accessibilityRole="link">
+              <Text style={s.legalLink}>Terms</Text>
+            </Pressable>
+            <Text style={s.legalSep}>·</Text>
+            <Pressable onPress={() => navigation.push("DataPrivacy", {})} accessibilityRole="link">
+              <Text style={s.legalLink}>Your data</Text>
+            </Pressable>
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -88,81 +88,57 @@ export default function PatientsLanding() {
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#f8fafc", paddingHorizontal: SPACING.sm, paddingVertical: SPACING.sm },
-  content: { flexGrow: 1, justifyContent: "center", paddingHorizontal: SPACING.xs, paddingVertical: SPACING.md },
+  root: { flex: 1, backgroundColor: COLORS.background, paddingHorizontal: SPACING.sm, paddingVertical: SPACING.sm },
+  content: {
+    flexGrow: 1,
+    paddingHorizontal: SPACING.xs,
+    paddingTop: SPACING.md,
+    paddingBottom: 100,
+  },
   centerWrap: { width: "100%", maxWidth: 360, alignSelf: "center" },
   topRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-start",
-    gap: SPACING.md,
+    alignItems: "center",
     paddingBottom: SPACING.sm,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#e2e8f0",
+    borderBottomColor: COLORS.border,
   },
-  brandBlock: { flex: 1, minWidth: 0, paddingRight: SPACING.sm },
-  appName: { fontSize: 20, fontWeight: "800", color: "#0f172a", letterSpacing: -0.3 },
-  signature: { marginTop: 4, fontSize: 12, lineHeight: 16, color: "#64748b", fontWeight: "500" },
-  profileLink: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    flexShrink: 0,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: "#cbd5e1",
-    backgroundColor: "#ffffff",
+  appName: { ...TYPOGRAPHY.heading, fontSize: 20 },
+  profileLink: { paddingVertical: 4, paddingHorizontal: 4 },
+  profileText: { fontSize: 16, color: COLORS.textPrimary, fontWeight: "600" },
+  title: { ...TYPOGRAPHY.title, marginTop: SPACING.lg },
+  body: { ...TYPOGRAPHY.bodySecondary, marginTop: 8 },
+  durationHint: { ...TYPOGRAPHY.caption, marginTop: 4 },
+  cta: { marginTop: SPACING.md },
+  section: { ...TYPOGRAPHY.label, marginTop: 22, marginBottom: SPACING.sm },
+  categoryBlock: { marginBottom: SPACING.md },
+  categoryLabel: { ...TYPOGRAPHY.label, marginBottom: SPACING.xs },
+  listCard: {
+    padding: 0,
+    overflow: "hidden",
   },
-  profileIcon: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: "#eff6ff",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  profileText: { fontSize: 13, color: "#2563eb", fontWeight: "700" },
-  title: {
+  disclaimer: {
+    ...TYPOGRAPHY.caption,
     marginTop: SPACING.lg,
-    fontSize: 32,
-    lineHeight: 38,
-    letterSpacing: -0.5,
-    fontWeight: "800",
-    color: "#0f172a",
+    textAlign: "center",
+    fontWeight: "600",
+    color: COLORS.textPrimary,
   },
-  body: { marginTop: 10, fontSize: 17, lineHeight: 24, color: "#475569", maxWidth: 320 },
-  cta: { marginTop: 18, backgroundColor: "#2563eb", borderRadius: 12, paddingVertical: 12, alignItems: "center" },
-  ctaText: { color: "#ffffff", fontSize: 15, fontWeight: "700" },
-  section: { marginTop: 22, marginBottom: SPACING.sm, fontSize: 16, fontWeight: "700", color: "#1e293b" },
-  list: {
-    maxHeight: Math.round(Dimensions.get("window").height * 0.42),
-    backgroundColor: "#ffffff",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
+  disclaimerSecondary: {
+    ...TYPOGRAPHY.caption,
+    marginTop: SPACING.sm,
+    textAlign: "center",
   },
-  listContent: { flexGrow: 0 },
-  listItem: {
+  legalRow: {
     flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.md,
-    borderBottomWidth: 1,
-    borderBottomColor: "#eef2f7",
-  },
-  listItemLast: { borderBottomWidth: 0 },
-  leadingIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: "#eff6ff",
-    alignItems: "center",
     justifyContent: "center",
-    marginRight: SPACING.sm,
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 6,
+    marginTop: SPACING.sm,
+    marginBottom: SPACING.md,
   },
-  itemCopy: { flex: 1, gap: SPACING.xs },
-  itemTitle: { fontSize: 16, color: "#0f172a", fontWeight: "700" },
-  itemSubtitle: { fontSize: 14, color: "#64748b", lineHeight: 20 },
+  legalLink: { ...TYPOGRAPHY.caption, fontWeight: "600", textDecorationLine: "underline" },
+  legalSep: { ...TYPOGRAPHY.caption, color: COLORS.textMuted },
 });

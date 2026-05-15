@@ -1,0 +1,179 @@
+{
+  "_comment": "Clinical decision pathway for Acute Sinusitis aligned to NHS Pharmacy First criteria and exclusion safeguards.",
+  "pathway": "sinusitis",
+  "label": "Sinusitis",
+  "applicableGenders": ["Male", "Female", "Other"],
+  "minimumAge": 12,
+  "maximumAge": null,
+  "questions": [
+    {
+      "id": "q1",
+      "text": "How long have you had sinus symptoms?",
+      "type": "select",
+      "options": ["Less than 10 days", "10 days to 12 weeks", "More than 12 weeks"],
+      "required": true
+    },
+    {
+      "id": "q2",
+      "text": "Do you have facial pain or pressure around your cheeks, forehead, or eyes?",
+      "type": "boolean",
+      "required": true
+    },
+    {
+      "id": "q3",
+      "text": "Do you have a blocked or runny nose?",
+      "type": "boolean",
+      "required": true
+    },
+    {
+      "id": "q4",
+      "text": "Do you have a severe headache?",
+      "type": "boolean",
+      "required": true
+    },
+    {
+      "id": "q5",
+      "text": "Do you have reduced or lost sense of smell?",
+      "type": "boolean",
+      "required": true
+    },
+    {
+      "id": "q6",
+      "text": "Do you have any visual changes, double vision, or eye swelling?",
+      "type": "boolean",
+      "required": true,
+      "redFlagHint": true
+    },
+    {
+      "id": "q7",
+      "text": "Do you have neurological symptoms (confusion, drowsiness, weakness, speech problems, neck stiffness, or light sensitivity)?",
+      "type": "boolean",
+      "required": true,
+      "redFlagHint": true
+    },
+    {
+      "id": "q8",
+      "text": "Have you had recurrent sinusitis episodes in the last year?",
+      "type": "select",
+      "options": ["No", "Yes"],
+      "required": true
+    },
+    {
+      "id": "q9",
+      "text": "Do you have high fever (38°C or above) or feel systemically very unwell?",
+      "type": "boolean",
+      "required": true
+    }
+  ],
+  "questionGraph": {
+    "startId": "q1",
+    "nodes": {
+      "q1": { "next": "q2" },
+      "q2": { "next": "q3" },
+      "q3": { "next": "q4" },
+      "q4": { "next": "q5" },
+      "q5": { "next": "q6" },
+      "q6": { "next": "q7" },
+      "q7": {
+        "branches": [
+          { "condition": "true", "next": "q8" }
+        ]
+      },
+      "q8": { "next": "q9" },
+      "q9": { "next": null }
+    }
+  },
+  "redFlags": [
+    {
+      "code": "RF_SIN_001",
+      "condition": "q6 === true",
+      "description": "Eye swelling or visual change suggests orbital complication",
+      "outcome": "emergency_999",
+      "message": "Eye swelling or visual changes with sinus symptoms need emergency care now."
+    },
+    {
+      "code": "RF_SIN_002",
+      "condition": "q7 === true",
+      "description": "Neurological symptoms suggest serious intracranial complication",
+      "outcome": "emergency_999",
+      "message": "Neurological warning symptoms need emergency assessment. Call 999."
+    },
+    {
+      "code": "RF_SIN_003",
+      "condition": "q4 === true && q9 === true",
+      "description": "Severe headache with systemic illness indicates urgent risk",
+      "outcome": "urgent_care",
+      "message": "Severe headache with systemic illness needs urgent same-day clinical review."
+    }
+  ],
+  "eligibilityRules": [
+    {
+      "id": "elig_1",
+      "condition": "q1 === 'Less than 10 days'",
+      "eligible": false,
+      "reason": "Symptoms under 10 days are usually viral and are outside Pharmacy First sinusitis treatment criteria"
+    },
+    {
+      "id": "elig_2",
+      "condition": "q1 === 'More than 12 weeks'",
+      "eligible": false,
+      "reason": "Chronic sinusitis (>12 weeks) requires GP assessment and possibly ENT referral"
+    },
+    {
+      "id": "elig_3",
+      "condition": "q8 === 'Yes'",
+      "eligible": false,
+      "reason": "Recurrent sinusitis requires GP review"
+    },
+    {
+      "id": "elig_4",
+      "condition": "q6 === true || q7 === true || q9 === true",
+      "eligible": false,
+      "reason": "Red flag or severe systemic features require higher acuity care"
+    },
+    {
+      "id": "elig_5",
+      "condition": "q1 === '10 days to 12 weeks' && q2 === true && q3 === true && q8 === 'No' && q6 === false && q7 === false && q9 === false",
+      "eligible": true,
+      "reason": "Meets acute sinusitis eligibility criteria for pharmacy pathway"
+    }
+  ],
+  "outcomeRules": [
+    {
+      "priority": 1,
+      "condition": "redFlagTriggered === true",
+      "outcome": "escalated_by_red_flag"
+    },
+    {
+      "priority": 2,
+      "condition": "q1 === 'More than 12 weeks'",
+      "outcome": "gp",
+      "reason": "Chronic sinusitis requires GP management"
+    },
+    {
+      "priority": 3,
+      "condition": "q1 === 'Less than 10 days'",
+      "outcome": "self_care",
+      "reason": "Likely viral phase under 10 days; self-care and monitoring advised"
+    },
+    {
+      "priority": 4,
+      "condition": "pharmacyEligible === true",
+      "outcome": "pharmacy",
+      "reason": "Acute sinusitis duration and symptom profile meet pharmacy treatment criteria"
+    },
+    {
+      "priority": 5,
+      "condition": "pharmacyEligible === false",
+      "outcome": "gp",
+      "reason": "Outside sinusitis pharmacy criteria or exclusion factors present"
+    }
+  ],
+  "selfCareAdvice": "Steam inhalation, saline nasal spray, rest, paracetamol/ibuprofen. Most viral sinusitis resolves within 2–3 weeks.",
+  "pharmacyTreatmentOptions": [
+    "Amoxicillin 500mg three times daily for 5 days",
+    "Doxycycline 200mg day 1 then 100mg daily for 4 days (if penicillin allergy)"
+  ],
+  "safetyNetAdvice": "Return if symptoms worsen rapidly, you develop eye swelling, severe headache, neck stiffness, or symptoms persist beyond 3 weeks.",
+  "pathwayPatientDisclaimer": "This pathway supports disposition for acute sinus-type symptoms; features suggesting orbital involvement, severe headache, meningism, or sepsis need urgent in-person assessment."
+}

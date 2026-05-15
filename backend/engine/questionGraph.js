@@ -14,7 +14,7 @@ const { evaluateCondition } = require('./redFlagDetector');
 
 /** Question ids that ask about pregnancy; not shown when patient reports Male (simplified gender capture). */
 const PREGNANCY_QUESTION_ID_BY_PATHWAY = {
-  uti: 'q5',
+  uti: 'q7',
   impetigo: 'q8',
   shingles: 'q8',
 };

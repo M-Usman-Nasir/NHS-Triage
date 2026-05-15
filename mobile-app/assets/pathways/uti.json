@@ -1,0 +1,185 @@
+{
+  "_comment": "Clinical decision pathway for Uncomplicated UTI aligned to NHS Pharmacy First eligibility and exclusion criteria.",
+  "pathway": "uti",
+  "label": "Uncomplicated Urinary Tract Infection (UTI)",
+  "applicableGenders": ["Female"],
+  "minimumAge": 16,
+  "maximumAge": 64,
+  "questions": [
+    {
+      "id": "q1",
+      "text": "How long have urinary symptoms been present?",
+      "type": "select",
+      "options": ["Less than 24 hours", "1–3 days", "4–7 days", "More than 7 days"],
+      "required": true
+    },
+    {
+      "id": "q2",
+      "text": "Do you have burning or pain when passing urine?",
+      "type": "boolean",
+      "required": true
+    },
+    {
+      "id": "q3",
+      "text": "Do you need to pass urine more often than usual?",
+      "type": "boolean",
+      "required": true
+    },
+    {
+      "id": "q4",
+      "text": "Do you have sudden urgency to pass urine?",
+      "type": "boolean",
+      "required": true
+    },
+    {
+      "id": "q5",
+      "text": "Is your urine cloudy?",
+      "type": "boolean",
+      "required": true
+    },
+    {
+      "id": "q6",
+      "text": "Do you have blood visible in your urine?",
+      "type": "boolean",
+      "required": true
+    },
+    {
+      "id": "q7",
+      "text": "Are you pregnant or could you be pregnant?",
+      "type": "boolean",
+      "required": true
+    },
+    {
+      "id": "q8",
+      "text": "Are you breastfeeding?",
+      "type": "boolean",
+      "required": true
+    },
+    {
+      "id": "q9",
+      "text": "Do you have a urinary catheter?",
+      "type": "boolean",
+      "required": true
+    },
+    {
+      "id": "q10",
+      "text": "Have you had recurrent UTIs (3 or more in the last 12 months)?",
+      "type": "boolean",
+      "required": true
+    },
+    {
+      "id": "q11",
+      "text": "Do you have fever (temperature 38°C or above)?",
+      "type": "boolean",
+      "required": true,
+      "redFlagHint": true
+    },
+    {
+      "id": "q12",
+      "text": "Do you have pain in your back, side, or flank?",
+      "type": "boolean",
+      "required": true,
+      "redFlagHint": true
+    },
+    {
+      "id": "q13",
+      "text": "Are you vomiting?",
+      "type": "boolean",
+      "required": true,
+      "redFlagHint": true
+    }
+  ],
+  "redFlags": [
+    {
+      "code": "RF_UTI_001",
+      "condition": "q11 === true && q12 === true",
+      "description": "Fever with flank/back pain suggests upper UTI or pyelonephritis",
+      "outcome": "urgent_care",
+      "message": "Fever with back or side pain can indicate kidney infection. Seek urgent same-day care."
+    },
+    {
+      "code": "RF_UTI_002",
+      "condition": "q13 === true",
+      "description": "Vomiting with UTI symptoms indicates possible complicated infection or dehydration risk",
+      "outcome": "urgent_care",
+      "message": "Vomiting with urinary symptoms needs urgent same-day assessment."
+    }
+  ],
+  "eligibilityRules": [
+    {
+      "id": "elig_1",
+      "condition": "q7 === true",
+      "eligible": false,
+      "reason": "Pregnancy requires GP or maternity assessment rather than Pharmacy First supply"
+    },
+    {
+      "id": "elig_2",
+      "condition": "q8 === true",
+      "eligible": false,
+      "reason": "Breastfeeding requires GP review under local prescribing policy"
+    },
+    {
+      "id": "elig_3",
+      "condition": "q9 === true",
+      "eligible": false,
+      "reason": "Catheter-associated urinary infection requires GP management"
+    },
+    {
+      "id": "elig_4",
+      "condition": "q10 === true",
+      "eligible": false,
+      "reason": "Recurrent UTI requires GP investigation"
+    },
+    {
+      "id": "elig_5",
+      "condition": "q6 === true",
+      "eligible": false,
+      "reason": "Visible blood in urine requires GP assessment"
+    },
+    {
+      "id": "elig_6",
+      "condition": "q2 === false && q3 === false && q4 === false && q5 === false",
+      "eligible": false,
+      "reason": "Symptoms do not currently match uncomplicated lower UTI criteria"
+    },
+    {
+      "id": "elig_7",
+      "condition": "gender === 'Female' && age >= 16 && age <= 64 && q2 === true && (q3 === true || q4 === true || q5 === true) && q7 === false && q8 === false && q9 === false && q10 === false && q6 === false && q11 === false && q12 === false && q13 === false",
+      "eligible": true,
+      "reason": "Meets uncomplicated lower UTI criteria for Pharmacy First pathway"
+    }
+  ],
+  "comorbidityModifiers": [],
+  "outcomeRules": [
+    {
+      "priority": 1,
+      "condition": "redFlagTriggered === true",
+      "outcome": "escalated_by_red_flag"
+    },
+    {
+      "priority": 2,
+      "condition": "pharmacyEligible === true",
+      "outcome": "pharmacy",
+      "reason": "Uncomplicated lower UTI criteria met for pharmacy treatment pathway"
+    },
+    {
+      "priority": 3,
+      "condition": "q2 === false && q3 === false && q4 === false && q5 === false",
+      "outcome": "self_care",
+      "reason": "Symptoms currently do not strongly suggest lower UTI; self-care and monitoring advised"
+    },
+    {
+      "priority": 4,
+      "condition": "pharmacyEligible === false",
+      "outcome": "gp",
+      "reason": "Exclusion or complexity criteria present; GP review required"
+    }
+  ],
+  "selfCareAdvice": "Drink fluids, use simple pain relief, and monitor symptoms. Seek help if pain worsens, fever develops, or symptoms persist.",
+  "pharmacyTreatmentOptions": [
+    "Trimethoprim 200mg twice daily for 7 days",
+    "Nitrofurantoin MR 100mg twice daily for 5 days"
+  ],
+  "safetyNetAdvice": "Seek urgent care if fever, flank pain, vomiting, or feeling very unwell develops. Seek GP review if symptoms persist, recur, or worsen.",
+  "pathwayPatientDisclaimer": "Community pharmacists may assess and treat uncomplicated lower UTI in women aged 16-64 under NHS Pharmacy First where local criteria are met; this tool supports navigation only and does not replace clinical examination or prescribing judgement."
+}

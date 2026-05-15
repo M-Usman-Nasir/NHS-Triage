@@ -1,3 +1,5 @@
+import { useNavigation } from "@react-navigation/native";
+import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import { useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -12,11 +14,24 @@ import {
 } from "react-native";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Card } from "../../components/Card";
+import { PrimaryButton } from "../../components/PrimaryButton";
+import { SecondaryButton } from "../../components/SecondaryButton";
 import { Screen } from "../../components/Screen";
 import { PATIENT_PROFILE_MOCK } from "../../lib/patientProfileMock";
 import { SPACING } from "../../lib/spacing";
+import type { RootStackParamList, RootTabParamList } from "../../App";
+import { COLORS, TYPOGRAPHY } from "../../lib/theme";
 
 export default function ProfilePage() {
+  const tabNavigation = useNavigation<BottomTabNavigationProp<RootTabParamList>>();
+
+  const openHomeScreen = (screen: keyof RootStackParamList, params?: object) => {
+    tabNavigation.navigate("Home", {
+      screen,
+      params,
+    } as never);
+  };
   const [open, setOpen] = useState(false);
   const [personalExpanded, setPersonalExpanded] = useState(false);
   const [consultationExpanded, setConsultationExpanded] = useState(false);
@@ -50,11 +65,8 @@ export default function ProfilePage() {
     <Screen contentContainerStyle={s.scrollContent}>
       <View style={s.bottomPad}>
         <Text style={s.title}>My profile</Text>
-        <Text style={s.subtitle}>
-          Your details, consultation history, and NHS connection readiness in one place.
-        </Text>
 
-        <View style={s.card}>
+        <Card style={s.card}>
         <Pressable
           style={({ pressed }) => [s.sectionRow, pressed && s.sectionRowPressed]}
           onPress={() => setPersonalExpanded((v) => !v)}
@@ -66,7 +78,7 @@ export default function ProfilePage() {
           <MaterialCommunityIcons
             name={personalExpanded ? "chevron-up" : "chevron-down"}
             size={22}
-            color="#64748b"
+            color={COLORS.textMuted}
           />
         </Pressable>
         {personalExpanded ? (
@@ -88,7 +100,7 @@ export default function ProfilePage() {
           <MaterialCommunityIcons
             name={consultationExpanded ? "chevron-up" : "chevron-down"}
             size={22}
-            color="#64748b"
+            color={COLORS.textMuted}
           />
         </Pressable>
         {consultationExpanded
@@ -111,7 +123,7 @@ export default function ProfilePage() {
           <MaterialCommunityIcons
             name={healthDetailsExpanded ? "chevron-up" : "chevron-down"}
             size={22}
-            color="#64748b"
+            color={COLORS.textMuted}
           />
         </Pressable>
         {healthDetailsExpanded
@@ -129,12 +141,12 @@ export default function ProfilePage() {
           <MaterialCommunityIcons
             name={nhsConnectionsExpanded ? "chevron-up" : "chevron-down"}
             size={22}
-            color="#64748b"
+            color={COLORS.textMuted}
           />
         </Pressable>
         {nhsConnectionsExpanded ? (
           <>
-            <Pressable style={s.cta} onPress={() => setOpen(true)}><Text style={s.ctaText}>Connect NHS services</Text></Pressable>
+            <SecondaryButton label="Connect NHS services" onPress={() => setOpen(true)} style={s.connectBtn} />
             {connections.map((c) => {
               const connected = c.status !== "not_connected";
               return (
@@ -146,16 +158,42 @@ export default function ProfilePage() {
                         {connected ? "Connected" : "Not connected"}
                       </Text>
                     </View>
-                    {connected ? (
-                      <MaterialCommunityIcons name="check-circle" size={28} color="#16a34a" accessibilityLabel="Connected" />
-                    ) : null}
                   </View>
                 </View>
               );
             })}
           </>
         ) : null}
-        </View>
+        </Card>
+
+        <Pressable
+          style={s.legalLink}
+          onPress={() => openHomeScreen("DataPrivacy", {})}
+          accessibilityRole="link"
+        >
+          <Text style={s.legalLinkText}>Your data & privacy</Text>
+        </Pressable>
+        <Pressable
+          style={s.legalLink}
+          onPress={() => openHomeScreen("Privacy")}
+          accessibilityRole="link"
+        >
+          <Text style={s.legalLinkText}>Privacy notice</Text>
+        </Pressable>
+        <Pressable
+          style={s.legalLink}
+          onPress={() => openHomeScreen("Terms")}
+          accessibilityRole="link"
+        >
+          <Text style={s.legalLinkText}>Terms</Text>
+        </Pressable>
+        <Pressable
+          style={s.legalLink}
+          onPress={() => openHomeScreen("Accessibility")}
+          accessibilityRole="link"
+        >
+          <Text style={s.legalLinkText}>Accessibility statement</Text>
+        </Pressable>
       </View>
 
       <Modal visible={open} animationType="slide" onRequestClose={() => setOpen(false)}>
@@ -184,7 +222,7 @@ export default function ProfilePage() {
                     accessibilityRole="button"
                     accessibilityLabel="Close form"
                   >
-                    <MaterialCommunityIcons name="close" size={26} color="#64748b" />
+                    <MaterialCommunityIcons name="close" size={26} color={COLORS.textMuted} />
                   </Pressable>
                 </View>
                 <Text style={s.modalIntro}>
@@ -276,18 +314,14 @@ export default function ProfilePage() {
                 </View>
 
                 <View style={s.modalActions}>
-                  <Pressable
-                    style={s.cta}
+                  <PrimaryButton
+                    label="Continue"
                     onPress={() => {
                       setConnections((cur) => cur.map((c) => ({ ...c, status: "connected" })));
                       setOpen(false);
                     }}
-                  >
-                    <Text style={s.ctaText}>Continue</Text>
-                  </Pressable>
-                  <Pressable style={s.secondary} onPress={() => setOpen(false)}>
-                    <Text style={s.secondaryText}>Cancel</Text>
-                  </Pressable>
+                  />
+                  <SecondaryButton label="Cancel" onPress={() => setOpen(false)} />
                 </View>
               </View>
             </ScrollView>
@@ -305,7 +339,7 @@ const s = StyleSheet.create({
     gap: SPACING.sm,
   },
   modalRoot: { flex: 1 },
-  modalSafe: { flex: 1, backgroundColor: "#f8fafc" },
+  modalSafe: { flex: 1, backgroundColor: COLORS.background },
   modalScrollView: { flex: 1 },
   modalScroll: {
     flexGrow: 1,
@@ -314,10 +348,10 @@ const s = StyleSheet.create({
     paddingBottom: SPACING.xxl,
   },
   modalCard: {
-    backgroundColor: "#ffffff",
-    borderRadius: 14,
+    backgroundColor: COLORS.surface,
+    borderRadius: 4,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
+    borderColor: COLORS.border,
     padding: SPACING.lg,
     gap: SPACING.sm,
   },
@@ -328,23 +362,18 @@ const s = StyleSheet.create({
     gap: SPACING.md,
     marginBottom: SPACING.xs,
   },
-  modalTitle: { flex: 1, fontSize: 20, fontWeight: "700", color: "#0f172a", lineHeight: 26 },
+  modalTitle: { flex: 1, ...TYPOGRAPHY.heading, lineHeight: 26 },
   modalClose: { padding: 4, marginTop: -2 },
-  modalIntro: { fontSize: 14, color: "#64748b", lineHeight: 20, marginBottom: SPACING.sm },
+  modalIntro: { ...TYPOGRAPHY.caption, marginBottom: SPACING.sm },
   fieldBlock: { marginBottom: SPACING.sm },
-  fieldLabel: { fontSize: 14, fontWeight: "600", color: "#0f172a", marginBottom: SPACING.xs },
-  fieldHint: { fontSize: 12, color: "#64748b", lineHeight: 16, marginBottom: SPACING.sm },
+  fieldLabel: { fontSize: 14, fontWeight: "600", color: COLORS.textPrimary, marginBottom: SPACING.xs },
+  fieldHint: { fontSize: 12, color: COLORS.textMuted, lineHeight: 16, marginBottom: SPACING.sm },
   modalActions: { marginTop: SPACING.md, gap: SPACING.sm },
-  card: {
-    backgroundColor: "#ffffff",
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-    padding: SPACING.lg,
-    gap: SPACING.sm,
-  },
-  title: { fontSize: 24, fontWeight: "700", color: "#0f172a", marginBottom: SPACING.xs },
-  subtitle: { fontSize: 14, color: "#64748b", lineHeight: 20, marginBottom: SPACING.xs },
+  card: { gap: SPACING.sm },
+  connectBtn: { marginBottom: SPACING.sm },
+  title: { ...TYPOGRAPHY.title, marginBottom: SPACING.xs },
+  legalLink: { paddingVertical: SPACING.sm, paddingHorizontal: SPACING.xs },
+  legalLinkText: { fontSize: 15, fontWeight: "600", color: COLORS.textPrimary, textDecorationLine: "underline" },
   sectionRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -353,45 +382,29 @@ const s = StyleSheet.create({
     paddingVertical: SPACING.xs,
   },
   sectionRowPressed: { opacity: 0.7 },
-  sectionRowLabel: { flex: 1, fontSize: 16, fontWeight: "700", color: "#0f172a", paddingRight: SPACING.sm },
-  body: { fontSize: 14, color: "#334155", lineHeight: 20 },
+  sectionRowLabel: { flex: 1, fontSize: 16, fontWeight: "700", color: COLORS.textPrimary, paddingRight: SPACING.sm },
+  body: { fontSize: 14, color: COLORS.textSecondary, lineHeight: 20 },
   box: {
-    borderRadius: 12,
+    borderRadius: 4,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
-    backgroundColor: "#fff",
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surface,
     padding: SPACING.md,
   },
-  boxConnected: { borderColor: "#bbf7d0", backgroundColor: "#f0fdf4" },
+  boxConnected: { borderColor: COLORS.selectedBorder },
   connectionRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: SPACING.md },
   connectionText: { flex: 1, minWidth: 0 },
-  connectedBody: { fontSize: 14, color: "#15803d", fontWeight: "600", lineHeight: 20 },
-  boxTitle: { fontWeight: "700", color: "#0f172a" },
+  connectedBody: { fontSize: 14, color: COLORS.success, fontWeight: "600", lineHeight: 20 },
+  boxTitle: { fontWeight: "700", color: COLORS.textPrimary },
   input: {
     borderWidth: 1,
-    borderColor: "#cbd5e1",
-    borderRadius: 12,
-    backgroundColor: "#fff",
+    borderColor: COLORS.border,
+    borderRadius: 4,
+    backgroundColor: COLORS.surface,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 16,
-    color: "#0f172a",
+    color: COLORS.textPrimary,
     minHeight: 48,
   },
-  cta: {
-    borderRadius: 12,
-    backgroundColor: "#2563eb",
-    paddingVertical: 14,
-    alignItems: "center",
-  },
-  ctaText: { color: "#fff", fontWeight: "700", fontSize: 16 },
-  secondary: {
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#bae6fd",
-    backgroundColor: "#fff",
-    paddingVertical: 12,
-    alignItems: "center",
-  },
-  secondaryText: { color: "#1d4ed8", fontWeight: "700", fontSize: 15 },
 });

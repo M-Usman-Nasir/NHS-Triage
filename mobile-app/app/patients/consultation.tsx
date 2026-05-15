@@ -20,19 +20,35 @@ import { useMultiConditionFlow } from "../../hooks/useMultiConditionFlow";
 import { augmentAnswersForPathway } from "../../lib/augmentConsultationAnswers";
 import { apiFetch, apiUrl } from "../../lib/api";
 import {
-  CONSULTATION_PREFACE_QUESTIONS,
+  CORE_TRIAGE_QUESTIONS,
   contextAnswersToSymptomHints,
+  isContextQuestionId,
   stripContextAnswers,
 } from "../../lib/consultationPrefaceQuestions";
+import { mergeCoreDurationIntoAnswers } from "../../lib/consultationAnswerMaps";
+import { getPathwayBundle } from "../../lib/pathwayBundleLoader";
+import {
+  applyChecklistAnswersToClinical,
+  getClinicalSkipCaption,
+  getDefinitionsForPathway,
+  getNextQuestionState,
+} from "../../lib/questionGraphResolver";
+import { ClinicalQuestionCard } from "../../components/ClinicalQuestionCard";
+import { BRAND_NAME, CONSULTATION } from "../../lib/patientCopy";
+import { evaluateRedFlagSelections } from "../../lib/redFlagRouting";
+import { RedFlagChecklist } from "../../components/RedFlagChecklist";
 import { MOCK_DATA_DISCLOSURE } from "../../lib/complianceContent";
 import { PATIENT_PATHWAYS } from "../../lib/patientPathways";
 import { SPACING } from "../../lib/spacing";
+import { BACK_NAV_ICON } from "../../lib/iconPolicy";
+import { COLORS, RADII, TYPOGRAPHY } from "../../lib/theme";
 import {
   isKnownPathwayQuestions,
   PATHWAY_QUESTIONS,
   pathwayClinicalQuestionsForPatient,
   type PathwayQuestion,
 } from "../../lib/pathwayQuestions";
+import { getConsultationConsent, clearConsultationConsent } from "../../lib/consultationConsentStore";
 import type { AnswerValue, ConsultationSubmitPayload } from "../../types/consultation";
 
 interface PatientInfo {
@@ -87,10 +103,10 @@ export default function ConsultationPage() {
     setCompletedConsultationIds,
   } = useMultiConditionFlow(pathwaysParam);
 
-  const [wizardStep, setWizardStep] = useState<"demographics" | "preface" | "clinical" | "submitting">(
-    "demographics",
-  );
-  const [prefaceIndex, setPrefaceIndex] = useState(0);
+  const [wizardStep, setWizardStep] = useState<
+    "demographics" | "coreTriage" | "redFlags" | "clinical" | "submitting"
+  >("demographics");
+  const [urgentBanner, setUrgentBanner] = useState<string | null>(null);
   const [patient, setPatient] = useState<PatientInfo>({ fullName: "", age: "", gender: "" });
   const [answers, setAnswers] = useState<Record<string, AnswerValue>>({});
   const [symptoms, setSymptoms] = useState("");
@@ -103,22 +119,44 @@ export default function ConsultationPage() {
   const [useServerFlow, setUseServerFlow] = useState(true);
   const [clinicalSchemaLoading, setClinicalSchemaLoading] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [clinicalSkipCaption, setClinicalSkipCaption] = useState<string | null>(null);
 
   const scrollRef = useRef<ScrollView>(null);
-  const prefaceQuestions = CONSULTATION_PREFACE_QUESTIONS;
-  const prefaceCount = prefaceQuestions.length;
-  const prefaceQuestion = prefaceQuestions[prefaceIndex];
+  const prevPathwayCodeRef = useRef<string | null>(null);
+  /** Prevents re-loading clinical schema on every answer (was causing blink / reset to q1). */
+  const clinicalSessionKeyRef = useRef<string | null>(null);
   const clinicalQuestion = clinicalCurrentId ? questionsById[clinicalCurrentId] : undefined;
+  const pathwayBundle = activePathwayCode ? getPathwayBundle(activePathwayCode) : null;
+  const redFlagItems = pathwayBundle?.redFlagChecklist ?? [];
+
+  const wizardStepNumber = (): number => {
+    if (wizardStep === "demographics") return 1;
+    if (wizardStep === "coreTriage") return 2;
+    if (wizardStep === "redFlags") return 3;
+    if (wizardStep === "clinical") return 4;
+    return 5;
+  };
 
   const pathwayLabelByCode = (code: string) => PATIENT_PATHWAYS.find((p) => p.code === code)?.label ?? code;
   const headerPathwayText = pathwayCodes.map((code) => pathwayLabelByCode(code)).join(" + ");
 
   useEffect(() => {
     if (!activePathwayCode) return;
+    const switched =
+      prevPathwayCodeRef.current != null && prevPathwayCodeRef.current !== activePathwayCode;
+    prevPathwayCodeRef.current = activePathwayCode;
+
     setAnswers((existing) => {
-      const prefaceIds = new Set(CONSULTATION_PREFACE_QUESTIONS.map((q) => q.id));
-      return Object.fromEntries(Object.entries(existing).filter(([key]) => prefaceIds.has(key)));
+      return Object.fromEntries(
+        Object.entries(existing).filter(
+          ([key]) => isContextQuestionId(key) || key.startsWith("_rf"),
+        ),
+      );
     });
+    setUrgentBanner(null);
+    if (switched) {
+      setWizardStep("redFlags");
+    }
     setError("");
     setQuestionsById({});
     setClinicalCurrentId(null);
@@ -126,12 +164,29 @@ export default function ConsultationPage() {
     setClinicalProgressMax(1);
     setUseServerFlow(true);
     setClinicalSchemaLoading(false);
+    setClinicalSkipCaption(null);
+    clinicalSessionKeyRef.current = null;
   }, [activePathwayCode]);
 
   useEffect(() => {
-    if (wizardStep !== "clinical" || !activePathwayCode) return;
+    if (wizardStep !== "clinical") {
+      clinicalSessionKeyRef.current = null;
+      return;
+    }
+    if (!activePathwayCode) return;
+
+    const sessionKey = `${activePathwayCode}:${patient.gender}`;
+    if (clinicalSessionKeyRef.current === sessionKey) {
+      return;
+    }
+    clinicalSessionKeyRef.current = sessionKey;
+
     let cancelled = false;
     setClinicalSchemaLoading(true);
+    const mergedAnswers = mergeCoreDurationIntoAnswers(
+      activePathwayCode,
+      answers as Record<string, unknown>,
+    );
     void (async () => {
       try {
         const genderParam = patient.gender ? `?gender=${encodeURIComponent(patient.gender)}` : "";
@@ -145,26 +200,47 @@ export default function ConsultationPage() {
           progressMax: number;
         };
         if (cancelled) return;
+        const bundle = getPathwayBundle(activePathwayCode);
         const byId: Record<string, PathwayQuestion> = {};
         for (const q of data.questions || []) {
-          byId[q.id] = q;
+          const fromBundle = bundle?.questions.find((bq) => bq.id === q.id);
+          byId[q.id] = {
+            ...q,
+            clinicalNote: q.clinicalNote ?? fromBundle?.clinicalNote,
+          };
         }
+        const localDefs = getDefinitionsForPathway(activePathwayCode, patient.gender, mergedAnswers);
+        const firstId = localDefs?.firstQuestionId ?? data.firstQuestionId;
         setQuestionsById(byId);
         setClinicalProgressMax(Math.max(data.progressMax || Object.keys(byId).length, 1));
-        setClinicalCurrentId(data.firstQuestionId);
+        setClinicalCurrentId(firstId);
+        setClinicalSkipCaption(getClinicalSkipCaption(activePathwayCode, firstId, mergedAnswers));
         setUseServerFlow(true);
         setClinicalHistory([]);
       } catch {
         if (cancelled) return;
-        const qs = pathwayClinicalQuestionsForPatient(
-          activePathwayCode,
-          PATHWAY_QUESTIONS[activePathwayCode],
-          patient.gender,
-        );
-        const byId = Object.fromEntries(qs.map((q) => [q.id, q]));
+        const defs = getDefinitionsForPathway(activePathwayCode, patient.gender, mergedAnswers);
+        const qs =
+          defs?.questions ??
+          pathwayClinicalQuestionsForPatient(
+            activePathwayCode,
+            PATHWAY_QUESTIONS[activePathwayCode],
+            patient.gender,
+          );
+        const bundle = getPathwayBundle(activePathwayCode);
+        const byId: Record<string, PathwayQuestion> = {};
+        for (const q of qs) {
+          const fromBundle = bundle?.questions.find((bq) => bq.id === q.id);
+          byId[q.id] = {
+            ...q,
+            clinicalNote: q.clinicalNote ?? fromBundle?.clinicalNote,
+          };
+        }
+        const firstId = defs?.firstQuestionId ?? qs[0]?.id ?? null;
         setQuestionsById(byId);
-        setClinicalProgressMax(Math.max(qs.length, 1));
-        setClinicalCurrentId(qs[0]?.id ?? null);
+        setClinicalProgressMax(defs?.progressMax ?? Math.max(qs.length, 1));
+        setClinicalCurrentId(firstId);
+        setClinicalSkipCaption(getClinicalSkipCaption(activePathwayCode, firstId, mergedAnswers));
         setUseServerFlow(false);
         setClinicalHistory([]);
       } finally {
@@ -174,6 +250,7 @@ export default function ConsultationPage() {
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- answers intentionally omitted; reload only when entering clinical
   }, [wizardStep, activePathwayCode, patient.gender]);
 
   useEffect(() => {
@@ -199,8 +276,44 @@ export default function ConsultationPage() {
       return;
     }
     setError("");
-    setWizardStep("preface");
-    setPrefaceIndex(0);
+    setWizardStep("coreTriage");
+  };
+
+  const handleCoreTriageSubmit = () => {
+    for (const q of CORE_TRIAGE_QUESTIONS) {
+      if (isAnswerEmpty(q, answers[q.id])) {
+        setError("Please answer both questions to continue.");
+        return;
+      }
+    }
+    setError("");
+    setWizardStep("redFlags");
+  };
+
+  const handleRedFlagsContinue = (selectedIds: string[], noneSelected: boolean) => {
+    if (!activePathwayCode) return;
+    const result = evaluateRedFlagSelections(redFlagItems, selectedIds, noneSelected);
+    if (result.action === "emergency") {
+      navigation.replace("Emergency", {
+        from: activePathwayCode,
+        question: result.question,
+        flags: result.labels,
+      });
+      return;
+    }
+    const merged = applyChecklistAnswersToClinical(
+      activePathwayCode,
+      answers as Record<string, unknown>,
+      selectedIds,
+      noneSelected,
+    ) as Record<string, AnswerValue>;
+    setAnswers(merged);
+    setUrgentBanner(
+      result.tier === "urgent_care" && result.labels.length > 0
+        ? "You reported symptoms that may need urgent same-day care. If you feel worse, use NHS 111 or emergency services."
+        : null,
+    );
+    setWizardStep("clinical");
   };
 
   const patientPayload = () => ({
@@ -208,12 +321,6 @@ export default function ConsultationPage() {
     age: parseInt(patient.age, 10),
     gender: patient.gender,
   });
-
-  const resolveNextLinear = (fromId: string, list: PathwayQuestion[]): string | null => {
-    const idx = list.findIndex((x) => x.id === fromId);
-    if (idx < 0 || idx >= list.length - 1) return null;
-    return list[idx + 1].id;
-  };
 
   const submitConsultation = async (finalAnswers: Record<string, AnswerValue>) => {
     if (!activePathwayCode) return;
@@ -225,6 +332,7 @@ export default function ConsultationPage() {
     ) as Record<string, AnswerValue>;
     const baseSymptoms = symptoms.split(",").map((s) => s.trim()).filter(Boolean);
     const contextHints = contextAnswersToSymptomHints(finalAnswers as Record<string, unknown>);
+    const consent = getConsultationConsent();
     const payload: ConsultationSubmitPayload = {
       pathwayCode: activePathwayCode,
       answers: answersForApi,
@@ -234,6 +342,7 @@ export default function ConsultationPage() {
         gender: patient.gender,
       },
       symptoms: [...baseSymptoms, ...contextHints],
+      ...(consent ? { consent } : {}),
     };
     try {
       const res = await apiFetch(apiUrl("/api/consultation"), {
@@ -241,7 +350,16 @@ export default function ConsultationPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      let data: { consultationId?: string; error?: string; outcome?: string } = {};
+      let data: {
+        consultationId?: string;
+        error?: string;
+        outcome?: string;
+        outcomeReason?: string;
+        redFlagTriggered?: boolean;
+        decision?: { title?: string };
+        reasoning?: { steps?: string[] };
+        referralRecommendation?: { instruction?: string; actions?: string[] };
+      } = {};
       try {
         data = (await res.json()) as typeof data;
       } catch {
@@ -257,16 +375,27 @@ export default function ConsultationPage() {
       if (hasMorePathways) {
         setCompletedConsultationIds(nextIds);
         moveToNextPathway();
-        setWizardStep("clinical");
+        setWizardStep("redFlags");
         return;
       }
       const allIds = nextIds.join(",");
-      navigation.replace("Result", { id: nextIds[0], ids: allIds });
+      const referral = data.referralRecommendation;
+      clearConsultationConsent();
+      navigation.replace("Result", {
+        id: nextIds[0],
+        ids: allIds,
+        outcome: data.outcome,
+        outcomeReason: data.outcomeReason,
+        pathwayCodes: pathwayCodes.join(","),
+        reasoningSteps: JSON.stringify(data.reasoning?.steps ?? []),
+        actionLine: referral?.actions?.[0] ?? referral?.instruction,
+        answersSnapshot: JSON.stringify(finalAnswers),
+      });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Submission failed";
       setWizardStep("clinical");
       const detail = isUnreachableErrorMessage(message)
-        ? "We could not complete that step. In demo mode your answers stay on the device — try again, or go back and change an answer."
+        ? CONSULTATION.submitErrorOffline
         : `${message} You can try again or go back and check your answers.`;
       setError(detail);
     }
@@ -274,11 +403,19 @@ export default function ConsultationPage() {
 
   const proceedClinicalAfterAnswer = async (merged: Record<string, AnswerValue>) => {
     if (!activePathwayCode || !clinicalCurrentId) return;
-    const clinicalOnly = stripContextAnswers(merged as Record<string, unknown>) as Record<string, AnswerValue>;
+    const withDuration = mergeCoreDurationIntoAnswers(
+      activePathwayCode,
+      merged as Record<string, unknown>,
+    ) as Record<string, AnswerValue>;
+    const clinicalOnly = stripContextAnswers(withDuration as Record<string, unknown>) as Record<
+      string,
+      AnswerValue
+    >;
     const augmented = augmentAnswersForPathway(
       activePathwayCode,
       clinicalOnly as Record<string, unknown>,
     ) as Record<string, AnswerValue>;
+    const patient = patientPayload();
 
     try {
       if (useServerFlow) {
@@ -288,7 +425,7 @@ export default function ConsultationPage() {
           body: JSON.stringify({
             pathwayCode: activePathwayCode,
             answers: augmented,
-            patient: patientPayload(),
+            patient,
             currentQuestionId: clinicalCurrentId,
           }),
         });
@@ -297,30 +434,31 @@ export default function ConsultationPage() {
           throw new Error(typeof data.error === "string" ? data.error : "Could not load next question.");
         }
         if (data.isComplete) {
-          setAnswers(merged);
-          await submitConsultation(merged);
+          setAnswers(withDuration);
+          await submitConsultation(withDuration);
           return;
         }
         if (data.nextQuestionId) {
           setClinicalHistory((h) => [...h, clinicalCurrentId]);
           setClinicalCurrentId(data.nextQuestionId);
-          setAnswers(merged);
+          setAnswers(withDuration);
         }
       } else {
-        const list = pathwayClinicalQuestionsForPatient(
+        const state = getNextQuestionState(
           activePathwayCode,
-          PATHWAY_QUESTIONS[activePathwayCode],
-          patient.gender,
+          clinicalCurrentId,
+          augmented as Record<string, unknown>,
+          patient,
         );
-        const nextId = resolveNextLinear(clinicalCurrentId, list);
-        if (!nextId) {
-          setAnswers(merged);
-          await submitConsultation(merged);
+        if (state.isComplete || !state.nextQuestionId) {
+          setAnswers(withDuration);
+          await submitConsultation(withDuration);
           return;
         }
         setClinicalHistory((h) => [...h, clinicalCurrentId]);
-        setClinicalCurrentId(nextId);
-        setAnswers(merged);
+        setClinicalCurrentId(state.nextQuestionId);
+        setClinicalProgressMax(state.progressMax);
+        setAnswers(withDuration);
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Could not continue.";
@@ -332,34 +470,12 @@ export default function ConsultationPage() {
     }
   };
 
-  const advancePreface = (merged: Record<string, AnswerValue>) => {
-    const q = prefaceQuestion;
-    if (!q) return;
-    const currentAnswer = merged[q.id];
-    if (q.required && isAnswerEmpty(q, currentAnswer)) {
-      setError("Please answer this question to continue.");
-      return;
-    }
-    setError("");
-    if (prefaceIndex < prefaceCount - 1) {
-      setPrefaceIndex((i) => i + 1);
-    } else {
-      setWizardStep("clinical");
-    }
-  };
-
-  const handlePrefaceAnswer = (value: string | boolean) => {
-    if (!prefaceQuestion) return;
-    const qId = prefaceQuestion.id;
-    const merged = { ...answers, [qId]: value };
-    setAnswers(merged);
-    if (prefaceQuestion.type === "boolean") {
-      setTimeout(() => advancePreface(merged), 250);
-    }
-  };
-
-  const routeToEmergencyScreen = (questionText: string) => {
-    navigation.push("Emergency", { from: activePathwayCode || "unknown", question: questionText });
+  const routeToEmergencyScreen = (questionText: string, flags?: string[]) => {
+    navigation.replace("Emergency", {
+      from: activePathwayCode || "unknown",
+      question: questionText,
+      flags,
+    });
   };
 
   const handleClinicalAnswer = (value: string | boolean) => {
@@ -370,10 +486,11 @@ export default function ConsultationPage() {
     }
     const qId = clinicalQuestion.id;
     const merged = { ...answers, [qId]: value };
-    setAnswers(merged);
     if (clinicalQuestion.type === "boolean") {
-      setTimeout(() => void proceedClinicalAfterAnswer(merged), 250);
+      void proceedClinicalAfterAnswer(merged);
+      return;
     }
+    setAnswers(merged);
   };
 
   const toggleClinicalMultiselect = (option: string) => {
@@ -385,11 +502,6 @@ export default function ConsultationPage() {
       const next = has ? cur.filter((o) => o !== option) : [...cur, option];
       return { ...prev, [qId]: next };
     });
-  };
-
-  const advancePrefaceManual = () => {
-    if (!prefaceQuestion) return;
-    advancePreface(answers);
   };
 
   const advanceClinicalManual = () => {
@@ -422,17 +534,16 @@ export default function ConsultationPage() {
         setError("");
         return;
       }
-      setWizardStep("preface");
-      setPrefaceIndex(prefaceCount - 1);
+      setWizardStep("redFlags");
       setError("");
       return;
     }
-    if (wizardStep === "preface") {
-      if (prefaceIndex > 0) {
-        setPrefaceIndex((i) => i - 1);
-        setError("");
-        return;
-      }
+    if (wizardStep === "redFlags") {
+      setWizardStep("coreTriage");
+      setError("");
+      return;
+    }
+    if (wizardStep === "coreTriage") {
       setWizardStep("demographics");
       setError("");
       return;
@@ -447,13 +558,13 @@ export default function ConsultationPage() {
   const skipCurrentCondition = () => {
     if (hasMorePathways) {
       moveToNextPathway();
-      setWizardStep("clinical");
+      setWizardStep("redFlags");
       setError("");
       return;
     }
     if (completedConsultationIds.length > 0) {
       const allIds = completedConsultationIds.join(",");
-      navigation.replace("Result", { id: completedConsultationIds[0], ids: allIds });
+      navigation.replace("Result", { id: completedConsultationIds[0], ids: allIds, outcome: "pharmacy" });
       return;
     }
     navigation.navigate("Patients");
@@ -492,11 +603,11 @@ export default function ConsultationPage() {
       <View style={s.pageInset}>
         <View style={s.headerRow}>
           <Pressable style={s.backBtn} onPress={goBack}>
-            <MaterialCommunityIcons name="arrow-left" size={20} color="#2563eb" />
+            <MaterialCommunityIcons name={BACK_NAV_ICON} size={20} color={COLORS.textMuted} />
           </Pressable>
           <View style={s.headerTitles}>
             <Text style={s.headerTitle} numberOfLines={1}>
-              Care Path
+              {BRAND_NAME}
             </Text>
             <Text style={s.headerSub} numberOfLines={1}>
               {headerPathwayText}
@@ -518,42 +629,32 @@ export default function ConsultationPage() {
         >
           {wizardStep === "demographics" && (
             <View>
-              <View style={s.step1Hero}>
-                <Text style={s.stepPill}>Step 1: About you</Text>
-              </View>
+              <Text style={s.stepPill}>Step {wizardStepNumber()} of 5: About you</Text>
               <Text style={s.screenTitle}>Before we begin</Text>
-              <Text style={s.screenBody}>
-                We ask for basic details to tailor safety checks and your summary. Clinical questions use the same
-                server-driven pathway rules here as in the triage engine.
-              </Text>
-              <View style={s.infoRow}>
-                <MaterialCommunityIcons name="shield-check-outline" size={20} color="#2563eb" />
-                <Text style={s.infoText}>
-                  <Text style={s.infoBold}>Rules-based triage</Text>
-                  {" — "}
-                  your answers are checked against NHS-aligned pathway rules, not a free-text chatbot.
-                </Text>
-              </View>
+              <Text style={s.screenBody}>{CONSULTATION.demographicsIntro}</Text>
 
               <View style={s.card}>
                 <Text style={s.fieldLabel}>Full name</Text>
+                <Text style={s.fieldHint}>{CONSULTATION.nameMinimisation}</Text>
                 <TextInput
                   style={s.input}
                   placeholder="e.g. Sarah Mitchell"
-                  placeholderTextColor="#94a3b8"
+                  placeholderTextColor={COLORS.textMuted}
                   value={patient.fullName}
                   onChangeText={(t) => setPatient({ ...patient, fullName: t })}
                 />
                 <Text style={[s.fieldLabel, s.fieldLabelSpaced]}>Age</Text>
+                <Text style={s.fieldHint}>{CONSULTATION.ageMinimisation}</Text>
                 <TextInput
                   style={s.input}
                   placeholder="e.g. 34"
-                  placeholderTextColor="#94a3b8"
+                  placeholderTextColor={COLORS.textMuted}
                   keyboardType="number-pad"
                   value={patient.age}
                   onChangeText={(t) => setPatient({ ...patient, age: t.replace(/\D/g, "").slice(0, 3) })}
                 />
                 <Text style={[s.fieldLabel, s.fieldLabelSpaced]}>Gender</Text>
+                <Text style={s.fieldHint}>{CONSULTATION.genderMinimisation}</Text>
                 <View style={s.genderRow}>
                   {GENDER_OPTIONS.map((opt) => {
                     const sel = patient.gender === opt;
@@ -571,10 +672,11 @@ export default function ConsultationPage() {
                 <Text style={[s.fieldLabel, s.fieldLabelSpaced]}>
                   Describe your symptoms <Text style={s.optional}>(optional)</Text>
                 </Text>
+                <Text style={s.fieldHint}>{CONSULTATION.symptomsMinimisation}</Text>
                 <TextInput
                   style={s.input}
                   placeholder="e.g. burning when passing urine, fever"
-                  placeholderTextColor="#94a3b8"
+                  placeholderTextColor={COLORS.textMuted}
                   value={symptoms}
                   onChangeText={setSymptoms}
                   onFocus={scrollToBottomAfterKeyboard}
@@ -588,103 +690,76 @@ export default function ConsultationPage() {
               ) : null}
 
               <Pressable style={s.primaryBtn} onPress={handleDemographicsSubmit}>
-                <Text style={s.primaryBtnText}>Continue to questions</Text>
-                <MaterialCommunityIcons name="chevron-right" size={22} color="#fff" />
+                <Text style={s.primaryBtnText}>Continue</Text>
               </Pressable>
             </View>
           )}
 
-          {wizardStep === "preface" && prefaceQuestion && (
+          {wizardStep === "coreTriage" && (
             <View>
-              <View style={s.prefaceProgressBlock}>
-                <View style={s.prefaceProgressHeader}>
-                  <Text style={s.prefaceProgressTitle}>Quick context</Text>
-                  <Text style={s.prefaceProgressCount}>
-                    {prefaceIndex + 1} / {prefaceCount}
-                  </Text>
-                </View>
-                <View style={s.prefaceProgressTrack}>
-                  <View
-                    style={[
-                      s.prefaceProgressFill,
-                      {
-                        width: `${((prefaceIndex + 1) / Math.max(prefaceCount, 1)) * 100}%`,
-                      },
-                    ]}
-                  />
-                </View>
-              </View>
+              <Text style={s.stepPill}>Step {wizardStepNumber()} of 5: Your symptoms</Text>
+              <Text style={s.screenTitle}>Tell us more</Text>
+              <Text style={s.screenBody}>{CONSULTATION.coreTriageIntro}</Text>
               <View style={s.card}>
-                <Text style={s.qTitle}>{prefaceQuestion.text}</Text>
-                {prefaceQuestion.type === "boolean" && (
-                  <View style={s.boolRow}>
-                    {(["Yes", "No"] as const).map((opt) => (
-                      <Pressable
-                        key={opt}
-                        style={[
-                          s.boolBtn,
-                          answers[prefaceQuestion.id] === (opt === "Yes") && (opt === "Yes" ? s.boolYes : s.boolNo),
-                        ]}
-                        onPress={() => handlePrefaceAnswer(opt === "Yes")}
-                      >
-                        <Text
-                          style={[
-                            s.boolBtnText,
-                            answers[prefaceQuestion.id] === (opt === "Yes") && s.boolBtnTextOn,
-                          ]}
-                        >
-                          {opt}
-                        </Text>
-                      </Pressable>
-                    ))}
+                {CORE_TRIAGE_QUESTIONS.map((q) => (
+                  <View key={q.id} style={s.coreBlock}>
+                    <Text style={s.qTitle}>{q.text}</Text>
+                    {q.options && (
+                      <View style={s.optionsBlock}>
+                        {q.options.map((opt) => {
+                          const selected = answers[q.id] === opt;
+                          return (
+                            <Pressable
+                              key={opt}
+                              style={[s.optionRow, selected && s.optionRowOn]}
+                              onPress={() => setAnswers({ ...answers, [q.id]: opt })}
+                            >
+                              <View style={[s.radioOuter, selected && s.radioOuterOn]}>
+                                {selected ? <View style={s.radioInner} /> : null}
+                              </View>
+                              <Text style={s.optionText}>{opt}</Text>
+                            </Pressable>
+                          );
+                        })}
+                      </View>
+                    )}
                   </View>
-                )}
-                {prefaceQuestion.type === "select" && prefaceQuestion.options && (
-                  <View style={s.optionsBlock}>
-                    {prefaceQuestion.options.map((opt) => {
-                      const selected = answers[prefaceQuestion.id] === opt;
-                      return (
-                        <Pressable
-                          key={opt}
-                          style={[s.optionRow, selected && s.optionRowOn]}
-                          onPress={() => setAnswers({ ...answers, [prefaceQuestion.id]: opt })}
-                        >
-                          <View style={[s.radioOuter, selected && s.radioOuterOn]}>
-                            {selected ? <View style={s.radioInner} /> : null}
-                          </View>
-                          <Text style={s.optionText}>{opt}</Text>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-                )}
+                ))}
                 {error ? <Text style={s.errorInline}>{error}</Text> : null}
-                {prefaceQuestion.type !== "boolean" && (
-                  <View style={s.mt6}>
-                    <Pressable style={s.primaryBtn} onPress={advancePrefaceManual}>
-                      <Text style={s.primaryBtnText}>
-                        {prefaceIndex === prefaceCount - 1 ? "Continue to clinical questions" : "Next"}
-                      </Text>
-                      <MaterialCommunityIcons name="chevron-right" size={22} color="#fff" />
-                    </Pressable>
-                    {!prefaceQuestion.required ? (
-                      <Text style={s.hintCenter}>Optional — you can tap Next to skip.</Text>
-                    ) : null}
-                  </View>
-                )}
+                <Pressable style={s.primaryBtn} onPress={handleCoreTriageSubmit}>
+                  <Text style={s.primaryBtnText}>Continue</Text>
+                </Pressable>
               </View>
+            </View>
+          )}
+
+          {wizardStep === "redFlags" && (
+            <View>
+              <Text style={s.stepPill}>Step {wizardStepNumber()} of 5: Safety check</Text>
+              <RedFlagChecklist
+                items={redFlagItems}
+                onContinue={handleRedFlagsContinue}
+                error={error || undefined}
+              />
             </View>
           )}
 
           {wizardStep === "clinical" && clinicalSchemaLoading && (
             <View style={s.loadingBox}>
-              <ActivityIndicator size="large" color="#2563eb" />
+              <ActivityIndicator size="large" color={COLORS.nhsBlue} />
               <Text style={s.loadingText}>Loading clinical pathway…</Text>
             </View>
           )}
 
           {wizardStep === "clinical" && !clinicalSchemaLoading && clinicalQuestion && (
             <View>
+              <Text style={s.stepPill}>Step {wizardStepNumber()} of 5: Clinical questions</Text>
+              {urgentBanner ? (
+                <View style={s.warnBanner}>
+                  <Text style={s.warnTitle}>Important</Text>
+                  <Text style={s.warnBody}>{urgentBanner}</Text>
+                </View>
+              ) : null}
               {pathwayCodes.length > 1 ? (
                 <Pressable style={s.skipBtn} onPress={skipCurrentCondition}>
                   <Text style={s.skipBtnText}>Skip this condition</Text>
@@ -692,40 +767,21 @@ export default function ConsultationPage() {
               ) : null}
               {clinicalQuestion.redFlagHint ? (
                 <View style={s.dangerBanner}>
-                  <Text style={s.dangerTitle}>Safety question — please answer honestly.</Text>
-                  <Text style={s.dangerBody}>
-                    These checks detect urgent risk factors and may escalate your outcome immediately when needed.
-                  </Text>
+                  <Text style={s.dangerTitle}>Safety question</Text>
+                  <Text style={s.dangerBody}>{CONSULTATION.clinicalSafetyHint}</Text>
                 </View>
               ) : null}
               {!useServerFlow ? (
                 <View style={s.warnBanner}>
-                  <Text style={s.warnTitle}>Offline pathway mode</Text>
+                  <Text style={s.warnTitle}>{CONSULTATION.offlinePathwayTitle}</Text>
                   <Text style={s.warnBody}>{MOCK_DATA_DISCLOSURE}</Text>
                 </View>
               ) : null}
-              <View style={s.prefaceProgressBlock}>
-                <View style={s.prefaceProgressHeader}>
-                  <Text style={s.prefaceProgressTitle}>Clinical pathway</Text>
-                  <Text style={s.prefaceProgressCount}>
-                    {Math.min(clinicalHistory.length + 1, clinicalProgressMax)} / {clinicalProgressMax}
-                  </Text>
-                </View>
-                <View style={s.prefaceProgressTrack}>
-                  <View
-                    style={[
-                      s.prefaceProgressFill,
-                      {
-                        width: `${(Math.min(clinicalHistory.length + 1, clinicalProgressMax) / Math.max(clinicalProgressMax, 1)) * 100}%`,
-                      },
-                    ]}
-                  />
-                </View>
-              </View>
-              <Text style={s.modeBadge}>{useServerFlow ? "NHS Pathway Logic" : "Offline Fallback Order"}</Text>
-
-              <View style={s.card}>
-                <Text style={s.qTitle}>{clinicalQuestion.text}</Text>
+              <Text style={s.clinicalProgressLabel}>
+                {CONSULTATION.clinicalProgressLabel} · Question {clinicalHistory.length + 1}
+              </Text>
+              {clinicalSkipCaption ? <Text style={s.skipCaption}>{clinicalSkipCaption}</Text> : null}
+              <ClinicalQuestionCard question={clinicalQuestion}>
                 {clinicalQuestion.type === "boolean" && (
                   <View style={s.boolRow}>
                     {(["Yes", "No"] as const).map((opt) => (
@@ -782,7 +838,7 @@ export default function ConsultationPage() {
                           onPress={() => toggleClinicalMultiselect(opt)}
                         >
                           <View style={[s.checkBox, selected && s.checkBoxOn]}>
-                            {selected ? <MaterialCommunityIcons name="check" size={14} color="#fff" /> : null}
+                            {selected ? <MaterialCommunityIcons name="check" size={14} color={COLORS.textPrimary} /> : null}
                           </View>
                           <Text style={s.optionText}>{opt}</Text>
                         </Pressable>
@@ -795,7 +851,7 @@ export default function ConsultationPage() {
                     style={[s.input, s.textArea]}
                     multiline
                     placeholder="Type here (or leave blank if not applicable)"
-                    placeholderTextColor="#94a3b8"
+                    placeholderTextColor={COLORS.textMuted}
                     value={typeof answers[clinicalQuestion.id] === "string" ? (answers[clinicalQuestion.id] as string) : ""}
                     onChangeText={(t) => setAnswers({ ...answers, [clinicalQuestion.id]: t })}
                     onFocus={scrollToBottomAfterKeyboard}
@@ -806,7 +862,6 @@ export default function ConsultationPage() {
                   <View style={s.mt6}>
                     <Pressable style={s.primaryBtn} onPress={advanceClinicalManual}>
                       <Text style={s.primaryBtnText}>Next</Text>
-                      <MaterialCommunityIcons name="chevron-right" size={22} color="#fff" />
                     </Pressable>
                     {!clinicalQuestion.required ? (
                       <Text style={s.hintCenter}>
@@ -815,17 +870,15 @@ export default function ConsultationPage() {
                     ) : null}
                   </View>
                 )}
-              </View>
+              </ClinicalQuestionCard>
             </View>
           )}
 
           {wizardStep === "submitting" && (
             <View style={s.loadingBox}>
-              <ActivityIndicator size="large" color="#2563eb" />
-              <Text style={s.submitTitle}>Analysing your responses…</Text>
-              <Text style={s.submitBody}>
-                Our clinical decision engine is evaluating your answers using the selected pathway rules.
-              </Text>
+              <ActivityIndicator size="large" color={COLORS.nhsBlue} />
+              <Text style={s.submitTitle}>{CONSULTATION.submitTitle}</Text>
+              <Text style={s.submitBody}>{CONSULTATION.submitBody}</Text>
             </View>
           )}
         </ScrollView>
@@ -835,7 +888,7 @@ export default function ConsultationPage() {
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#f8fafc" },
+  root: { flex: 1, backgroundColor: COLORS.background },
   pageInset: {
     flex: 1,
     paddingTop: SPACING.lg,
@@ -845,127 +898,90 @@ const s = StyleSheet.create({
   headerRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   backBtn: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
   headerTitles: { flex: 1, minWidth: 0 },
-  headerTitle: { fontSize: 15, fontWeight: "700", color: "#0f172a" },
-  headerSub: { fontSize: 12, color: "#64748b", marginTop: 2 },
+  headerTitle: { ...TYPOGRAPHY.caption, fontSize: 15, fontWeight: "700", color: COLORS.textPrimary },
+  headerSub: { ...TYPOGRAPHY.caption, marginTop: 2 },
   scroll: { flex: 1 },
   scrollContent: { paddingTop: SPACING.md, flexGrow: 1 },
-  step1Hero: {
-    width: "100%",
-    alignItems: "center",
-    marginBottom: SPACING.sm,
-  },
   stepPill: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: "#cbd5e1",
-    fontSize: 11,
-    fontWeight: "600",
-    color: "#2563eb",
-    overflow: "hidden",
-  },
-  prefaceProgressBlock: { marginBottom: SPACING.md },
-  prefaceProgressHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    ...TYPOGRAPHY.label,
+    alignSelf: "flex-start",
     marginBottom: SPACING.sm,
   },
-  prefaceProgressTitle: { fontSize: 12, fontWeight: "700", color: "#0f172a" },
-  prefaceProgressCount: { fontSize: 12, fontWeight: "600", color: "#64748b" },
-  prefaceProgressTrack: {
-    height: 4,
-    borderRadius: 99,
-    backgroundColor: "#e2e8f0",
-    overflow: "hidden",
-  },
-  prefaceProgressFill: { height: "100%", borderRadius: 99, backgroundColor: "#2563eb" },
-  screenTitle: { fontSize: 26, fontWeight: "800", color: "#0f172a" },
-  screenBody: { marginTop: 6, fontSize: 14, lineHeight: 21, color: "#475569" },
-  infoRow: {
-    flexDirection: "row",
-    gap: 8,
-    marginTop: 10,
-    padding: 10,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-    backgroundColor: "#fff",
-  },
-  infoText: { flex: 1, fontSize: 12, lineHeight: 18, color: "#64748b" },
-  infoBold: { fontWeight: "700", color: "#0f172a" },
+  clinicalProgressLabel: { ...TYPOGRAPHY.caption, color: COLORS.textPrimary, marginBottom: SPACING.sm },
+  skipCaption: { ...TYPOGRAPHY.caption, color: COLORS.textSecondary, marginBottom: SPACING.sm, fontStyle: "italic" },
+  screenTitle: { ...TYPOGRAPHY.title },
+  screenBody: { ...TYPOGRAPHY.bodySecondary, marginTop: 6 },
   card: {
     marginTop: 10,
     padding: 12,
-    borderRadius: 14,
+    borderRadius: RADII.sm,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
-    backgroundColor: "#fff",
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surface,
   },
-  fieldLabel: { fontSize: 14, fontWeight: "600", color: "#0f172a" },
+  fieldLabel: { fontSize: 14, fontWeight: "600", color: COLORS.textPrimary },
+  fieldHint: { ...TYPOGRAPHY.caption, marginTop: 4, marginBottom: 4 },
   fieldLabelSpaced: { marginTop: 10 },
-  optional: { fontWeight: "400", color: "#64748b" },
+  optional: { fontWeight: "400", color: COLORS.textMuted },
   input: {
     marginTop: 4,
     borderWidth: 1,
-    borderColor: "#cbd5e1",
-    borderRadius: 12,
+    borderColor: COLORS.border,
+    borderRadius: RADII.sm,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 16,
-    color: "#0f172a",
-    backgroundColor: "#fff",
+    color: COLORS.textPrimary,
+    backgroundColor: COLORS.surface,
   },
   textArea: { minHeight: 100, textAlignVertical: "top" },
   genderRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 6 },
   genderChip: {
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 999,
+    borderRadius: RADII.sm,
     borderWidth: 1,
-    borderColor: "#cbd5e1",
-    backgroundColor: "#fff",
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surface,
   },
-  genderChipOn: { borderColor: "#2563eb", backgroundColor: "#eff6ff" },
-  genderChipText: { fontSize: 13, fontWeight: "600", color: "#475569" },
-  genderChipTextOn: { color: "#1d4ed8" },
+  genderChipOn: { borderColor: COLORS.selectedBorder, backgroundColor: COLORS.surface },
+  genderChipText: { fontSize: 13, fontWeight: "600", color: COLORS.textSecondary },
+  genderChipTextOn: { color: COLORS.textPrimary },
   errorBox: {
     marginTop: 8,
     padding: 10,
-    borderRadius: 12,
+    borderRadius: RADII.sm,
     borderWidth: 1,
-    borderColor: "#fecaca",
-    backgroundColor: "#fef2f2",
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.errorBg,
   },
-  errorText: { fontSize: 14, color: "#b91c1c" },
-  errorInline: { marginTop: 10, fontSize: 14, fontWeight: "600", color: "#b91c1c" },
+  errorText: { fontSize: 14, color: COLORS.error },
+  errorInline: { marginTop: 10, fontSize: 14, fontWeight: "600", color: COLORS.error },
   primaryBtn: {
     marginTop: 12,
-    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
-    backgroundColor: "#2563eb",
-    borderRadius: 12,
+    backgroundColor: COLORS.nhsBlue,
+    borderRadius: RADII.sm,
     paddingVertical: 12,
   },
-  primaryBtnText: { color: "#fff", fontSize: 16, fontWeight: "700" },
-  qTitle: { fontSize: 18, fontWeight: "700", color: "#0f172a", lineHeight: 24 },
+  primaryBtnText: { color: COLORS.surface, fontSize: 16, fontWeight: "700" },
+  coreBlock: { marginBottom: 16 },
+  qTitle: { ...TYPOGRAPHY.heading, fontSize: 18, lineHeight: 24 },
   boolRow: { flexDirection: "row", gap: 8, marginTop: 12 },
   boolBtn: {
     flex: 1,
     paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: "#bae6fd",
+    borderRadius: RADII.sm,
+    borderWidth: 1,
+    borderColor: COLORS.border,
     alignItems: "center",
-    backgroundColor: "#fff",
+    backgroundColor: COLORS.surface,
   },
-  boolYes: { borderColor: "#2563eb", backgroundColor: "#eff6ff" },
-  boolNo: { borderColor: "#94a3b8", backgroundColor: "#f1f5f9" },
-  boolBtnText: { fontSize: 16, fontWeight: "700", color: "#64748b" },
-  boolBtnTextOn: { color: "#0f172a" },
+  boolYes: { borderColor: COLORS.selectedBorder, backgroundColor: COLORS.surface },
+  boolNo: { borderColor: COLORS.border, backgroundColor: COLORS.surface },
+  boolBtnText: { fontSize: 16, fontWeight: "700", color: COLORS.textSecondary },
+  boolBtnTextOn: { color: COLORS.textPrimary },
   optionsBlock: { marginTop: 10, gap: 6 },
   optionRow: {
     flexDirection: "row",
@@ -973,82 +989,73 @@ const s = StyleSheet.create({
     gap: 10,
     paddingVertical: 10,
     paddingHorizontal: 10,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: "#e2e8f0",
-    backgroundColor: "#fff",
+    borderRadius: RADII.sm,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surface,
   },
-  optionRowOn: { borderColor: "#2563eb", backgroundColor: "#eff6ff" },
+  optionRowOn: { borderColor: COLORS.selectedBorder, backgroundColor: COLORS.surface },
   radioOuter: {
     width: 20,
     height: 20,
     borderRadius: 10,
     borderWidth: 2,
-    borderColor: "#94a3b8",
+    borderColor: COLORS.textMuted,
     alignItems: "center",
     justifyContent: "center",
   },
-  radioOuterOn: { borderColor: "#2563eb" },
-  radioInner: { width: 10, height: 10, borderRadius: 5, backgroundColor: "#2563eb" },
-  optionText: { flex: 1, fontSize: 15, color: "#1e293b", lineHeight: 21 },
+  radioOuterOn: { borderColor: COLORS.selectedBorder },
+  radioInner: { width: 10, height: 10, borderRadius: 5, backgroundColor: COLORS.selectedBorder },
+  optionText: { flex: 1, fontSize: 15, color: COLORS.textPrimary, lineHeight: 21 },
   checkBox: {
     width: 24,
     height: 24,
-    borderRadius: 6,
+    borderRadius: RADII.sm,
     borderWidth: 2,
-    borderColor: "#94a3b8",
+    borderColor: COLORS.textMuted,
     alignItems: "center",
     justifyContent: "center",
   },
-  checkBoxOn: { backgroundColor: "#2563eb", borderColor: "#2563eb" },
+  checkBoxOn: { backgroundColor: COLORS.surface, borderColor: COLORS.selectedBorder },
   mt6: { marginTop: 12 },
-  hintCenter: { marginTop: 6, textAlign: "center", fontSize: 12, color: "#64748b" },
+  hintCenter: { marginTop: 6, textAlign: "center", fontSize: 12, color: COLORS.textMuted },
   loadingBox: { paddingVertical: 24, alignItems: "center" },
-  loadingText: { marginTop: 8, fontSize: 14, color: "#64748b" },
+  loadingText: { marginTop: 8, fontSize: 14, color: COLORS.textSecondary },
   skipBtn: {
     alignSelf: "flex-end",
     marginBottom: 6,
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 10,
+    borderRadius: RADII.sm,
     borderWidth: 1,
-    borderColor: "#bae6fd",
-    backgroundColor: "#fff",
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surface,
   },
-  skipBtnText: { fontSize: 12, fontWeight: "600", color: "#475569" },
+  skipBtnText: { fontSize: 12, fontWeight: "600", color: COLORS.textSecondary },
   dangerBanner: {
     marginBottom: 8,
     padding: 10,
-    borderRadius: 12,
+    borderRadius: RADII.sm,
     borderWidth: 1,
-    borderColor: "#fecaca",
-    backgroundColor: "#fef2f2",
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.errorBg,
   },
-  dangerTitle: { fontSize: 13, fontWeight: "700", color: "#991b1b" },
-  dangerBody: { marginTop: 4, fontSize: 12, lineHeight: 18, color: "#7f1d1d" },
+  dangerTitle: { fontSize: 13, fontWeight: "700", color: COLORS.error },
+  dangerBody: { marginTop: 4, fontSize: 12, lineHeight: 18, color: COLORS.textPrimary },
   warnBanner: {
     marginBottom: 8,
     padding: 10,
-    borderRadius: 12,
+    borderRadius: RADII.sm,
     borderWidth: 1,
-    borderColor: "#fde68a",
-    backgroundColor: "#fffbeb",
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.warningBg,
   },
-  warnTitle: { fontSize: 13, fontWeight: "700", color: "#92400e" },
-  warnBody: { marginTop: 4, fontSize: 12, lineHeight: 18, color: "#78350f" },
-  modeBadge: {
-    alignSelf: "flex-start",
-    marginBottom: 6,
-    fontSize: 10,
-    fontWeight: "700",
-    color: "#2563eb",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  submitTitle: { marginTop: 10, fontSize: 20, fontWeight: "700", color: "#0f172a" },
-  submitBody: { marginTop: 6, fontSize: 14, color: "#64748b", textAlign: "center", paddingHorizontal: 12 },
-  centerText: { fontSize: 15, color: "#64748b", textAlign: "center" },
-  centerTitle: { fontSize: 18, fontWeight: "700", color: "#0f172a", textAlign: "center", marginBottom: 6 },
+  warnTitle: { fontSize: 13, fontWeight: "700", color: COLORS.warning },
+  warnBody: { marginTop: 4, fontSize: 12, lineHeight: 18, color: COLORS.textPrimary },
+  submitTitle: { marginTop: 10, ...TYPOGRAPHY.title, fontSize: 20 },
+  submitBody: { marginTop: 6, ...TYPOGRAPHY.bodySecondary, textAlign: "center", paddingHorizontal: 12 },
+  centerText: { ...TYPOGRAPHY.bodySecondary, textAlign: "center" },
+  centerTitle: { ...TYPOGRAPHY.heading, textAlign: "center", marginBottom: 6 },
   linkBtn: { marginTop: 12, alignSelf: "center", paddingVertical: 8 },
-  linkBtnText: { fontSize: 15, fontWeight: "600", color: "#2563eb", textDecorationLine: "underline" },
+  linkBtnText: { fontSize: 15, fontWeight: "600", color: COLORS.textPrimary, textDecorationLine: "underline" },
 });

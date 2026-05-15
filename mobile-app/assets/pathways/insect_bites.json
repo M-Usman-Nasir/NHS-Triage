@@ -1,0 +1,151 @@
+{
+  "_comment": "Clinical decision pathway for Infected Insect Bites aligned to NHS Pharmacy First criteria including 48-hour worsening gate.",
+  "pathway": "insect_bites",
+  "label": "Infected Insect Bites",
+  "applicableGenders": ["Male", "Female", "Other"],
+  "minimumAge": 1,
+  "maximumAge": null,
+  "questions": [
+    {
+      "id": "q1",
+      "text": "When did the bite or sting happen?",
+      "type": "select",
+      "options": ["Within the last 24 hours", "1–3 days ago", "4–7 days ago", "More than 7 days ago"],
+      "required": true
+    },
+    {
+      "id": "q2",
+      "text": "Is the bite area red, warm, swollen, painful, or oozing?",
+      "type": "boolean",
+      "required": true
+    },
+    {
+      "id": "q3",
+      "text": "Is the redness spreading beyond the immediate bite area?",
+      "type": "boolean",
+      "required": true,
+      "clinicalNote": "Spreading redness (erythema) suggests cellulitis"
+    },
+    {
+      "id": "q4",
+      "text": "Do you have fever (38°C or above) or feel systemically unwell?",
+      "type": "boolean",
+      "required": true
+    },
+    {
+      "id": "q5",
+      "text": "Is there a red line tracking up from the bite toward your body?",
+      "type": "boolean",
+      "required": true,
+      "redFlagHint": true
+    },
+    {
+      "id": "q6",
+      "text": "Do you have difficulty breathing, swelling of the face or throat, or a severe rash all over your body?",
+      "type": "boolean",
+      "required": true,
+      "redFlagHint": true
+    },
+    {
+      "id": "q7",
+      "text": "Did symptoms clearly worsen 48 hours after the bite or sting?",
+      "type": "boolean",
+      "required": true
+    },
+    {
+      "id": "q8",
+      "text": "Do you have confusion, severe shivering, very fast breathing, or other sepsis warning signs?",
+      "type": "boolean",
+      "required": true,
+      "redFlagHint": true
+    }
+  ],
+  "redFlags": [
+    {
+      "code": "RF_IB_001",
+      "condition": "q6 === true",
+      "description": "Anaphylaxis features",
+      "outcome": "emergency_999",
+      "message": "These symptoms may indicate anaphylaxis. Call 999 immediately."
+    },
+    {
+      "code": "RF_IB_002",
+      "condition": "q5 === true",
+      "description": "Red line tracking from bite suggests lymphangitis",
+      "outcome": "emergency_999",
+      "message": "A red line spreading from a bite needs emergency assessment. Call 999."
+    },
+    {
+      "code": "RF_IB_003",
+      "condition": "q4 === true && q3 === true",
+      "description": "Spreading infection with systemic illness",
+      "outcome": "urgent_care",
+      "message": "Spreading infection with fever needs same-day medical assessment."
+    },
+    {
+      "code": "RF_IB_004",
+      "condition": "q8 === true",
+      "description": "Possible sepsis warning features",
+      "outcome": "emergency_999",
+      "message": "Possible sepsis symptoms need emergency care now. Call 999."
+    }
+  ],
+  "eligibilityRules": [
+    {
+      "id": "elig_1",
+      "condition": "age >= 1 && q2 === true && q7 === true && q3 === false && q4 === false && q5 === false && q6 === false && q8 === false",
+      "eligible": true,
+      "reason": "Localised worsening infected bite (after 48 hours) without systemic or red-flag features"
+    },
+    {
+      "id": "elig_2",
+      "condition": "age < 1",
+      "eligible": false,
+      "reason": "Under 1 year old requires GP review"
+    },
+    {
+      "id": "elig_3",
+      "condition": "q7 === false",
+      "eligible": false,
+      "reason": "Pharmacy infected-bite pathway requires clear worsening after 48 hours"
+    },
+    {
+      "id": "elig_4",
+      "condition": "q3 === true || q4 === true",
+      "eligible": false,
+      "reason": "Spreading redness or systemic features require GP or urgent review"
+    }
+  ],
+  "outcomeRules": [
+    {
+      "priority": 1,
+      "condition": "redFlagTriggered === true",
+      "outcome": "escalated_by_red_flag"
+    },
+    {
+      "priority": 2,
+      "condition": "q2 === false",
+      "outcome": "self_care",
+      "reason": "No signs of infection — self-care appropriate"
+    },
+    {
+      "priority": 3,
+      "condition": "pharmacyEligible === true",
+      "outcome": "pharmacy",
+      "reason": "Localised infected insect bite — pharmacy treatment appropriate"
+    },
+    {
+      "priority": 4,
+      "condition": "pharmacyEligible === false",
+      "outcome": "gp",
+      "reason": "Outside infected bite pharmacy criteria or exclusion factors present"
+    }
+  ],
+  "selfCareAdvice": "Clean the area with soap and water. Apply a cold compress. Avoid scratching. Antihistamine cream or oral antihistamine for itching. Monitor for spreading redness.",
+  "pharmacyTreatmentOptions": [
+    "Flucloxacillin 500mg four times daily for 5–7 days",
+    "Clarithromycin 500mg twice daily for 5 days (penicillin allergy)"
+  ],
+  "safetyNetAdvice": "Return urgently if: redness spreads significantly, a red line appears, fever develops, or you feel very unwell.",
+  "pathwayPatientDisclaimer": "This pathway distinguishes local irritation from spreading infection; severe allergic reaction, necrotising infection, or rapid deterioration require emergency care — call 999 if in doubt."
+}

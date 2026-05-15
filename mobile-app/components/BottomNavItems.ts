@@ -1,3 +1,5 @@
+import { COLORS } from "../lib/theme";
+
 export type BottomNavRoute = "Home" | "Checks" | "Track" | "Advice" | "Profile";
 
 /** MaterialCommunityIcons glyph names (react-native-vector-icons). */
@@ -11,7 +13,7 @@ export const BOTTOM_NAV_ITEMS: Record<BottomNavRoute, BottomNavItem> = {
   Home: { label: "Home", icon: "home-outline", iconFocused: "home" },
   Checks: { label: "My checks", icon: "clipboard-check-outline", iconFocused: "clipboard-check" },
   Track: { label: "Progress", icon: "chart-line", iconFocused: "chart-line" },
-  Advice: { label: "Advice", icon: "shield-check-outline", iconFocused: "shield-check" },
+  Advice: { label: "Advice", icon: "file-document-outline", iconFocused: "file-document" },
   Profile: { label: "My profile", icon: "account-outline", iconFocused: "account" },
 };
 
@@ -23,7 +25,7 @@ export const BOTTOM_TAB_BAR = {
   paddingBottom: 6,
   iconSize: 24,
   labelFontSize: 12,
-  labelFontWeight: "700" as const,
+  labelFontWeight: "600" as const,
 };
 
 /**
@@ -36,5 +38,10 @@ export function bottomTabBarWithInsets(bottomInset: number) {
     height: BOTTOM_TAB_BAR.height + extra,
     paddingBottom: BOTTOM_TAB_BAR.paddingBottom + extra,
     paddingTop: BOTTOM_TAB_BAR.paddingTop,
+    backgroundColor: COLORS.background,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    elevation: 0,
+    shadowOpacity: 0,
   };
 }

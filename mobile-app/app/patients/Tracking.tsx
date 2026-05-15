@@ -12,9 +12,9 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { PrimaryButton } from "../../components/PrimaryButton";
 import { SPACING } from "../../lib/spacing";
-
-const PRIMARY = "#2563eb";
+import { COLORS, RADII, TYPOGRAPHY } from "../../lib/theme";
 
 const THROAT_LABELS = ["Mild", "Mild", "Moderate", "Severe", "Very severe"];
 const FEVER_LABELS = ["None", "Mild", "Moderate", "Severe", "Very severe"];
@@ -145,13 +145,7 @@ export default function TrackingScreen() {
             This is not monitored in real time. If you feel worse, seek medical help.
           </Text>
 
-          <Pressable
-            style={({ pressed }) => [s.primaryCta, pressed && s.primaryCtaPressed]}
-            onPress={() => {}}
-            accessibilityRole="button"
-          >
-            <Text style={s.primaryCtaText}>Save</Text>
-          </Pressable>
+          <PrimaryButton label="Save" onPress={() => {}} style={s.primaryCta} />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -159,17 +153,17 @@ export default function TrackingScreen() {
 }
 
 const s = StyleSheet.create({
-  safeRoot: { flex: 1, backgroundColor: "#f8fafc", paddingHorizontal: SPACING.sm, paddingVertical: SPACING.sm },
+  safeRoot: { flex: 1, backgroundColor: COLORS.background, paddingHorizontal: SPACING.sm, paddingVertical: SPACING.sm },
   keyboardAvoid: { flex: 1 },
   scroll: { flex: 1 },
   scrollInner: { flexGrow: 1, paddingHorizontal: SPACING.xs, paddingTop: SPACING.xs },
-  title: { fontSize: 24, fontWeight: "700", color: "#0f172a", marginBottom: SPACING.xs },
-  subtitle: { fontSize: 14, color: "#64748b", lineHeight: 20, marginBottom: SPACING.xs },
+  title: { ...TYPOGRAPHY.title, marginBottom: SPACING.xs },
+  subtitle: { ...TYPOGRAPHY.caption, marginBottom: SPACING.xs },
   card: {
-    backgroundColor: "#fff",
-    borderRadius: 14,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADII.sm,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
+    borderColor: COLORS.border,
     padding: SPACING.lg,
     gap: SPACING.sm,
     marginTop: SPACING.sm,
@@ -181,70 +175,48 @@ const s = StyleSheet.create({
     paddingBottom: SPACING.sm,
     marginBottom: SPACING.sm,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#e2e8f0",
+    borderBottomColor: COLORS.border,
   },
-  todayLabel: { fontSize: 13, fontWeight: "700", color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5 },
-  dateValue: { fontSize: 14, color: "#0f172a", fontWeight: "600" },
-  prompt: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#0f172a",
-    marginBottom: SPACING.xs,
-  },
+  todayLabel: { ...TYPOGRAPHY.label },
+  dateValue: { fontSize: 14, color: COLORS.textPrimary, fontWeight: "600" },
+  prompt: { ...TYPOGRAPHY.heading, fontSize: 16, marginBottom: SPACING.xs },
   scaleBlock: { marginTop: SPACING.xs },
-  scaleTitle: { fontSize: 14, fontWeight: "600", color: "#0f172a", marginBottom: SPACING.sm },
+  scaleTitle: { fontSize: 14, fontWeight: "600", color: COLORS.textPrimary, marginBottom: SPACING.sm },
   ratingTrack: {
     flexDirection: "row",
-    backgroundColor: "#f1f5f9",
-    borderRadius: 999,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADII.sm,
     padding: 4,
     gap: 4,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
+    borderColor: COLORS.border,
   },
   ratingCell: {
     flex: 1,
     minHeight: 44,
-    borderRadius: 999,
+    borderRadius: RADII.sm,
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "transparent",
   },
-  ratingCellOn: { backgroundColor: PRIMARY },
-  ratingDigit: { fontSize: 16, fontWeight: "700", color: "#0f172a" },
-  ratingDigitOn: { color: "#ffffff" },
-  scaleCaption: {
-    marginTop: SPACING.sm,
-    textAlign: "center",
-    fontSize: 13,
-    color: "#64748b",
-    fontWeight: "500",
-  },
-  notesLabel: { fontSize: 14, fontWeight: "600", color: "#0f172a", marginBottom: SPACING.xs },
+  ratingCellOn: { borderColor: COLORS.selectedBorder, backgroundColor: COLORS.surface },
+  ratingDigit: { fontSize: 16, fontWeight: "700", color: COLORS.textPrimary },
+  ratingDigitOn: { color: COLORS.textPrimary },
+  scaleCaption: { marginTop: SPACING.sm, textAlign: "center", fontSize: 13, color: COLORS.textMuted, fontWeight: "500" },
+  notesLabel: { fontSize: 14, fontWeight: "600", color: COLORS.textPrimary, marginBottom: SPACING.xs },
   notesInput: {
     borderWidth: 1,
-    borderColor: "#cbd5e1",
-    borderRadius: 12,
+    borderColor: COLORS.border,
+    borderRadius: RADII.sm,
     paddingHorizontal: 14,
     paddingVertical: 12,
     minHeight: 120,
     fontSize: 16,
-    color: "#0f172a",
+    color: COLORS.textPrimary,
     lineHeight: 22,
-    backgroundColor: "#fff",
+    backgroundColor: COLORS.surface,
   },
-  disclaimer: {
-    fontSize: 13,
-    lineHeight: 18,
-    color: "#64748b",
-    marginTop: SPACING.md,
-  },
-  primaryCta: {
-    marginTop: SPACING.sm,
-    backgroundColor: PRIMARY,
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: "center",
-  },
-  primaryCtaPressed: { opacity: 0.92 },
-  primaryCtaText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  disclaimer: { fontSize: 13, lineHeight: 18, color: COLORS.textMuted, marginTop: SPACING.md },
+  primaryCta: { marginTop: SPACING.sm },
 });

@@ -11,6 +11,10 @@ export interface PathwayQuestion {
   options?: string[];
   required: boolean;
   redFlagHint?: boolean;
+  displayWhen?: string;
+  /** Patient-facing “why we ask” line (from pathway JSON clinicalNote or copy). */
+  clinicalNote?: string;
+  helperText?: string;
 }
 
 export const PATHWAY_QUESTIONS: Record<string, PathwayQuestion[]> = {

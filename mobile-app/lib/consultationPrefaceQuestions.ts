@@ -7,33 +7,40 @@
 
 import type { PathwayQuestion } from "./pathwayQuestions";
 
-export const CONSULTATION_PREFACE_QUESTIONS: PathwayQuestion[] = [
+const IMPACT_QUESTION: PathwayQuestion = {
+  id: "_ctx_impact",
+  text: "How much are your symptoms affecting what you can do today?",
+  type: "select",
+  options: [
+    "Little — I can do most things",
+    "Moderate — some activities are difficult",
+    "A lot — I need to rest or stay home",
+    "Prefer not to say",
+  ],
+  required: false,
+};
+
+export const CORE_TRIAGE_QUESTIONS: PathwayQuestion[] = [
   {
     id: "_ctx_duration",
     text: "How long have you had symptoms?",
     type: "select",
     options: ["Less than 24 hours", "1-3 days", "4-7 days", "More than 7 days", "Prefer not to say"],
-    required: false,
+    required: true,
   },
   {
     id: "_ctx_severity",
     text: "How severe are your symptoms right now?",
     type: "select",
     options: ["Mild", "Moderate", "Severe", "Very severe", "Prefer not to say"],
-    required: false,
+    required: true,
   },
-  {
-    id: "_ctx_impact",
-    text: "How much are your symptoms affecting what you can do today?",
-    type: "select",
-    options: [
-      "Little — I can do most things",
-      "Moderate — some activities are difficult",
-      "A lot — I need to rest or stay home",
-      "Prefer not to say",
-    ],
-    required: false,
-  },
+  IMPACT_QUESTION,
+];
+
+/** Optional context — not shown in mobile v1 wizard (hints only if re-enabled). */
+export const CONSULTATION_PREFACE_QUESTIONS: PathwayQuestion[] = [
+  ...CORE_TRIAGE_QUESTIONS,
   {
     id: "_ctx_first_episode",
     text: "Have you had this kind of problem before?",
